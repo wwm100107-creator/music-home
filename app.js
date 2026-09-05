@@ -94,17 +94,18 @@
 
   // --------------------------------------------------------------------------
   // [SKILL: /ponytail] STATE MANAGEMENT: Quản lý trạng thái bài hát
+  // Bắt đầu với danh sách trống vì người dùng chưa thêm bài hát nào
   // --------------------------------------------------------------------------
   const state = {
-    playlist: [...DEFAULT_GHIBLI_TRACKS], // Khởi tạo với 6 bài Ghibli chuẩn GIAODIEN.png
-    filteredIndices: [0, 1, 2, 3, 4, 5],
-    currentIndex: 2,        // Mặc định là bài #3: Merry-Go-Round of Life (Howl's Moving Castle)
+    playlist: [],           // Danh sách bài hát (khởi tạo trống theo yêu cầu)
+    filteredIndices: [],
+    currentIndex: -1,       // Chưa phát bài nào khi mới vào
     isPlaying: false,
     volume: 0.8,
     previousVolume: 0.8,
     isMuted: false,
     loopMode: 'all',        // 'off' | 'all' | 'one' | 'custom'
-    selectedLoopTrackIds: new Set(['ghibli_card_3']), // Mặc định chọn bài Howl
+    selectedLoopTrackIds: new Set(),
     isShuffle: false,
     shuffleOrder: [],
     shufflePosition: 0,
@@ -152,8 +153,9 @@
     sidebarNavList: document.getElementById('sidebarNavList'),
     sidebarNavItems: document.querySelectorAll('.sidebar-nav-item'),
 
-    // Main Content Playlist Cards
-    playlistCards: document.querySelectorAll('.playlist-card'),
+    // Main Content Playlist Cards & Grid
+    playlistsGrid: document.getElementById('playlistsGrid'),
+    playlistsEmptyState: document.getElementById('playlistsEmptyState'),
 
     // Bottom Player Glass Elements (GIAODIEN.png)
     currentTrackCover: document.getElementById('currentTrackCover'),
@@ -413,7 +415,7 @@
           title: cleanTitle(file.name),
           artist: detectedFolder || 'Giai điệu địa phương',
           album: detectedFolder || 'Thư mục máy tính',
-          cover: 'album-howl.jpg',
+          cover: '', // Thumbnail để trống theo yêu cầu của user (sẽ xử lý sau)
           format: getExtension(file.name).toUpperCase() || 'AUDIO',
           size: formatBytes(file.size),
           url: null
@@ -488,7 +490,7 @@
 
     // Cập nhật giao diện Now Playing góc trái chuẩn GIAODIEN.png
     if (dom.currentTrackCover) {
-      dom.currentTrackCover.src = track.cover || 'album-howl.jpg';
+      dom.currentTrackCover.src = track.cover || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='24' fill='%23fefae0'>🎵</text></svg>";
       dom.currentTrackCover.alt = track.title;
     }
     if (dom.trackTitle) {
@@ -496,17 +498,17 @@
       dom.trackTitle.title = track.name;
     }
     if (dom.trackArtist) {
-      dom.trackArtist.textContent = track.artist || 'Joe Hisaishi';
+      dom.trackArtist.textContent = track.artist || 'Giai điệu Ghibli';
     }
     if (dom.trackAlbum) {
-      dom.trackAlbum.textContent = track.album || "Howl's Moving Castle";
+      dom.trackAlbum.textContent = track.album || '';
     }
     if (dom.trackFormat) {
       dom.trackFormat.textContent = track.format || 'AUDIO';
     }
 
     // Highlight Playlist Card đang phát
-    highlightActivePlaylistCard(track.title);
+    highlightActivePlaylistCard();
 
     // Xử lý Audio Source
 
@@ -870,18 +872,23 @@
   // --------------------------------------------------------------------------
   // DANH SÁCH BÀI HÁT THẺ LÁ GIẤY MỘC & CUSTOM LOOP DRAWER
   // --------------------------------------------------------------------------
-  function renderPlaylist() {
+  // --------------------------------------------------------------------------
+  // DANH SÁCH BÀI HÁT THẺ LÁ GIẤY MỘC & CUSTOM LOOP DRAWER
+  // --------------------------------------------------------------------------
+  function renderDrawerList() {
+    if (!dom.songList) return;
     if (state.playlist.length === 0) {
-      dom.emptyState.classList.remove('hidden');
+      if (dom.emptyState) dom.emptyState.classList.remove('hidden');
       dom.songList.innerHTML = '';
       return;
     }
 
-    dom.emptyState.classList.add('hidden');
+    if (dom.emptyState) dom.emptyState.classList.add('hidden');
     const frag = document.createDocumentFragment();
 
     state.filteredIndices.forEach((playlistIdx, displayIdx) => {
       const track = state.playlist[playlistIdx];
+      if (!track) return;
       const li = document.createElement('li');
       li.className = 'nature-song-card' + (playlistIdx === state.currentIndex ? ' active' : '');
       li.dataset.index = playlistIdx;
@@ -897,7 +904,7 @@
           <div class="leaf-num-stamp">${displayIdx + 1}</div>
           <div class="card-song-details">
             <span class="card-title" title="${track.name}">${track.title}</span>
-            <div class="card-subtext">${track.artist || 'Joe Hisaishi'} • ${track.size || ''} ${track.isCobalt ? '🕊️ Cobalt' : ''}</div>
+            <div class="card-subtext">${track.artist || 'Giai điệu Ghibli'} • ${track.size || ''} ${track.isCobalt ? '🕊️ Cobalt' : ''}</div>
           </div>
         </div>
         <span class="card-leaf-badge">${track.format || 'AUDIO'}</span>
@@ -923,6 +930,69 @@
     dom.songList.appendChild(frag);
   }
 
+  // --------------------------------------------------------------------------
+  // [SKILL: /image-to-code-skill & /impeccable & /ponytail]
+  // RENDER DYNAMIC PLAYLISTS GRID TẠI MAIN CONTENT
+  // Giữ nguyên cách trình bày thẻ vuông bo góc tròn mềm mại từ GIAODIEN.png,
+  // Thumbnail để trống theo yêu cầu chờ người dùng đưa phương án xử lý sau.
+  // --------------------------------------------------------------------------
+  function renderPlaylistsGrid() {
+    if (!dom.playlistsGrid) return;
+
+    if (state.playlist.length === 0) {
+      dom.playlistsGrid.innerHTML = '';
+      if (dom.playlistsEmptyState) dom.playlistsEmptyState.classList.remove('hidden');
+      return;
+    }
+
+    if (dom.playlistsEmptyState) dom.playlistsEmptyState.classList.add('hidden');
+    const frag = document.createDocumentFragment();
+
+    state.filteredIndices.forEach((playlistIdx) => {
+      const track = state.playlist[playlistIdx];
+      if (!track) return;
+
+      const card = document.createElement('div');
+      card.className = 'playlist-card' + (playlistIdx === state.currentIndex ? ' active' : '');
+      card.dataset.index = playlistIdx;
+
+      // Thumbnail để trống theo yêu cầu
+      card.innerHTML = `
+        <div class="card-art-box">
+          <div class="card-cover-empty" title="Thumbnail để trống">
+            <span class="empty-thumb-symbol">🎵</span>
+          </div>
+          <button class="card-hover-play" title="Phát bài này">
+            <span class="play-arrow">▶</span>
+          </button>
+        </div>
+        <h3 class="card-title-text" title="${track.title || track.name}">${track.title || track.name}</h3>
+      `;
+
+      card.addEventListener('click', () => {
+        loadTrack(playlistIdx, true);
+      });
+
+      const playBtn = card.querySelector('.card-hover-play');
+      if (playBtn) {
+        playBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          loadTrack(playlistIdx, true);
+        });
+      }
+
+      frag.appendChild(card);
+    });
+
+    dom.playlistsGrid.innerHTML = '';
+    dom.playlistsGrid.appendChild(frag);
+  }
+
+  function renderPlaylist() {
+    renderDrawerList();
+    renderPlaylistsGrid();
+  }
+
   function updateActiveCard() {
     const items = dom.songList.querySelectorAll('.nature-song-card');
     items.forEach(item => {
@@ -936,15 +1006,15 @@
     });
   }
 
-  function highlightActivePlaylistCard(trackTitle) {
-    dom.playlistCards.forEach(card => {
-      const cardTrack = card.dataset.track;
-      if (cardTrack && trackTitle && (cardTrack.toLowerCase().includes(trackTitle.toLowerCase()) || trackTitle.toLowerCase().includes(cardTrack.toLowerCase()))) {
-        card.style.borderColor = 'var(--ghibli-gold)';
-        card.style.transform = 'translateY(-4px)';
+  function highlightActivePlaylistCard() {
+    if (!dom.playlistsGrid) return;
+    const cards = dom.playlistsGrid.querySelectorAll('.playlist-card');
+    cards.forEach(card => {
+      const cardIdx = parseInt(card.dataset.index, 10);
+      if (cardIdx === state.currentIndex) {
+        card.classList.add('active');
       } else {
-        card.style.borderColor = 'rgba(255, 255, 255, 0.45)';
-        card.style.transform = '';
+        card.classList.remove('active');
       }
     });
   }
@@ -1118,7 +1188,7 @@
 
     let trackTitle = 'Giai Điệu Ghibli Trực Tuyến';
     let trackArtist = 'Cobalt Audio Stream';
-    let trackCover = 'card-ghibli.jpg';
+    let trackCover = ''; // Thumbnail để trống theo yêu cầu của user
 
     try {
       // 1. Thu thập metadata nhanh từ oEmbed để hiển thị tên bài và ảnh bìa
@@ -1205,7 +1275,9 @@
       dom.trackTitle.textContent = trackTitle;
       dom.trackArtist.textContent = trackArtist;
       dom.trackAlbum.textContent = 'Cobalt Audio Stream';
-      if (dom.currentTrackCover) dom.currentTrackCover.src = trackCover;
+      if (dom.currentTrackCover) {
+        dom.currentTrackCover.src = trackCover || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='24' fill='%23fefae0'>🎵</text></svg>";
+      }
 
       // Thêm bài hát vào danh sách phát
       const newTrack = {
@@ -1214,7 +1286,7 @@
         title: trackTitle,
         artist: trackArtist,
         album: 'Cobalt Audio Stream',
-        cover: trackCover,
+        cover: '', // Thumbnail để trống theo yêu cầu của user
         format: 'MP3',
         size: 'Online Stream',
         url: streamUrl,
@@ -1225,7 +1297,7 @@
       state.filteredIndices = state.playlist.map((_, i) => i);
       renderPlaylist();
       updatePlaylistCount();
-      highlightActivePlaylistCard(trackTitle);
+      highlightActivePlaylistCard();
 
       showToast(`Đang phát: "${trackTitle}" 🕊️🎶`);
 
@@ -1960,8 +2032,10 @@
     setupEvents();
     initAuthSession();
 
-    // Nạp bài Howl's Joy (Merry-Go-Round of Life) mặc định chuẩn GIAODIEN.png
-    loadTrack(2, false);
+    // Nếu có bài hát thì tải bài đầu tiên, ngược lại giữ trạng thái trống sẵn sàng
+    if (state.playlist.length > 0) {
+      loadTrack(0, false);
+    }
 
     // [SKILL: /animate & /impeccable] Khởi tạo thanh trượt tấm gỗ ở mục Active ban đầu (Playlists)
     const initialActive = document.querySelector('.sidebar-nav-item.active') || document.getElementById('tabPlaylists');

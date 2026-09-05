@@ -254,75 +254,17 @@
       <section class="playlists-view-section">
         <h1 class="view-main-title">Playlists</h1>
 
-        <!-- GRID 6 CARD CHÍNH CHUẨN PIXEL-PERFECT TỪ GIAODIEN.PNG -->
-        <div class="playlists-grid">
-          
-          <!-- Card 1: Ghibli Melodies -->
-          <div class="playlist-card" data-playlist="ghibli-melodies" data-track="Spirited Away - One Summer's Day" data-artist="Joe Hisaishi" data-cover="card-ghibli.jpg">
-            <div class="card-art-box">
-              <img src="card-ghibli.jpg" alt="Ghibli Melodies" class="card-cover-img" loading="lazy">
-              <button class="card-hover-play" title="Phát ngay">
-                <span class="play-arrow">▶</span>
-              </button>
-            </div>
-            <h3 class="card-title-text">GHIBLI MELODIES</h3>
-          </div>
+        <!-- GRID CHỨA CÁC CARD BÀI HÁT (SẼ TỰ ĐỘNG HIỂN THỊ KHI NGƯỜI DÙNG THÊM NHẠC VÀO WEB) -->
+        <div class="playlists-grid" id="playlistsGrid"></div>
 
-          <!-- Card 2: Nature Sounds -->
-          <div class="playlist-card" data-playlist="nature-sounds" data-track="My Neighbor Totoro - Wind Forest" data-artist="Joe Hisaishi" data-cover="card-totoro.jpg">
-            <div class="card-art-box">
-              <img src="card-totoro.jpg" alt="Nature Sounds" class="card-cover-img" loading="lazy">
-              <button class="card-hover-play" title="Phát ngay">
-                <span class="play-arrow">▶</span>
-              </button>
-            </div>
-            <h3 class="card-title-text">NATURE SOUNDS</h3>
-          </div>
-
-          <!-- Card 3: Howl's Joy -->
-          <div class="playlist-card" data-playlist="howls-joy" data-track="Merry-Go-Round of Life" data-artist="Joe Hisaishi" data-album="Howl's Moving Castle" data-cover="card-howl.jpg">
-            <div class="card-art-box">
-              <img src="card-howl.jpg" alt="Howl's Joy" class="card-cover-img" loading="lazy">
-              <button class="card-hover-play" title="Phát ngay">
-                <span class="play-arrow">▶</span>
-              </button>
-            </div>
-            <h3 class="card-title-text">HOWL'S JOY</h3>
-          </div>
-
-          <!-- Card 4: Ki-Ki's Music -->
-          <div class="playlist-card" data-playlist="kikis-music" data-track="A Town with an Ocean View" data-artist="Joe Hisaishi" data-cover="card-kiki.jpg">
-            <div class="card-art-box">
-              <img src="card-kiki.jpg" alt="Ki-Ki's Music" class="card-cover-img" loading="lazy">
-              <button class="card-hover-play" title="Phát ngay">
-                <span class="play-arrow">▶</span>
-              </button>
-            </div>
-            <h3 class="card-title-text">KI-KI'S MUSIC</h3>
-          </div>
-
-          <!-- Card 5: Wind Rises -->
-          <div class="playlist-card" data-playlist="wind-rises" data-track="The Wind Rises (A Journey)" data-artist="Joe Hisaishi" data-cover="card-wind.jpg">
-            <div class="card-art-box">
-              <img src="card-wind.jpg" alt="Wind Rises" class="card-cover-img" loading="lazy">
-              <button class="card-hover-play" title="Phát ngay">
-                <span class="play-arrow">▶</span>
-              </button>
-            </div>
-            <h3 class="card-title-text">WIND RISES</h3>
-          </div>
-
-          <!-- Card 6: Forest Beats (Hàng thứ 2 trong GIAODIEN.png) -->
-          <div class="playlist-card" data-playlist="forest-beats" data-track="Kiki's Flying Delivery - Lofi Beats" data-artist="Studio Ghibli Chill" data-cover="card-kiki-town.jpg">
-            <div class="card-art-box">
-              <img src="card-kiki-town.jpg" alt="Forest Beats" class="card-cover-img" loading="lazy">
-              <button class="card-hover-play" title="Phát ngay">
-                <span class="play-arrow">▶</span>
-              </button>
-            </div>
-            <h3 class="card-title-text">FOREST BEATS</h3>
-          </div>
-
+        <!-- TRẠNG THÁI TRỐNG: KHI CHƯA CÓ BÀI HÁT NÀO ĐƯỢC THÊM VÀO WEB -->
+        <div class="playlists-empty-state" id="playlistsEmptyState">
+          <div class="empty-sprout-icon">🌱</div>
+          <h3 class="empty-title">Chưa có bài hát nào trong danh sách</h3>
+          <p class="empty-subtitle">Hãy mở thư mục nhạc trên máy tính hoặc dán liên kết YouTube / TikTok vào ô tìm kiếm để thưởng thức giai điệu trong ngôi nhà Ghibli.</p>
+          <label for="folderInput" class="empty-add-btn cursor-pointer" title="Mở thư mục nhạc trên máy tính">
+            <span>📂 Mở Thư Mục Nhạc</span>
+          </label>
         </div>
       </section>
 
@@ -378,16 +320,16 @@
       <!-- LEFT: Bìa album + Tên bài hát + Nghệ sĩ + Yêu thích -->
       <div class="player-left-group">
         <div class="album-cover-frame">
-          <img id="currentTrackCover" src="album-howl.jpg" alt="Merry-Go-Round of Life" class="now-playing-cover">
+          <img id="currentTrackCover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='24' fill='%23fefae0'>🎵</text></svg>" alt="Chưa có bài hát" class="now-playing-cover">
         </div>
         <div class="now-playing-meta">
           <div class="song-title-row">
-            <span id="trackTitle" class="track-title-text" title="Merry-Go-Round of Life">Merry-Go-Round of Life</span>
-            <button id="likeBtn" class="leaf-heart-btn active" title="Yêu thích bài này">💚</button>
+            <span id="trackTitle" class="track-title-text" title="Chưa có bài hát nào">Chưa có bài hát nào</span>
+            <button id="likeBtn" class="leaf-heart-btn" title="Yêu thích bài này">💚</button>
           </div>
-          <span id="trackArtist" class="track-artist-text">Joe Hisaishi</span>
-          <span id="trackAlbum" class="track-album-text">Howl's Moving Castle</span>
-          <span id="trackFormat" class="hidden">MP3</span>
+          <span id="trackArtist" class="track-artist-text">Ghibli Music Home</span>
+          <span id="trackAlbum" class="track-album-text">Khu vườn âm nhạc</span>
+          <span id="trackFormat" class="hidden">--</span>
         </div>
       </div>
 
