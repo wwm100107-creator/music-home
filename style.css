@@ -397,13 +397,68 @@ body.ghibli-app-body {
   padding: 6px 14px;
   width: 320px;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: width 0.2s, background 0.2s;
+  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
 .top-search-shell:focus-within {
   width: 380px;
   background: rgba(255, 255, 255, 0.55);
   border-color: #ffffff;
+}
+
+/* SMART INPUT: Khi phát hiện Link URL YouTube / TikTok */
+.top-search-shell.url-mode {
+  width: 440px;
+  background: rgba(240, 253, 244, 0.75);
+  border-color: #52b788;
+  box-shadow: inset 0 2px 4px rgba(45, 106, 79, 0.1), 0 0 14px rgba(82, 183, 136, 0.45);
+}
+
+.search-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.search-icon-lens {
+  color: var(--ghibli-brown-dark);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s;
+}
+
+.search-icon-pigeon {
+  font-size: 1.15rem;
+  line-height: 1;
+  display: inline-block;
+  animation: pigeonFlutter 1.6s infinite ease-in-out alternate;
+  transform-origin: center bottom;
+}
+
+@keyframes pigeonFlutter {
+  0% { transform: translateY(0) rotate(-3deg) scale(1); }
+  50% { transform: translateY(-2px) rotate(3deg) scale(1.08); }
+  100% { transform: translateY(0) rotate(-1deg) scale(1); }
+}
+
+.search-link-tag {
+  background: #2d6a4f;
+  color: #ffffff;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  animation: tagPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes tagPopIn {
+  0% { transform: scale(0.7); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .top-search-shell input {
@@ -428,6 +483,244 @@ body.ghibli-app-body {
   color: var(--ghibli-brown-mid);
   cursor: pointer;
   line-height: 1;
+}
+
+/* ==========================================================================
+   [SKILL: /animate & /animation-vocabulary]
+   HIỆU ỨNG SUSUWATARI KÉO CHIẾC LÁ NẶNG NHỌC (HEAVY LEAF DRAG LOADING)
+   - Vocabulary: Tug-of-war heave & strain, staggered pulling, resistance drag
+   - Chỉ xuất hiện khi isLoading === true
+   ========================================================================== */
+.susuwatari-leaf-loader {
+  margin: 10px 0 16px 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  animation: loaderSlideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  z-index: 30;
+}
+
+.susuwatari-leaf-loader.hidden {
+  display: none !important;
+}
+
+@keyframes loaderSlideDown {
+  0% { opacity: 0; transform: translateY(-10px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.leaf-loader-box {
+  background: rgba(247, 240, 222, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 2px solid #c99355;
+  border-radius: 20px;
+  padding: 14px 28px 16px 28px;
+  box-shadow: 0 8px 24px rgba(43, 24, 16, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 580px;
+  width: 100%;
+}
+
+.leaf-pull-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  position: relative;
+  padding: 8px 16px 4px 16px;
+  min-height: 60px;
+}
+
+/* Các chú Bụi Than Susuwatari */
+.soot-sprite {
+  width: 38px;
+  height: 38px;
+  background: #181818;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 0 0 2px #222222,
+    0 3px 6px rgba(0, 0, 0, 0.35);
+  transform-origin: bottom center;
+}
+
+.soot-sprite .soot-eyes {
+  display: flex;
+  gap: 4px;
+}
+
+.soot-sprite .soot-pupil {
+  width: 9px;
+  height: 9px;
+  background: #ffffff;
+  border-radius: 50%;
+  position: relative;
+  display: block;
+}
+
+.soot-sprite .soot-pupil::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 4.5px;
+  height: 4.5px;
+  background: #111111;
+  border-radius: 50%;
+}
+
+/* Giọt mồ hôi 💦 vất vả gắng sức */
+.sweat-drop {
+  position: absolute;
+  top: -12px;
+  font-size: 0.95rem;
+  opacity: 0;
+}
+
+.sweat-drop.s1 {
+  right: -4px;
+  animation: sweatFloat 1.2s infinite ease-in;
+}
+
+.sweat-drop.s2 {
+  left: -4px;
+  animation: sweatFloat 1.2s infinite ease-in 0.4s;
+}
+
+@keyframes sweatFloat {
+  0% { opacity: 0; transform: translateY(4px) scale(0.6); }
+  30% { opacity: 1; transform: translateY(-2px) scale(1); }
+  80% { opacity: 0.8; transform: translateY(-12px) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-16px) scale(0.8); }
+}
+
+/* [SKILL: /animate] Nhịp điệu kéo co giằng co (Tug-of-war rhythm) */
+.soot-1 {
+  animation: sootTug 1.15s infinite cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+.soot-2 {
+  animation: sootTug 1.15s infinite cubic-bezier(0.45, 0, 0.55, 1) 0.14s;
+}
+
+.soot-3 {
+  animation: sootTug 1.15s infinite cubic-bezier(0.45, 0, 0.55, 1) 0.28s;
+}
+
+@keyframes sootTug {
+  0% { transform: rotate(6deg) translateX(0) scale(1, 1); }
+  35% { transform: rotate(-18deg) translateX(-14px) scale(0.92, 1.08); }
+  65% { transform: rotate(-15deg) translateX(-11px) scale(0.95, 1.05); }
+  100% { transform: rotate(6deg) translateX(0) scale(1, 1); }
+}
+
+/* Dây thừng leo căng thẳng */
+.strained-vine-rope {
+  width: 70px;
+  height: 4.5px;
+  background: repeating-linear-gradient(
+    45deg,
+    #52b788,
+    #52b788 6px,
+    #2d6a4f 6px,
+    #2d6a4f 12px
+  );
+  border-radius: 3px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transform-origin: left center;
+  animation: ropeTension 1.15s infinite cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+@keyframes ropeTension {
+  0% { transform: scaleX(1); opacity: 0.85; }
+  35% { transform: scaleX(1.15) translateY(-1px); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0.85; }
+}
+
+/* Chiếc lá xanh khổng lồ nặng nhọc */
+.heavy-green-leaf {
+  width: 82px;
+  height: 48px;
+  background: linear-gradient(135deg, #74c69d 0%, #2d6a4f 100%);
+  border-radius: 6px 40px 6px 40px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.28), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: left bottom;
+  animation: heavyLeafDrag 1.15s infinite cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+.leaf-rib {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 1px;
+}
+
+.leaf-music-badge {
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.8rem;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+@keyframes heavyLeafDrag {
+  0% { transform: rotate(-3deg) translateX(0); }
+  35% { transform: rotate(12deg) translateX(-8px); }
+  65% { transform: rotate(9deg) translateX(-6px); }
+  100% { transform: rotate(-3deg) translateX(0); }
+}
+
+/* Chữ hiển thị trạng thái */
+.leaf-loader-text {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.leaf-loader-title {
+  font-family: var(--font-ghibli-title);
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: var(--ghibli-brown-dark);
+  letter-spacing: 0.3px;
+}
+
+.leaf-loader-sub {
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ghibli-brown-mid);
+}
+
+/* Reduced Motion: Tôn trọng người dùng hạn chế chuyển động */
+@media (prefers-reduced-motion: reduce) {
+  .soot-sprite,
+  .heavy-green-leaf,
+  .strained-vine-rope,
+  .sweat-drop,
+  .search-icon-pigeon {
+    animation: none !important;
+  }
 }
 
 .top-actions-cluster {

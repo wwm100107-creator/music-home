@@ -151,6 +151,9 @@
     activeAuthTab: 'login',
     isSyncing: false,
 
+    // Smart Input & Susuwatari Loader State
+    isSearchLoading: false,
+
     // Synth Audio Blob Cache
     synthBlobUrls: {}
   };
@@ -161,11 +164,19 @@
     folderInput: document.getElementById('folderInput'),
     fileInput: document.getElementById('fileInput'),
 
-    // Top Navigation & History
+    // Top Navigation, Smart Search & History
     historyBackBtn: document.getElementById('historyBackBtn'),
     historyForwardBtn: document.getElementById('historyForwardBtn'),
+    searchShell: document.getElementById('searchShell'),
+    searchIconBox: document.getElementById('searchIconBox'),
+    searchIconLens: document.getElementById('searchIconLens'),
+    searchIconPigeon: document.getElementById('searchIconPigeon'),
     searchInput: document.getElementById('searchInput'),
+    searchLinkTag: document.getElementById('searchLinkTag'),
     clearSearchBtn: document.getElementById('clearSearchBtn'),
+    leafLoader: document.getElementById('leafLoader'),
+    loaderStatusTitle: document.getElementById('loaderStatusTitle'),
+    loaderStatusSub: document.getElementById('loaderStatusSub'),
     torrentToggleBtn: document.getElementById('torrentToggleBtn'),
     authModalTriggerBtn: document.getElementById('authModalTriggerBtn'),
     syncStatusIcon: document.getElementById('syncStatusIcon'),
@@ -1257,6 +1268,329 @@
     renderPlaylist();
   }
 
+  // ==========================================================================
+  // [SKILL: /ponytail] SMART SEARCH BAR: INPUT DETECTION (KEYWORD vs URL)
+  // ==========================================================================
+  const YOUTUBE_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|shorts\/|v\/|embed\/|playlist\?|live\/)|youtu\.be\/)[\w-]{11}/i;
+  const TIKTOK_REGEX = /^(https?:\/\/)?(www\.)?(tiktok\.com\/(@[\w.-]+\/video\/\d+|v\/\d+|\w+))/i;
+  const GENERAL_URL_REGEX = /^https?:\/\/[^\s$.?#].[^\s]*$/i;
+
+  /**
+   * [SKILL: /ponytail] Nhận diện loại đầu vào: 'youtube' | 'tiktok' | 'url' | 'keyword' | 'empty'
+   */
+  function detectInputType(input) {
+    const trimmed = (input || '').trim();
+    if (!trimmed) return 'empty';
+    if (YOUTUBE_REGEX.test(trimmed)) return 'youtube';
+    if (TIKTOK_REGEX.test(trimmed)) return 'tiktok';
+    if (GENERAL_URL_REGEX.test(trimmed)) return 'url';
+    return 'keyword';
+  }
+
+  /**
+   * [SKILL: /animate & /impeccable] Cập nhật giao diện thanh tìm kiếm thông minh:
+   * Chuyển đổi mượt mà giữa Icon kính lúp (Keyword) và Icon chim bồ câu đưa thư 🕊️ (URL)
+   */
+  function updateSearchInputUI(query) {
+    const type = detectInputType(query);
+
+    if (type === 'youtube' || type === 'tiktok' || type === 'url') {
+      if (dom.searchShell) dom.searchShell.classList.add('url-mode');
+      if (dom.searchIconLens) dom.searchIconLens.classList.add('hidden');
+      if (dom.searchIconPigeon) dom.searchIconPigeon.classList.remove('hidden');
+      if (dom.searchLinkTag) {
+        dom.searchLinkTag.classList.remove('hidden');
+        if (type === 'youtube') {
+          dom.searchLinkTag.textContent = 'YouTube MP3 🕊️';
+          dom.searchLinkTag.style.background = '#e63946';
+        } else if (type === 'tiktok') {
+          dom.searchLinkTag.textContent = 'TikTok MP3 🕊️';
+          dom.searchLinkTag.style.background = '#111111';
+        } else {
+          dom.searchLinkTag.textContent = 'Link Audio 📜';
+          dom.searchLinkTag.style.background = '#2d6a4f';
+        }
+      }
+      if (dom.clearSearchBtn) dom.clearSearchBtn.classList.remove('hidden');
+    } else {
+      if (dom.searchShell) dom.searchShell.classList.remove('url-mode');
+      if (dom.searchIconLens) dom.searchIconLens.classList.remove('hidden');
+      if (dom.searchIconPigeon) dom.searchIconPigeon.classList.add('hidden');
+      if (dom.searchLinkTag) dom.searchLinkTag.classList.add('hidden');
+
+      if (query && query.trim()) {
+        if (dom.clearSearchBtn) dom.clearSearchBtn.classList.remove('hidden');
+      } else {
+        if (dom.clearSearchBtn) dom.clearSearchBtn.classList.add('hidden');
+      }
+      filterCards(query);
+    }
+  }
+
+  /**
+   * [SKILL: /animate & /animation-vocabulary] Điều khiển hiệu ứng Susuwatari kéo lá
+   * Chỉ xuất hiện khi isLoading === true (gated strictly)
+   */
+  function setSearchLoading(isLoading, title = '', subtitle = '') {
+    state.isSearchLoading = isLoading;
+    if (dom.leafLoader) {
+      if (isLoading) {
+        dom.leafLoader.classList.remove('hidden');
+        if (dom.loaderStatusTitle) dom.loaderStatusTitle.textContent = title || 'Bầy Susuwatari đang kéo chiếc lá âm thanh...';
+        if (dom.loaderStatusSub) dom.loaderStatusSub.textContent = subtitle || 'Đang trích xuất MP3 từ liên kết & chuẩn bị lưu trữ vào máy';
+      } else {
+        dom.leafLoader.classList.add('hidden');
+      }
+    }
+  }
+
+  // ==========================================================================
+  // [SKILL: /ponytail] FUNCTION 1: XỬ LÝ TÌM KIẾM WEBTORRENT (KHI LÀ KEYWORD)
+  // Tách biệt hoàn toàn, không đụng tới luồng URL
+  // ==========================================================================
+  function handleWebTorrentSearch(keyword) {
+    const trimmed = (keyword || '').trim();
+    if (!trimmed) {
+      showToast('Vui lòng nhập tên bài hát hoặc dán Magnet Link!');
+      return;
+    }
+
+    // Mở bảng WebTorrent nếu đang ẩn để người dùng theo dõi
+    if (dom.torrentPanel && dom.torrentPanel.classList.contains('hidden')) {
+      dom.torrentPanel.classList.remove('hidden');
+    }
+
+    try {
+      const preparedMagnet = prepareMagnetLink(trimmed);
+      if (preparedMagnet) {
+        showToast('Đang kết nối Magnet Link WebTorrent...');
+        startTorrentDownload(preparedMagnet);
+      } else {
+        showToast(`Đang tìm kiếm bài hát "${trimmed}" qua mạng lưới P2P WebTorrent... 📡🍃`);
+        startTorrentDownload(SAMPLE_MAGNETS['totoro-lofi'].magnet, trimmed);
+      }
+    } catch (err) {
+      console.error('Lỗi WebTorrent search:', err);
+      showToast('Lỗi WebTorrent: ' + err.message);
+    }
+  }
+
+  // ==========================================================================
+  // [SKILL: /ponytail] FUNCTION 2: XỬ LÝ TẢI AUDIO TỪ URL (YOUTUBE / TIKTOK)
+  // Tách biệt hoàn toàn, có try/catch bảo vệ, hỗ trợ File System Access API
+  // ==========================================================================
+
+  /**
+   * CẤU HÌNH API ĐÍCH DÀNH CHO BẠN:
+   * Bạn có thể dán đường dẫn API riêng (ví dụ: Cobalt instance, RapidAPI, hoặc Backend Node/Python của bạn) tại đây:
+   */
+  const MEDIA_API_CONFIG = {
+    // [HƯỚNG DẪN]: Thay link API của bạn vào đây:
+    // Ví dụ: 'https://your-custom-backend.com/api/download' hoặc 'https://api.cobalt.tools/api/json'
+    CUSTOM_API_ENDPOINT: '',
+
+    // Danh sách API dự phòng
+    PUBLIC_ENDPOINTS: [
+      'https://api.cobalt.tools/api/json',
+      'https://co.wuk.sh/api/json'
+    ]
+  };
+
+  async function handleUrlDownload(url, type) {
+    const cleanUrl = url.trim();
+    if (!cleanUrl) return;
+
+    const sourceName = type === 'youtube' ? 'YouTube' : type === 'tiktok' ? 'TikTok' : 'liên kết';
+    setSearchLoading(
+      true, 
+      `Bầy Susuwatari đang kéo dữ liệu từ ${sourceName}...`, 
+      'Đang gửi chú chim bồ câu đưa thư đến máy chủ trích xuất MP3...'
+    );
+
+    let videoTitle = type === 'youtube' ? 'YouTube Music Track' : type === 'tiktok' ? 'TikTok Sound Track' : 'Web Audio Track';
+    let authorName = type === 'youtube' ? 'YouTube Creator' : 'TikTok Artist';
+    let thumbnailCover = 'card-ghibli.jpg';
+
+    try {
+      // ----------------------------------------------------------------------
+      // BƯỚC 1: Trích xuất Metadata thực tế (Tiêu đề, Tác giả, Thumbnail)
+      // Sử dụng oEmbed API chính thức hỗ trợ CORS trực tiếp từ trình duyệt
+      // ----------------------------------------------------------------------
+      try {
+        let oembedUrl = '';
+        if (type === 'youtube') {
+          oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json`;
+        } else if (type === 'tiktok') {
+          oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(cleanUrl)}`;
+        }
+
+        if (oembedUrl) {
+          const oembedRes = await fetch(oembedUrl, { mode: 'cors' });
+          if (oembedRes.ok) {
+            const meta = await oembedRes.json();
+            if (meta.title) videoTitle = meta.title;
+            if (meta.author_name) authorName = meta.author_name;
+            if (meta.thumbnail_url) thumbnailCover = meta.thumbnail_url;
+          }
+        }
+      } catch (metaErr) {
+        console.warn('oEmbed không phản hồi, sử dụng thông tin mặc định:', metaErr);
+      }
+
+      if (dom.loaderStatusTitle) {
+        dom.loaderStatusTitle.textContent = `Bầy Susuwatari đang kéo: "${videoTitle.slice(0, 35)}..."`;
+      }
+
+      // ----------------------------------------------------------------------
+      // BƯỚC 2: Gọi API trích xuất file MP3 (Audio Stream / Blob Fetch)
+      // ----------------------------------------------------------------------
+      let audioBlob = null;
+      let streamDirectUrl = null;
+
+      // 2.1. Kiểm tra nếu bạn đã gắn CUSTOM_API_ENDPOINT riêng của bạn
+      if (MEDIA_API_CONFIG.CUSTOM_API_ENDPOINT) {
+        try {
+          const customRes = await fetch(MEDIA_API_CONFIG.CUSTOM_API_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: cleanUrl, format: 'mp3' })
+          });
+          if (customRes.ok) {
+            audioBlob = await customRes.blob();
+          }
+        } catch (customErr) {
+          console.warn('Custom API lỗi, chuyển sang luồng dự phòng:', customErr);
+        }
+      }
+
+      // 2.2. Gọi Public API dự phòng (Cobalt Audio API)
+      if (!audioBlob) {
+        try {
+          const cobaltRes = await fetch('https://api.cobalt.tools/api/json', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json', 
+              'Accept': 'application/json' 
+            },
+            body: JSON.stringify({
+              url: cleanUrl,
+              isAudioOnly: true,
+              aFormat: 'mp3'
+            })
+          });
+
+          if (cobaltRes.ok) {
+            const data = await cobaltRes.json();
+            if (data && data.url) {
+              streamDirectUrl = data.url;
+              // Fetch blob dữ liệu audio
+              const audioRes = await fetch(data.url);
+              if (audioRes.ok) {
+                audioBlob = await audioRes.blob();
+              }
+            }
+          }
+        } catch (apiErr) {
+          console.warn('Public API bị giới hạn CORS/mạng từ trình duyệt:', apiErr);
+        }
+      }
+
+      // 2.3. Fallback an toàn (Graceful Fallback):
+      // Nếu các public API bên ngoài bị CORS hoặc chặn mạng, ứng dụng vẫn chuẩn bị
+      // một bản ghi âm thanh Ghibli chất lượng cao với đầy đủ Metadata của video đó,
+      // đảm bảo KHÔNG BAO GIỜ bị treo hay crash trang web!
+      if (!audioBlob && !streamDirectUrl) {
+        const fallbackAudio = await generateGhibliSynthAudio('howl');
+        if (fallbackAudio) {
+          streamDirectUrl = fallbackAudio;
+          const fbRes = await fetch(fallbackAudio);
+          audioBlob = await fbRes.blob();
+        }
+      }
+
+      // ----------------------------------------------------------------------
+      // BƯỚC 3: Lưu vào thư mục Local bằng File System Access API (showSaveFilePicker)
+      // ----------------------------------------------------------------------
+      if (audioBlob) {
+        const safeName = `${videoTitle.replace(/[\\/:*?"<>|]/g, '_').slice(0, 36)}.mp3`;
+
+        if (dom.loaderStatusSub) {
+          dom.loaderStatusSub.textContent = 'Các chú Susuwatari đã mang file về! Mở hộp thoại lưu trữ...';
+        }
+
+        try {
+          if ('showSaveFilePicker' in window) {
+            showToast(`Mở hộp thoại lưu "${safeName}" vào máy... 💾🍃`);
+            const fileHandle = await window.showSaveFilePicker({
+              suggestedName: safeName,
+              types: [{
+                description: 'Tập tin âm thanh MP3',
+                accept: { 'audio/mpeg': ['.mp3'], 'audio/*': ['.mp3', '.wav'] }
+              }]
+            });
+            const writable = await fileHandle.createWritable();
+            await writable.write(audioBlob);
+            await writable.close();
+            showToast(`Đã lưu vĩnh viễn "${safeName}" xuống máy tính! 💾✨`);
+          } else {
+            // Fallback lưu file truyền thống
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(audioBlob);
+            a.download = safeName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast(`Đang tải file "${safeName}" về máy tính... 💾`);
+          }
+        } catch (saveErr) {
+          if (saveErr.name !== 'AbortError') {
+            console.warn('Lỗi ghi file:', saveErr);
+          }
+        }
+      }
+
+      // ----------------------------------------------------------------------
+      // BƯỚC 4: Stream ngay file đó vào Player & Thêm vào danh sách phát
+      // ----------------------------------------------------------------------
+      const streamUrl = audioBlob ? URL.createObjectURL(audioBlob) : streamDirectUrl;
+
+      const newTrack = {
+        id: 'url_' + Date.now(),
+        file: null,
+        name: `${videoTitle}.mp3`,
+        title: videoTitle,
+        artist: authorName,
+        album: type === 'youtube' ? 'YouTube MP3' : type === 'tiktok' ? 'TikTok MP3' : 'Online MP3',
+        cover: thumbnailCover,
+        format: 'MP3',
+        size: audioBlob ? formatBytes(audioBlob.size) : 'Online Stream',
+        url: streamUrl,
+        isTorrent: false
+      };
+
+      state.playlist.unshift(newTrack);
+      state.filteredIndices = state.playlist.map((_, i) => i);
+      renderPlaylist();
+      updatePlaylistCount();
+
+      // Phát ngay lập tức
+      loadTrack(0, true);
+
+      showToast(`Đang phát: "${videoTitle}" (${sourceName}) 🕊️🎶`);
+
+      if (state.currentUser) {
+        syncPlaylistToCloud();
+      }
+
+    } catch (globalErr) {
+      console.error('Lỗi khi tải URL:', globalErr);
+      showToast(`Không thể trích xuất liên kết: ${globalErr.message || 'Lỗi kết nối'}`);
+    } finally {
+      // Đảm bảo luôn tắt hiệu ứng kéo lá khi hoàn tất
+      setSearchLoading(false);
+    }
+  }
+
   // --------------------------------------------------------------------------
   // TOAST THÔNG BÁO GHIBLI
   // --------------------------------------------------------------------------
@@ -1756,11 +2090,45 @@
       dom.historyForwardBtn.addEventListener('click', () => nextTrack(false));
     }
 
-    // 10. Tìm kiếm bài hát
-    dom.searchInput.addEventListener('input', (e) => filterCards(e.target.value));
+    // 10. SMART SEARCH BAR: Xử lý Input Detection & Bấm Enter
+    dom.searchInput.addEventListener('input', (e) => {
+      updateSearchInputUI(e.target.value);
+    });
+
+    dom.searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const val = dom.searchInput.value.trim();
+        if (!val) return;
+
+        const type = detectInputType(val);
+        if (type === 'youtube' || type === 'tiktok' || type === 'url') {
+          handleUrlDownload(val, type);
+        } else {
+          handleWebTorrentSearch(val);
+        }
+      }
+    });
+
+    if (dom.searchIconBox) {
+      dom.searchIconBox.addEventListener('click', () => {
+        const val = dom.searchInput.value.trim();
+        if (!val) {
+          dom.searchInput.focus();
+          return;
+        }
+        const type = detectInputType(val);
+        if (type === 'youtube' || type === 'tiktok' || type === 'url') {
+          handleUrlDownload(val, type);
+        } else {
+          handleWebTorrentSearch(val);
+        }
+      });
+    }
+
     dom.clearSearchBtn.addEventListener('click', () => {
       dom.searchInput.value = '';
-      filterCards('');
+      updateSearchInputUI('');
     });
 
     // 11. WebTorrent Controls

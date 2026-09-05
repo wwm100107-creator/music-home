@@ -151,12 +151,20 @@
           <button class="history-circle-btn" id="historyForwardBtn" title="Tiến tới">&gt;</button>
         </div>
 
-        <div class="top-search-shell">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-          <input type="text" id="searchInput" placeholder="Tìm bài hát, nghệ sĩ hoặc giai điệu...">
+        <!-- SMART SEARCH BAR: Nhận diện Keyword hoặc Link YouTube / TikTok -->
+        <div class="top-search-shell" id="searchShell">
+          <div class="search-icon-box" id="searchIconBox">
+            <!-- Icon kính lúp mặc định cho Keyword -->
+            <svg class="search-icon-lens" id="searchIconLens" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <!-- Icon chim bồ câu đưa thư Ghibli xuất hiện khi dán Link URL -->
+            <span class="search-icon-pigeon hidden" id="searchIconPigeon" title="Liên kết đa phương tiện (YouTube / TikTok)">🕊️</span>
+          </div>
+
+          <input type="text" id="searchInput" placeholder="Tìm bài hát hoặc dán link YouTube/TikTok...">
+          <span class="search-link-tag hidden" id="searchLinkTag">YouTube MP3</span>
           <button id="clearSearchBtn" class="clear-search-btn hidden" title="Xóa">&times;</button>
         </div>
 
@@ -179,6 +187,46 @@
           </div>
         </div>
       </header>
+
+      <!-- 
+        ======================================================================
+        [SKILL: /animate & /animation-vocabulary]
+        HIỆU ỨNG SUSUWATARI KÉO CHIẾC LÁ NẶNG NHỌC (HEAVY LEAF DRAG LOADING)
+        Xuất hiện mượt mà khi isLoading === true trong lúc xử lý & tải MP3
+        ======================================================================
+      -->
+      <div class="susuwatari-leaf-loader hidden" id="leafLoader" aria-live="polite">
+        <div class="leaf-loader-box">
+          <div class="leaf-pull-stage">
+            <!-- Đội hình Susuwatari gắng sức kéo dây leo (Tug-of-war effort) -->
+            <div class="soot-sprite soot-1" title="Susuwatari 1">
+              <div class="soot-eyes"><span class="soot-pupil"></span><span class="soot-pupil"></span></div>
+              <span class="sweat-drop s1">💦</span>
+            </div>
+            <div class="soot-sprite soot-2" title="Susuwatari 2">
+              <div class="soot-eyes"><span class="soot-pupil"></span><span class="soot-pupil"></span></div>
+              <span class="sweat-drop s2">💦</span>
+            </div>
+            <div class="soot-sprite soot-3" title="Susuwatari 3">
+              <div class="soot-eyes"><span class="soot-pupil"></span><span class="soot-pupil"></span></div>
+            </div>
+
+            <!-- Dây thừng dây leo căng cứng rung bần bật -->
+            <div class="strained-vine-rope"></div>
+
+            <!-- Chiếc lá to nặng nhọc chứa âm thanh MP3 đang được kéo về -->
+            <div class="heavy-green-leaf">
+              <span class="leaf-rib"></span>
+              <span class="leaf-music-badge">🎵 MP3</span>
+            </div>
+          </div>
+
+          <div class="leaf-loader-text">
+            <div class="leaf-loader-title" id="loaderStatusTitle">Bầy Susuwatari đang kéo chiếc lá âm thanh...</div>
+            <div class="leaf-loader-sub" id="loaderStatusSub">Đang trích xuất MP3 từ liên kết & chuẩn bị lưu trữ vào máy</div>
+          </div>
+        </div>
+      </div>
 
       <!-- SECTION CHÍNH: PLAYLISTS GRID -->
       <section class="playlists-view-section">
