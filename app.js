@@ -1,32 +1,40 @@
 /**
  * ============================================================================
- * ANTIGRAVITY • COSMIC WEB MUSIC PLAYER
- * Fullstack Audio Engine & UI Controller
+ * MUSIC HOME • ISOMETRIC LO-FI SOUND STATION (2.5D ART)
+ * 100% Offline Engine • Vanilla ES6 • Pure Web Standards
  * ============================================================================
+ * 
+ * SKILLS APPLIED IN THIS MODULE:
+ * - [SKILL: /ponytail] : Tối giản hóa logic, YAGNI, dùng Native Web Audio & HTML5 Audio, không thư viện thừa.
+ * - [SKILL: /apple-design] : Phản hồi tức thì trên pointerdown, Direct Manipulation (kéo tua 1:1), ngắt chuyển động an toàn.
+ * - [SKILL: /animate & /improve-animations] : Điều khiển hoạt ảnh xoay đĩa than Isometric, cần gạt Tonearm cơ học, sóng Visualizer Lofi.
+ * - [SKILL: /impeccable] : Xử lý tương tác tinh tế, định dạng số liệu chính xác, dọn dẹp RAM triệt để (Zero Memory Leak).
  */
 
 (() => {
   'use strict';
 
-  // --- HẰNG SỐ & ĐỊNH DẠNG HỖ TRỢ ---
-  const SUPPORTED_EXTENSIONS = ['.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac', '.opus', '.weba'];
+  // --- HẰNG SỐ ĐỊNH DẠNG HỖ TRỢ (100% OFFLINE) ---
+  const SUPPORTED_AUDIO_EXT = ['.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac', '.opus', '.weba'];
 
-  // --- TRẠNG THÁI ỨNG DỤNG (STATE) ---
+  // --------------------------------------------------------------------------
+  // [SKILL: /ponytail] STATE MANAGEMENT: Quản lý trạng thái bài hát gọn gàng, rõ ràng
+  // --------------------------------------------------------------------------
   const state = {
-    playlist: [],          // Danh sách toàn bộ bài hát [{ id, file, name, title, artist, format, size, url }]
-    filteredIndices: [],   // Danh sách index của bài hát đang hiển thị theo tìm kiếm
-    currentIndex: -1,      // Vị trí bài hát hiện tại trong playlist
+    playlist: [],           // Danh sách gốc [{ id, file, name, title, artist, format, size, url }]
+    filteredIndices: [],    // Index các bài đang hiển thị khi tìm kiếm
+    currentIndex: -1,       // Index bài đang phát trong playlist
     isPlaying: false,
     volume: 0.8,
     previousVolume: 0.8,
     isMuted: false,
-    loopMode: 'all',       // 'off' | 'all' | 'one'
+    loopMode: 'all',        // 'off' | 'all' | 'one'
     isShuffle: false,
-    shuffleOrder: [],      // Thứ tự ngẫu nhiên của các index bài hát
-    shufflePosition: 0,    // Vị trí hiện tại trong mảng shuffleOrder
-    visualizerMode: 'bars',// 'bars' | 'wave'
-    audioContextInitialized: false,
-    isScrubbing: false     // Cờ khi đang kéo tua thanh tiến trình
+    shuffleOrder: [],       // Mảng hoán vị Fisher-Yates
+    shufflePosition: 0,
+    visualizerMode: 'bars', // 'bars' | 'wave'
+    isFlatView: false,      // Chuyển đổi góc nhìn 2.5D Isometric / Phẳng 2D
+    isScrubbing: false      // Cờ kéo tua thanh tiến trình
   };
 
   // --- DOM ELEMENTS CACHE ---
@@ -35,26 +43,33 @@
     folderInput: document.getElementById('folderInput'),
     fileInput: document.getElementById('fileInput'),
     
-    // Vinyl & Stage
+    // Isometric Scene & Controls
+    isoScene: document.getElementById('isoScene'),
+    viewToggleBtn: document.getElementById('viewToggleBtn'),
+    viewToggleText: document.getElementById('viewToggleText'),
+    
+    // Turntable & Vinyl
     vinylDisc: document.getElementById('vinylDisc'),
+    tonearm: document.getElementById('tonearm'),
     visualizerCanvas: document.getElementById('visualizerCanvas'),
     visualizerModeBtn: document.getElementById('visualizerModeBtn'),
-    visualizerModeText: document.getElementById('visualizerModeText'),
-    
-    // Metadata
+    visModeLabel: document.getElementById('visModeLabel'),
+
+    // Retro LCD Display
     trackTitle: document.getElementById('trackTitle'),
     trackArtist: document.getElementById('trackArtist'),
     trackFormat: document.getElementById('trackFormat'),
-    
-    // Progress
+    playStatusText: document.getElementById('playStatusText'),
+
+    // Progress Bar
     progressContainer: document.getElementById('progressContainer'),
     progressBar: document.getElementById('progressBar'),
     progressThumb: document.getElementById('progressThumb'),
     progressHoverTime: document.getElementById('progressHoverTime'),
     currentTime: document.getElementById('currentTime'),
     totalDuration: document.getElementById('totalDuration'),
-    
-    // Controls
+
+    // Mechanical Tactile Buttons
     playPauseBtn: document.getElementById('playPauseBtn'),
     playIcon: document.getElementById('playIcon'),
     pauseIcon: document.getElementById('pauseIcon'),
@@ -63,68 +78,59 @@
     shuffleBtn: document.getElementById('shuffleBtn'),
     loopBtn: document.getElementById('loopBtn'),
     loopBadge: document.getElementById('loopBadge'),
-    
+
     // Volume
     muteBtn: document.getElementById('muteBtn'),
     volumeHighIcon: document.getElementById('volumeHighIcon'),
     volumeMutedIcon: document.getElementById('volumeMutedIcon'),
     volumeSlider: document.getElementById('volumeSlider'),
     volumePercent: document.getElementById('volumePercent'),
-    
-    // Playlist & Search
+
+    // Playlist
     playlistCount: document.getElementById('playlistCount'),
     searchInput: document.getElementById('searchInput'),
     clearSearchBtn: document.getElementById('clearSearchBtn'),
+    folderNameBadge: document.getElementById('folderNameBadge'),
     playlistContainer: document.getElementById('playlistContainer'),
     emptyState: document.getElementById('emptyState'),
     songList: document.getElementById('songList'),
-    folderNameBadge: document.getElementById('folderNameBadge'),
-    
+
     // Toast
     toast: document.getElementById('toast')
   };
 
-  // --- WEB AUDIO API CHO VISUALIZER ---
+  // --------------------------------------------------------------------------
+  // [SKILL: /animate & /impeccable] WEB AUDIO API & ISOMETRIC CANVAS VISUALIZER
+  // --------------------------------------------------------------------------
   let audioCtx = null;
   let analyser = null;
   let audioSource = null;
   let dataArray = null;
   let canvasCtx = null;
-  let animationFrameId = null;
+  let animId = null;
 
-  /**
-   * Khởi tạo Web Audio API
-   * Lưu ý: Trình duyệt yêu cầu cử chỉ của người dùng (click) trước khi AudioContext chạy
-   */
   function initAudioContext() {
-    if (state.audioContextInitialized) return;
+    if (audioCtx) return;
     try {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) return;
+      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtxClass) return;
 
-      audioCtx = new AudioContextClass();
+      audioCtx = new AudioCtxClass();
       analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 128; // 64 bins tần số mượt mà
+      analyser.fftSize = 128;
       analyser.smoothingTimeConstant = 0.8;
 
-      // Nối MediaElementAudioSourceNode từ thẻ <audio>
       audioSource = audioCtx.createMediaElementSource(dom.audio);
       audioSource.connect(analyser);
       analyser.connect(audioCtx.destination);
 
-      const bufferLength = analyser.frequencyBinCount;
-      dataArray = new Uint8Array(bufferLength);
-
-      state.audioContextInitialized = true;
+      dataArray = new Uint8Array(analyser.frequencyBinCount);
     } catch (err) {
-      console.warn('Web Audio API kết nối bị giới hạn hoặc chạy trên môi trường file tĩnh, tự động kích hoạt Visualizer mô phỏng:', err);
+      console.warn('Môi trường file:// kích hoạt bộ mô phỏng sóng Lofi tự động:', err);
     }
   }
 
-  /**
-   * Vẽ Canvas Audio Visualizer
-   */
-  function initVisualizerCanvas() {
+  function initCanvas() {
     canvasCtx = dom.visualizerCanvas.getContext('2d');
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
@@ -136,14 +142,12 @@
     const dpr = window.devicePixelRatio || 1;
     dom.visualizerCanvas.width = rect.width * dpr;
     dom.visualizerCanvas.height = rect.height * dpr;
-    if (canvasCtx) {
-      canvasCtx.scale(dpr, dpr);
-    }
+    if (canvasCtx) canvasCtx.scale(dpr, dpr);
   }
 
-  let idlePhase = 0;
+  let lofiPhase = 0;
   function renderVisualizer() {
-    animationFrameId = requestAnimationFrame(renderVisualizer);
+    animId = requestAnimationFrame(renderVisualizer);
     if (!canvasCtx) return;
 
     const width = dom.visualizerCanvas.getBoundingClientRect().width;
@@ -152,10 +156,8 @@
     canvasCtx.clearRect(0, 0, width, height);
 
     let hasRealData = false;
-    if (state.audioContextInitialized && analyser && state.isPlaying) {
-      if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
+    if (audioCtx && analyser && state.isPlaying) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
       if (state.visualizerMode === 'bars') {
         analyser.getByteFrequencyData(dataArray);
       } else {
@@ -165,84 +167,71 @@
     }
 
     if (state.visualizerMode === 'bars') {
-      // --- CHẾ ĐỘ 1: CỘT TẦN SỐ NEON ĐỐI XỨNG ---
-      const barCount = 36;
-      const barWidth = (width / barCount) * 0.65;
-      const barSpacing = (width / barCount);
-      const gradient = canvasCtx.createLinearGradient(0, height, 0, 0);
-      gradient.addColorStop(0, 'rgba(121, 40, 202, 0.1)');
-      gradient.addColorStop(0.5, 'rgba(0, 242, 254, 0.6)');
-      gradient.addColorStop(1, 'rgba(255, 0, 128, 0.9)');
-
-      canvasCtx.fillStyle = gradient;
+      // --- Chế độ 1: Cột tần số Lofi Pastel ---
+      const barCount = 28;
+      const barWidth = (width / barCount) * 0.55;
+      const barSpacing = width / barCount;
 
       for (let i = 0; i < barCount; i++) {
-        let barHeight = 0;
+        let barH = 0;
         if (hasRealData && dataArray) {
-          const sampleIndex = Math.floor((i / barCount) * (dataArray.length * 0.75));
-          const val = dataArray[sampleIndex] || 0;
-          barHeight = (val / 255) * (height * 0.65);
+          const sample = Math.floor((i / barCount) * (dataArray.length * 0.7));
+          barH = ((dataArray[sample] || 0) / 255) * (height * 0.65);
         } else if (state.isPlaying) {
-          // Mô phỏng sóng âm sinh động nếu analyser bị hạn chế
-          const wave = Math.sin(idlePhase + i * 0.3) * 0.5 + 0.5;
-          barHeight = (wave * 0.4 + 0.1) * height;
+          const wave = Math.sin(lofiPhase + i * 0.35) * 0.5 + 0.5;
+          barH = (wave * 0.45 + 0.1) * height;
         } else {
-          // Trạng thái nghỉ (Idle glow)
-          const idleWave = Math.sin(idlePhase * 0.5 + i * 0.2) * 0.5 + 0.5;
-          barHeight = 4 + idleWave * 8;
+          barH = 4 + Math.sin(lofiPhase * 0.4 + i * 0.25) * 3;
         }
 
         const x = i * barSpacing + (barSpacing - barWidth) / 2;
-        const y = height - barHeight;
+        const y = height - barH - 8;
 
-        // Vẽ cột bo góc nhẹ ở đỉnh
+        // Gradient pastel ấm áp phong cách Lofi Room
+        const grad = canvasCtx.createLinearGradient(0, height, 0, y);
+        grad.addColorStop(0, 'rgba(42, 157, 143, 0.2)');
+        grad.addColorStop(0.6, 'rgba(255, 209, 102, 0.7)');
+        grad.addColorStop(1, 'rgba(255, 107, 107, 0.9)');
+
+        canvasCtx.fillStyle = grad;
         canvasCtx.beginPath();
-        canvasCtx.roundRect(x, y, barWidth, barHeight, [3, 3, 0, 0]);
+        canvasCtx.roundRect(x, y, barWidth, barH, [4, 4, 1, 1]);
         canvasCtx.fill();
       }
     } else {
-      // --- CHẾ ĐỘ 2: SÓNG DAO ĐỘNG OSCILLOSCOPE CYBERPUNK ---
+      // --- Chế độ 2: Sóng mềm Lofi Oscilloscope ---
       canvasCtx.beginPath();
-      canvasCtx.lineWidth = 2.5;
-      canvasCtx.strokeStyle = 'rgba(0, 242, 254, 0.85)';
-      canvasCtx.shadowColor = '#00f2fe';
-      canvasCtx.shadowBlur = 12;
+      canvasCtx.lineWidth = 3;
+      canvasCtx.strokeStyle = 'rgba(255, 107, 107, 0.85)';
 
-      const sliceWidth = width / 40;
+      const sliceW = width / 32;
       let x = 0;
 
-      for (let i = 0; i <= 40; i++) {
+      for (let i = 0; i <= 32; i++) {
         let v = 0.5;
         if (hasRealData && dataArray) {
-          const sampleIndex = Math.floor((i / 40) * dataArray.length);
-          v = (dataArray[sampleIndex] || 128) / 255.0;
+          const sample = Math.floor((i / 32) * dataArray.length);
+          v = (dataArray[sample] || 128) / 255.0;
         } else if (state.isPlaying) {
-          v = 0.5 + Math.sin(idlePhase * 2 + i * 0.4) * 0.25;
+          v = 0.5 + Math.sin(lofiPhase * 1.5 + i * 0.3) * 0.2;
         } else {
-          v = 0.5 + Math.sin(idlePhase + i * 0.15) * 0.05;
+          v = 0.5 + Math.sin(lofiPhase * 0.5 + i * 0.15) * 0.05;
         }
 
         const y = v * height;
-        if (i === 0) {
-          canvasCtx.moveTo(x, y);
-        } else {
-          canvasCtx.lineTo(x, y);
-        }
-        x += sliceWidth;
+        if (i === 0) canvasCtx.moveTo(x, y);
+        else canvasCtx.lineTo(x, y);
+        x += sliceW;
       }
       canvasCtx.stroke();
-      canvasCtx.shadowBlur = 0; // reset shadow
     }
 
-    idlePhase += state.isPlaying ? 0.08 : 0.02;
+    lofiPhase += state.isPlaying ? 0.07 : 0.015;
   }
 
-  // --- QUẢN LÝ DANH SÁCH & TẬP TIN NHẠC ---
-
-  /**
-   * Xử lý nạp FileList từ thẻ input hoặc sự kiện Drag & Drop
-   * @param {FileList|File[]} fileList
-   */
+  // --------------------------------------------------------------------------
+  // [SKILL: /ponytail] XỬ LÝ NHẬP TẬP TIN & THƯ MỤC CỤC BỘ (100% OFFLINE)
+  // --------------------------------------------------------------------------
   function handleFiles(fileList) {
     if (!fileList || fileList.length === 0) return;
 
@@ -251,124 +240,94 @@
 
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
-      const fileName = file.name.toLowerCase();
-
-      // Kiểm tra file có đúng định dạng audio hỗ trợ không
+      const lower = file.name.toLowerCase();
       const isAudio = file.type.startsWith('audio/') || 
-                      SUPPORTED_EXTENSIONS.some(ext => fileName.endsWith(ext));
+                      SUPPORTED_AUDIO_EXT.some(ext => lower.endsWith(ext));
 
       if (isAudio) {
-        // Tách đường dẫn để lấy tên thư mục mẹ
         if (!detectedFolder && file.webkitRelativePath) {
-          const parts = file.webkitRelativePath.split('/');
-          if (parts.length > 1) {
-            detectedFolder = parts[0];
-          }
+          const segments = file.webkitRelativePath.split('/');
+          if (segments.length > 1) detectedFolder = segments[0];
         }
 
-        // Tạo metadata hiển thị
-        const cleanTitle = cleanFileName(file.name);
-        const format = getFileExtension(file.name).toUpperCase();
-        const sizeFormatted = formatFileSize(file.size);
-
         newTracks.push({
-          id: 'track_' + Date.now() + '_' + i,
+          id: 'trk_' + Date.now() + '_' + i,
           file: file,
           name: file.name,
-          title: cleanTitle,
-          artist: detectedFolder || 'Tập tin cục bộ',
-          format: format || 'AUDIO',
-          size: sizeFormatted,
-          url: null // Sẽ tạo qua URL.createObjectURL khi phát
+          title: cleanFileName(file.name),
+          artist: detectedFolder || 'Tập tin máy',
+          format: getExtension(file.name).toUpperCase() || 'AUDIO',
+          size: formatBytes(file.size),
+          url: null // Tạo blob URL khi phát để tiết kiệm RAM
         });
       }
     }
 
     if (newTracks.length === 0) {
-      showToast('Không tìm thấy file âm thanh hợp lệ trong thư mục!');
+      showToast('Không tìm thấy file nhạc hợp lệ (.mp3, .wav, .flac)!');
       return;
     }
 
-    // Sắp xếp bài hát theo thứ tự bảng chữ cái tự nhiên (01, 02, 10...)
+    // Sắp xếp tự nhiên theo tên (Track 01, Track 02...)
     newTracks.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
-    // Thu hồi bộ nhớ các ObjectURL cũ để tránh rò rỉ RAM (Memory Leak)
-    state.playlist.forEach(track => {
-      if (track.url) URL.revokeObjectURL(track.url);
+    // [SKILL: /impeccable] Dọn dẹp URL cũ giải phóng bộ nhớ
+    state.playlist.forEach(t => {
+      if (t.url) URL.revokeObjectURL(t.url);
     });
 
     state.playlist = newTracks;
-    state.filteredIndices = state.playlist.map((_, index) => index);
-    
-    // Cập nhật giao diện thư mục
-    if (detectedFolder) {
-      dom.folderNameBadge.textContent = `Thư mục: ${detectedFolder}`;
-    } else {
-      dom.folderNameBadge.textContent = `Nguồn: ${newTracks.length} files`;
-    }
+    state.filteredIndices = state.playlist.map((_, i) => i);
 
-    // Khởi tạo thứ tự Shuffle
-    if (state.isShuffle) {
-      buildShuffleOrder(0);
-    }
+    dom.folderNameBadge.textContent = detectedFolder ? `Thư mục: ${detectedFolder}` : `Đã nạp: ${newTracks.length} files`;
+
+    if (state.isShuffle) buildShuffleOrder(0);
 
     renderPlaylist();
     updatePlaylistCount();
-
-    // Tự động load và phát bài đầu tiên
     loadTrack(0, true);
-    showToast(`Đã nạp ${newTracks.length} bài hát thành công!`);
+    showToast(`Đã mở ${newTracks.length} bài hát thành công!`);
   }
 
-  /**
-   * Làm sạch tên file để hiển thị làm tiêu đề bài hát mượt mà
-   */
   function cleanFileName(fileName) {
-    const lastDot = fileName.lastIndexOf('.');
-    let base = lastDot !== -1 ? fileName.substring(0, lastDot) : fileName;
-    // Bỏ số thứ tự đầu bài hát ví dụ: "01. Song", "01 - Song"
-    base = base.replace(/^\d+[\s.-]+/, '');
-    // Thay thế dấu gạch dưới thành khoảng trắng
-    base = base.replace(/_/g, ' ');
-    return base.trim() || fileName;
+    const dot = fileName.lastIndexOf('.');
+    let name = dot !== -1 ? fileName.substring(0, dot) : fileName;
+    name = name.replace(/^\d+[\s.-]+/, '');
+    return name.replace(/_/g, ' ').trim() || fileName;
   }
 
-  function getFileExtension(fileName) {
-    const lastDot = fileName.lastIndexOf('.');
-    return lastDot !== -1 ? fileName.substring(lastDot + 1) : '';
+  function getExtension(fileName) {
+    const dot = fileName.lastIndexOf('.');
+    return dot !== -1 ? fileName.substring(dot + 1) : '';
   }
 
-  function formatFileSize(bytes) {
-    if (!bytes || bytes === 0) return '0 B';
+  function formatBytes(bytes) {
+    if (!bytes) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   }
 
-  // --- ĐIỀU KHIỂN PHÁT NHẠC (AUDIO CONTROLS) ---
-
-  /**
-   * Nạp bài hát theo chỉ mục (Index)
-   * Quản lý tạo/thu hồi URL.createObjectURL tối ưu bộ nhớ
-   */
+  // --------------------------------------------------------------------------
+  // [SKILL: /animate & /apple-design] ĐIỀU KHIỂN PHÁT NHẠC VẬT LÝ
+  // --------------------------------------------------------------------------
   function loadTrack(index, autoPlay = false) {
     if (index < 0 || index >= state.playlist.length) return;
 
     const track = state.playlist[index];
 
-    // Thu hồi ObjectURL bài hát trước đó nếu có
+    // Thu hồi URL bài trước
     if (state.currentIndex >= 0 && state.currentIndex !== index) {
-      const prevTrack = state.playlist[state.currentIndex];
-      if (prevTrack && prevTrack.url) {
-        URL.revokeObjectURL(prevTrack.url);
-        prevTrack.url = null;
+      const prev = state.playlist[state.currentIndex];
+      if (prev && prev.url) {
+        URL.revokeObjectURL(prev.url);
+        prev.url = null;
       }
     }
 
     state.currentIndex = index;
 
-    // Tạo blob URL trực tiếp từ File
     if (!track.url) {
       track.url = URL.createObjectURL(track.file);
     }
@@ -376,45 +335,37 @@
     dom.audio.src = track.url;
     dom.audio.load();
 
-    // Cập nhật thông tin giao diện
+    // Cập nhật màn hình LCD
     dom.trackTitle.textContent = track.title;
     dom.trackTitle.title = track.name;
-    dom.trackArtist.textContent = track.artist;
+    dom.trackArtist.textContent = `${track.artist} • ${track.size}`;
     dom.trackFormat.textContent = track.format;
 
-    // Reset thanh tiến trình
-    updateProgressBar(0, 0);
+    updateProgress(0, 0);
+    updateActiveCard();
 
-    // Cập nhật vị trí active trong danh sách phát
-    updateActivePlaylistItem();
-
-    if (autoPlay) {
-      playAudio();
-    } else {
-      pauseAudio();
-    }
+    if (autoPlay) playAudio();
+    else pauseAudio();
   }
 
   function playAudio() {
     initAudioContext();
-    if (audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 
     dom.audio.play().then(() => {
       state.isPlaying = true;
-      updatePlayPauseUI();
+      updatePlaybackUI();
     }).catch(err => {
-      console.warn('Trình duyệt chặn autoplay tự động trước tương tác người dùng:', err);
+      console.warn('Autoplay cần tương tác chuột đầu tiên:', err);
       state.isPlaying = false;
-      updatePlayPauseUI();
+      updatePlaybackUI();
     });
   }
 
   function pauseAudio() {
     dom.audio.pause();
     state.isPlaying = false;
-    updatePlayPauseUI();
+    updatePlaybackUI();
   }
 
   function togglePlayPause() {
@@ -426,33 +377,31 @@
       loadTrack(0, true);
       return;
     }
-    if (state.isPlaying) {
-      pauseAudio();
-    } else {
-      playAudio();
-    }
+    if (state.isPlaying) pauseAudio();
+    else playAudio();
   }
 
-  function updatePlayPauseUI() {
+  function updatePlaybackUI() {
     if (state.isPlaying) {
       dom.playIcon.classList.add('hidden');
       dom.pauseIcon.classList.remove('hidden');
       dom.vinylDisc.classList.add('playing');
+      dom.tonearm.classList.add('active'); // Cần gạt hạ xuống đĩa
+      dom.playStatusText.textContent = 'PLAYING';
+      dom.playStatusText.style.color = 'var(--accent-mint)';
     } else {
       dom.playIcon.classList.remove('hidden');
       dom.pauseIcon.classList.add('hidden');
       dom.vinylDisc.classList.remove('playing');
+      dom.tonearm.classList.remove('active'); // Cần gạt nhấc về vị trí nghỉ
+      dom.playStatusText.textContent = 'PAUSED';
+      dom.playStatusText.style.color = 'var(--accent-sun)';
     }
   }
 
-  /**
-   * Chuyển sang bài tiếp theo (Next Track)
-   * Tương thích hoàn hảo với chế độ Shuffle và Loop
-   */
   function nextTrack(isAutoEnded = false) {
     if (state.playlist.length === 0) return;
 
-    // Nếu đang bật chế độ lặp lại 1 bài và bài hát tự kết thúc
     if (isAutoEnded && state.loopMode === 'one') {
       dom.audio.currentTime = 0;
       dom.audio.play();
@@ -463,37 +412,29 @@
       state.shufflePosition++;
       if (state.shufflePosition >= state.shuffleOrder.length) {
         if (state.loopMode === 'all') {
-          // Tạo lại mảng Shuffle mới để không bị lặp lại thứ tự cũ
           buildShuffleOrder();
           state.shufflePosition = 0;
         } else {
-          // Dừng khi hết danh sách ngẫu nhiên
           pauseAudio();
-          showToast('Đã phát hết danh sách bài hát!');
+          showToast('Đã phát hết danh sách ngẫu nhiên!');
           return;
         }
       }
-      const nextIdx = state.shuffleOrder[state.shufflePosition];
-      loadTrack(nextIdx, true);
+      loadTrack(state.shuffleOrder[state.shufflePosition], true);
     } else {
-      let nextIndex = state.currentIndex + 1;
-      if (nextIndex >= state.playlist.length) {
-        if (state.loopMode === 'all') {
-          nextIndex = 0;
-        } else {
+      let next = state.currentIndex + 1;
+      if (next >= state.playlist.length) {
+        if (state.loopMode === 'all') next = 0;
+        else {
           pauseAudio();
           showToast('Đã phát hết danh sách bài hát!');
           return;
         }
       }
-      loadTrack(nextIndex, true);
+      loadTrack(next, true);
     }
   }
 
-  /**
-   * Quay lại bài trước đó (Previous Track)
-   * Nếu đã nghe hơn 3 giây: tua về đầu bài. Nếu dưới 3s: quay lại bài trước.
-   */
   function prevTrack() {
     if (state.playlist.length === 0) return;
 
@@ -505,49 +446,34 @@
     if (state.isShuffle) {
       if (state.shufflePosition > 0) {
         state.shufflePosition--;
-        const prevIdx = state.shuffleOrder[state.shufflePosition];
-        loadTrack(prevIdx, true);
+        loadTrack(state.shuffleOrder[state.shufflePosition], true);
       } else {
         dom.audio.currentTime = 0;
       }
     } else {
-      let prevIndex = state.currentIndex - 1;
-      if (prevIndex < 0) {
-        prevIndex = state.playlist.length - 1;
-      }
-      loadTrack(prevIndex, true);
+      let prev = state.currentIndex - 1;
+      if (prev < 0) prev = state.playlist.length - 1;
+      loadTrack(prev, true);
     }
   }
 
-  // --- THUẬT TOÁN SHUFFLE & LOOP MODES ---
-
-  /**
-   * Thuật toán tráo bài Fisher-Yates Shuffling
-   * Đảm bảo mọi hoán vị đều có xác suất bằng nhau, đồng thời giữ nguyên bài đang nghe ở vị trí số 0
-   */
-  function buildShuffleOrder(anchorCurrentIndex = state.currentIndex) {
+  // --------------------------------------------------------------------------
+  // [SKILL: /ponytail] THUẬT TOÁN SHUFFLE & LOOP MODES GỌN GÀNG
+  // --------------------------------------------------------------------------
+  function buildShuffleOrder(anchorIndex = state.currentIndex) {
     const total = state.playlist.length;
-    if (total === 0) {
-      state.shuffleOrder = [];
-      return;
-    }
-
     const indices = [];
     for (let i = 0; i < total; i++) {
-      if (i !== anchorCurrentIndex) indices.push(i);
+      if (i !== anchorIndex) indices.push(i);
     }
-
-    // Fisher-Yates Shuffle
+    // Fisher-Yates O(n)
     for (let i = indices.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [indices[i], indices[j]] = [indices[j], indices[i]];
     }
-
-    // Đặt bài hiện tại lên đầu mảng shuffleOrder
-    if (anchorCurrentIndex >= 0 && anchorCurrentIndex < total) {
-      indices.unshift(anchorCurrentIndex);
+    if (anchorIndex >= 0 && anchorIndex < total) {
+      indices.unshift(anchorIndex);
     }
-
     state.shuffleOrder = indices;
     state.shufflePosition = 0;
   }
@@ -557,63 +483,60 @@
     if (state.isShuffle) {
       buildShuffleOrder(state.currentIndex);
       dom.shuffleBtn.classList.add('active');
-      showToast('Chế độ phát ngẫu nhiên: Bật');
+      showToast('Phát ngẫu nhiên: BẬT');
     } else {
       dom.shuffleBtn.classList.remove('active');
-      showToast('Chế độ phát ngẫu nhiên: Tắt');
+      showToast('Phát ngẫu nhiên: TẮT');
     }
   }
 
-  /**
-   * Chuyển đổi 3 trạng thái Lặp lại:
-   * 'off' (Tắt) -> 'all' (Lặp toàn bộ) -> 'one' (Lặp 1 bài) -> 'off'
-   */
   function cycleLoopMode() {
     if (state.loopMode === 'all') {
       state.loopMode = 'one';
       dom.loopBtn.classList.add('active', 'loop-one');
-      showToast('Lặp lại bài hát hiện tại');
+      showToast('Lặp lại: 1 BÀI HIỆN TẠI');
     } else if (state.loopMode === 'one') {
       state.loopMode = 'off';
       dom.loopBtn.classList.remove('active', 'loop-one');
-      showToast('Không lặp lại');
+      showToast('Lặp lại: TẮT');
     } else {
       state.loopMode = 'all';
       dom.loopBtn.classList.add('active');
       dom.loopBtn.classList.remove('loop-one');
-      showToast('Lặp lại toàn bộ danh sách');
+      showToast('Lặp lại: TOÀN BỘ DANH SÁCH');
     }
   }
 
-  // --- THANH TIẾN TRÌNH & VOLUME ---
-
-  function updateProgressBar(current, duration) {
-    const percent = duration > 0 ? (current / duration) * 100 : 0;
-    dom.progressBar.style.width = `${percent}%`;
-    dom.progressThumb.style.left = `${percent}%`;
-    dom.currentTime.textContent = formatTime(current);
-    dom.totalDuration.textContent = formatTime(duration);
+  // --------------------------------------------------------------------------
+  // [SKILL: /apple-design] DIRECT MANIPULATION: THANH TIẾN TRÌNH & VOLUME
+  // --------------------------------------------------------------------------
+  function updateProgress(curr, dur) {
+    const pct = dur > 0 ? (curr / dur) * 100 : 0;
+    dom.progressBar.style.width = `${pct}%`;
+    dom.progressThumb.style.left = `${pct}%`;
+    dom.currentTime.textContent = formatSec(curr);
+    dom.totalDuration.textContent = formatSec(dur);
   }
 
-  function formatTime(seconds) {
+  function formatSec(seconds) {
     if (!seconds || isNaN(seconds)) return '00:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
   }
 
-  function seekByMouseEvent(e) {
+  function seekByPointer(e) {
     const rect = dom.progressContainer.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+    const x = e.clientX - rect.left;
+    const ratio = Math.max(0, Math.min(1, x / rect.width));
     if (dom.audio.duration) {
       dom.audio.currentTime = ratio * dom.audio.duration;
-      updateProgressBar(dom.audio.currentTime, dom.audio.duration);
+      updateProgress(dom.audio.currentTime, dom.audio.duration);
     }
   }
 
-  function handleVolumeChange(val) {
-    state.volume = Math.max(0, Math.min(1, parseFloat(val)));
+  function setVolume(v) {
+    state.volume = Math.max(0, Math.min(1, parseFloat(v)));
     dom.audio.volume = state.volume;
     dom.volumeSlider.value = state.volume;
     dom.volumePercent.textContent = `${Math.round(state.volume * 100)}%`;
@@ -632,15 +555,16 @@
 
   function toggleMute() {
     if (state.isMuted) {
-      handleVolumeChange(state.previousVolume > 0 ? state.previousVolume : 0.5);
+      setVolume(state.previousVolume > 0 ? state.previousVolume : 0.5);
     } else {
       state.previousVolume = state.volume;
-      handleVolumeChange(0);
+      setVolume(0);
     }
   }
 
-  // --- DANH SÁCH PHÁT (PLAYLIST UI) ---
-
+  // --------------------------------------------------------------------------
+  // DANH SÁCH THẺ BÀI HÁT XẾP TẦNG 2.5D (PLAYLIST CARDS)
+  // --------------------------------------------------------------------------
   function renderPlaylist() {
     if (state.playlist.length === 0) {
       dom.emptyState.classList.remove('hidden');
@@ -649,50 +573,43 @@
     }
 
     dom.emptyState.classList.add('hidden');
-    const fragment = document.createDocumentFragment();
+    const frag = document.createDocumentFragment();
 
-    state.filteredIndices.forEach((playlistIndex, displayIndex) => {
-      const track = state.playlist[playlistIndex];
+    state.filteredIndices.forEach((playlistIdx, displayIdx) => {
+      const track = state.playlist[playlistIdx];
       const li = document.createElement('li');
-      li.className = 'song-item' + (playlistIndex === state.currentIndex ? ' active' : '');
-      li.dataset.index = playlistIndex;
+      li.className = 'iso-card-item' + (playlistIdx === state.currentIndex ? ' active' : '');
+      li.dataset.index = playlistIdx;
 
       li.innerHTML = `
-        <div class="song-main-info">
-          <div class="song-index">
-            <span class="song-index-text">${displayIndex + 1}</span>
-            <div class="eq-bars">
-              <span class="eq-bar"></span>
-              <span class="eq-bar"></span>
-              <span class="eq-bar"></span>
-            </div>
-          </div>
-          <div class="song-text-meta">
-            <span class="song-name" title="${track.name}">${track.title}</span>
-            <div class="song-sub">${track.size} • ${track.format}</div>
+        <div class="card-left">
+          <div class="card-num-box">${displayIdx + 1}</div>
+          <div class="card-text">
+            <span class="card-title" title="${track.name}">${track.title}</span>
+            <div class="card-meta-line">${track.size} • ${track.format}</div>
           </div>
         </div>
-        <span class="song-side-badge">${track.format}</span>
+        <span class="card-right-badge">${track.format}</span>
       `;
 
+      // [SKILL: /apple-design] Phản hồi trực tiếp khi nhấp
       li.addEventListener('click', () => {
-        loadTrack(playlistIndex, true);
+        loadTrack(playlistIdx, true);
       });
 
-      fragment.appendChild(li);
+      frag.appendChild(li);
     });
 
     dom.songList.innerHTML = '';
-    dom.songList.appendChild(fragment);
+    dom.songList.appendChild(frag);
   }
 
-  function updateActivePlaylistItem() {
-    const items = dom.songList.querySelectorAll('.song-item');
+  function updateActiveCard() {
+    const items = dom.songList.querySelectorAll('.iso-card-item');
     items.forEach(item => {
       const idx = parseInt(item.dataset.index, 10);
       if (idx === state.currentIndex) {
         item.classList.add('active');
-        // Cuộn mượt mà đưa bài hát đang phát vào tầm nhìn
         item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       } else {
         item.classList.remove('active');
@@ -701,61 +618,81 @@
   }
 
   function updatePlaylistCount() {
-    const count = state.playlist.length;
-    dom.playlistCount.textContent = `${count} bài hát`;
+    dom.playlistCount.textContent = `${state.playlist.length} Bài Hát`;
   }
 
-  function filterPlaylist(keyword) {
-    const query = keyword.trim().toLowerCase();
-    if (!query) {
+  function filterCards(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) {
       state.filteredIndices = state.playlist.map((_, i) => i);
       dom.clearSearchBtn.classList.add('hidden');
     } else {
       dom.clearSearchBtn.classList.remove('hidden');
       state.filteredIndices = state.playlist
-        .map((track, i) => ({ track, i }))
-        .filter(({ track }) => track.name.toLowerCase().includes(query) || track.title.toLowerCase().includes(query))
+        .map((t, i) => ({ t, i }))
+        .filter(({ t }) => t.name.toLowerCase().includes(q) || t.title.toLowerCase().includes(q))
         .map(({ i }) => i);
     }
     renderPlaylist();
   }
 
-  // --- TOAST NOTIFICATIONS ---
-  let toastTimeout = null;
-  function showToast(message) {
-    clearTimeout(toastTimeout);
-    dom.toast.textContent = message;
+  // --------------------------------------------------------------------------
+  // TOAST THÔNG BÁO
+  // --------------------------------------------------------------------------
+  let toastTimer = null;
+  function showToast(msg) {
+    clearTimeout(toastTimer);
+    dom.toast.textContent = msg;
     dom.toast.classList.remove('hidden');
-    toastTimeout = setTimeout(() => {
+    toastTimer = setTimeout(() => {
       dom.toast.classList.add('hidden');
-    }, 2400);
+    }, 2200);
   }
 
-  // --- SỰ KIỆN LẮNG NGHE (EVENT LISTENERS) ---
+  // --------------------------------------------------------------------------
+  // CHUYỂN ĐỔI GÓC NHÌN 2.5D ISOMETRIC / PHẲNG 2D
+  // --------------------------------------------------------------------------
+  function toggleIsometricView() {
+    state.isFlatView = !state.isFlatView;
+    if (state.isFlatView) {
+      dom.isoScene.classList.add('flat-view');
+      dom.viewToggleText.textContent = 'Góc nhìn: 2D';
+      showToast('Đã chuyển sang góc nhìn phẳng 2D');
+    } else {
+      dom.isoScene.classList.remove('flat-view');
+      dom.viewToggleText.textContent = 'Góc nhìn: 2.5D';
+      showToast('Đã chuyển sang góc nhìn Isometric 2.5D');
+    }
+  }
 
-  function setupEventListeners() {
-    // 1. File & Folder Import
+  // --------------------------------------------------------------------------
+  // SỰ KIỆN TƯƠNG TÁC (EVENT LISTENERS)
+  // --------------------------------------------------------------------------
+  function setupEvents() {
+    // 1. Chuyển đổi góc nhìn
+    dom.viewToggleBtn.addEventListener('click', toggleIsometricView);
+
+    // 2. Nhập file & thư mục
     dom.folderInput.addEventListener('change', (e) => {
       handleFiles(e.target.files);
-      e.target.value = ''; // Reset để có thể chọn lại cùng folder
+      e.target.value = '';
     });
-
     dom.fileInput.addEventListener('change', (e) => {
       handleFiles(e.target.files);
       e.target.value = '';
     });
 
-    // Drag and drop trên toàn trang & playlist container
-    ['dragenter', 'dragover'].forEach(eventName => {
-      window.addEventListener(eventName, (e) => {
+    // Drag and Drop
+    ['dragenter', 'dragover'].forEach(name => {
+      window.addEventListener(name, (e) => {
         e.preventDefault();
         e.stopPropagation();
         dom.emptyState.classList.add('drag-over');
       }, false);
     });
 
-    ['dragleave', 'drop'].forEach(eventName => {
-      window.addEventListener(eventName, (e) => {
+    ['dragleave', 'drop'].forEach(name => {
+      window.addEventListener(name, (e) => {
         e.preventDefault();
         e.stopPropagation();
         dom.emptyState.classList.remove('drag-over');
@@ -763,104 +700,90 @@
     });
 
     window.addEventListener('drop', (e) => {
-      const dt = e.dataTransfer;
-      if (dt && dt.files && dt.files.length > 0) {
-        handleFiles(dt.files);
+      if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+        handleFiles(e.dataTransfer.files);
       }
     });
 
-    // 2. Audio Element Events
+    // 3. Sự kiện thẻ Audio
     dom.audio.addEventListener('timeupdate', () => {
       if (!state.isScrubbing && dom.audio.duration) {
-        updateProgressBar(dom.audio.currentTime, dom.audio.duration);
+        updateProgress(dom.audio.currentTime, dom.audio.duration);
       }
     });
-
     dom.audio.addEventListener('loadedmetadata', () => {
-      updateProgressBar(dom.audio.currentTime, dom.audio.duration);
+      updateProgress(dom.audio.currentTime, dom.audio.duration);
     });
-
     dom.audio.addEventListener('ended', () => {
       nextTrack(true);
     });
-
-    dom.audio.addEventListener('error', (e) => {
-      console.error('Lỗi khi phát tập tin âm thanh:', e);
-      showToast('Không thể phát file này (định dạng không hỗ trợ hoặc file bị lỗi)!');
+    dom.audio.addEventListener('error', () => {
+      showToast('Lỗi: Định dạng file không thể phát trực tiếp!');
       pauseAudio();
     });
 
-    // 3. Player Control Buttons
+    // 4. Các nút cơ học Playback
     dom.playPauseBtn.addEventListener('click', togglePlayPause);
     dom.nextBtn.addEventListener('click', () => nextTrack(false));
     dom.prevBtn.addEventListener('click', prevTrack);
     dom.shuffleBtn.addEventListener('click', toggleShuffle);
     dom.loopBtn.addEventListener('click', cycleLoopMode);
 
-    // 4. Seeking & Progress Bar Interaction
-    dom.progressContainer.addEventListener('mousedown', (e) => {
+    // 5. Thanh tiến trình (Pointer Events)
+    dom.progressContainer.addEventListener('pointerdown', (e) => {
       state.isScrubbing = true;
-      seekByMouseEvent(e);
+      dom.progressContainer.setPointerCapture(e.pointerId);
+      seekByPointer(e);
     });
 
-    window.addEventListener('mousemove', (e) => {
+    dom.progressContainer.addEventListener('pointermove', (e) => {
       if (state.isScrubbing) {
-        seekByMouseEvent(e);
+        seekByPointer(e);
       }
-    });
-
-    window.addEventListener('mouseup', () => {
-      state.isScrubbing = false;
-    });
-
-    // Tooltip thời gian khi hover trên thanh tiến trình
-    dom.progressContainer.addEventListener('mousemove', (e) => {
+      // Tooltip preview thời gian
       const rect = dom.progressContainer.getBoundingClientRect();
-      const hoverX = e.clientX - rect.left;
-      const ratio = Math.max(0, Math.min(1, hoverX / rect.width));
+      const x = e.clientX - rect.left;
+      const ratio = Math.max(0, Math.min(1, x / rect.width));
       if (dom.audio.duration) {
-        const hoverSecs = ratio * dom.audio.duration;
-        dom.progressHoverTime.textContent = formatTime(hoverSecs);
-        dom.progressHoverTime.style.left = `${hoverX}px`;
+        dom.progressHoverTime.textContent = formatSec(ratio * dom.audio.duration);
+        dom.progressHoverTime.style.left = `${x}px`;
         dom.progressHoverTime.style.opacity = '1';
       }
     });
 
-    dom.progressContainer.addEventListener('mouseleave', () => {
-      dom.progressHoverTime.style.opacity = '0';
+    dom.progressContainer.addEventListener('pointerup', (e) => {
+      state.isScrubbing = false;
+      try { dom.progressContainer.releasePointerCapture(e.pointerId); } catch (_) {}
     });
 
-    // 5. Volume Slider & Mute
-    dom.volumeSlider.addEventListener('input', (e) => {
-      handleVolumeChange(e.target.value);
+    dom.progressContainer.addEventListener('pointerleave', () => {
+      if (!state.isScrubbing) dom.progressHoverTime.style.opacity = '0';
     });
 
+    // 6. Chỉnh âm lượng & Mute
+    dom.volumeSlider.addEventListener('input', (e) => setVolume(e.target.value));
     dom.muteBtn.addEventListener('click', toggleMute);
 
-    // 6. Search Input
-    dom.searchInput.addEventListener('input', (e) => {
-      filterPlaylist(e.target.value);
-    });
-
+    // 7. Tìm kiếm
+    dom.searchInput.addEventListener('input', (e) => filterCards(e.target.value));
     dom.clearSearchBtn.addEventListener('click', () => {
       dom.searchInput.value = '';
-      filterPlaylist('');
+      filterCards('');
     });
 
-    // 7. Visualizer Mode Switch
+    // 8. Đổi chế độ Visualizer
     dom.visualizerModeBtn.addEventListener('click', () => {
       if (state.visualizerMode === 'bars') {
         state.visualizerMode = 'wave';
-        dom.visualizerModeText.textContent = 'Sóng Laser';
+        dom.visModeLabel.textContent = '〰️ Sóng Mềm';
       } else {
         state.visualizerMode = 'bars';
-        dom.visualizerModeText.textContent = 'Sóng Cột';
+        dom.visModeLabel.textContent = '📊 Cột Lofi';
       }
     });
 
-    // 8. Global Keyboard Shortcuts
+    // 9. Phím tắt toàn cục (Global Keyboard Shortcuts)
     window.addEventListener('keydown', (e) => {
-      // Bỏ qua khi người dùng đang gõ trong ô tìm kiếm
       if (e.target.tagName === 'INPUT') return;
 
       switch (e.code) {
@@ -878,11 +801,11 @@
           break;
         case 'ArrowUp':
           e.preventDefault();
-          handleVolumeChange(Math.min(1, state.volume + 0.05));
+          setVolume(Math.min(1, state.volume + 0.05));
           break;
         case 'ArrowDown':
           e.preventDefault();
-          handleVolumeChange(Math.max(0, state.volume - 0.05));
+          setVolume(Math.max(0, state.volume - 0.05));
           break;
         case 'KeyN':
           nextTrack(false);
@@ -903,13 +826,12 @@
     });
   }
 
-  // --- KHỞI CHẠY ỨNG DỤNG ---
+  // --- KHỞI ĐỘNG ỨNG DỤNG ---
   function init() {
-    handleVolumeChange(0.8);
-    // Khởi tạo mặc định Loop All
-    dom.loopBtn.classList.add('active');
-    initVisualizerCanvas();
-    setupEventListeners();
+    setVolume(0.8);
+    dom.loopBtn.classList.add('active'); // Mặc định lặp toàn bộ danh sách
+    initCanvas();
+    setupEvents();
   }
 
   document.addEventListener('DOMContentLoaded', init);

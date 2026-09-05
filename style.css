@@ -1,1130 +1,1358 @@
 /* ==========================================================================
-   ANTIGRAVITY • COSMIC WEB MUSIC PLAYER
-   Design System & Styling
+   MUSIC HOME • ISOMETRIC LO-FI SOUND STATION (2.5D ART)
+   100% Offline • Pure CSS Isometric Projection & Mechanical Tactile Motion
    ========================================================================== */
 
+/* --------------------------------------------------------------------------
+   [SKILL: /apple-design & /impeccable] DESIGN TOKENS & SYSTEM FOUNDATIONS
+   Typography, optical spacing, Lofi pastel palette inspired by cozy room art.
+   -------------------------------------------------------------------------- */
 :root {
-  /* Color Palette - Deep Space & Neon Aurora */
-  --bg-cosmos: #06070d;
-  --bg-surface: rgba(15, 18, 28, 0.75);
-  --bg-surface-elevated: rgba(23, 27, 43, 0.85);
-  --bg-input: rgba(10, 13, 22, 0.65);
-  
-  --border-glass: rgba(255, 255, 255, 0.08);
-  --border-glass-hover: rgba(255, 255, 255, 0.2);
-  --border-active: rgba(0, 242, 254, 0.4);
+  /* Bảng màu Lofi Pastel & Cozy Room Watercolor */
+  --bg-room: #1e2430;
+  --bg-room-grad: radial-gradient(circle at 20% 20%, #2f3b52 0%, #1a202c 70%, #121620 100%);
+  --wood-floor: #d4a373;
+  --wood-shadow: #bc8a5f;
+  --wood-highlight: #faedcd;
 
-  /* Neon Gradients */
-  --neon-cyan: #00f2fe;
-  --neon-purple: #7928ca;
-  --neon-pink: #ff0080;
-  --neon-blue: #3b82f6;
+  /* Khối Boombox Chassis (Vỏ máy phát dạng khối hộp 3D) */
+  --block-top: #fbf8f3;
+  --block-side: #e5ded3;
+  --block-edge: #cfc5b6;
+  --block-dark-edge: #a89b88;
+  --block-shadow: rgba(14, 18, 28, 0.45);
 
-  --accent-gradient: linear-gradient(135deg, #7928ca 0%, #4338ca 45%, #00f2fe 100%);
-  --accent-gradient-vibrant: linear-gradient(135deg, #ff0080 0%, #7928ca 50%, #00f2fe 100%);
-  
-  --shadow-neon-glow: 0 0 25px rgba(121, 40, 202, 0.35);
-  --shadow-cyan-glow: 0 0 20px rgba(0, 242, 254, 0.3);
-  --shadow-glass: 0 20px 50px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  /* Màu điểm nhấn Lofi & Pastel Neon */
+  --accent-teal: #2a9d8f;
+  --accent-mint: #52b788;
+  --accent-coral: #ff6b6b;
+  --accent-pink: #f72585;
+  --accent-sun: #ffd166;
+  --accent-lavender: #7209b7;
 
-  /* Typography */
-  --font-display: 'Syne', sans-serif;
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  /* Màn hình LCD cổ điển */
+  --lcd-bg: #111e19;
+  --lcd-glow: #2ec4b6;
+  --lcd-text: #b7e4c7;
+  --lcd-subtext: #74a892;
 
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  /* Typography hệ thống (100% Offline - Không phụ thuộc CDN) */
+  --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SF Mono", Menlo, Consolas, Monaco, "Liberation Mono", monospace;
 
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-full: 9999px;
-
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-spring: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  /* Thông số khối 3D Isometric Extrusion */
+  --iso-depth: 8px;
+  --iso-depth-active: 2px;
+  --iso-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --spring-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* Reset & Box Sizing */
+/* Reset & Box-Sizing */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background-color: var(--bg-cosmos);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
+  font-family: var(--font-stack);
+  background: var(--bg-room-grad);
+  color: #2d3748;
   min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   overflow-x: hidden;
   position: relative;
+  display: flex;
+  flex-direction: column;
   user-select: none;
 }
 
-/* Ambient Floating Lights (Cosmic Aurora) */
-.ambient-glow {
-  position: fixed;
-  border-radius: 50%;
-  filter: blur(100px);
+/* --------------------------------------------------------------------------
+   HIỆU ỨNG ÁNH SÁNG PHÒNG & NOISE GRAIN
+   -------------------------------------------------------------------------- */
+.svg-noise-filter {
+  position: absolute;
+  width: 0;
+  height: 0;
   pointer-events: none;
-  z-index: 0;
-  opacity: 0.45;
-  animation: floatAmbient 18s ease-in-out infinite alternate;
 }
 
-.glow-1 {
-  width: 450px;
-  height: 450px;
-  top: -10%;
-  left: 10%;
-  background: radial-gradient(circle, rgba(121, 40, 202, 0.55), transparent 70%);
+.noise-overlay {
+  position: fixed;
+  inset: 0;
+  filter: url(#cozy-grain);
+  opacity: 0.25;
+  pointer-events: none;
+  z-index: 99;
 }
 
-.glow-2 {
-  width: 500px;
-  height: 500px;
-  bottom: -15%;
-  right: 10%;
-  background: radial-gradient(circle, rgba(0, 242, 254, 0.45), transparent 70%);
-  animation-duration: 22s;
-  animation-delay: -5s;
-}
-
-.glow-3 {
+.sunlight-ray {
+  position: fixed;
+  top: -20%;
+  right: 15%;
   width: 350px;
-  height: 350px;
-  top: 40%;
-  left: 45%;
-  background: radial-gradient(circle, rgba(255, 0, 128, 0.25), transparent 70%);
-  animation-duration: 15s;
-  animation-delay: -9s;
-}
-
-@keyframes floatAmbient {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(40px, -30px) scale(1.1); }
-  100% { transform: translate(-30px, 40px) scale(0.95); }
-}
-
-/* Main Container */
-.app-container {
-  width: 100%;
-  max-width: 1200px;
-  height: 92vh;
-  max-height: 880px;
-  margin: auto;
-  padding: 18px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  position: relative;
+  height: 140vh;
+  background: linear-gradient(135deg, rgba(255, 235, 179, 0.14) 0%, rgba(255, 235, 179, 0.04) 50%, transparent 80%);
+  transform: rotate(-35deg);
+  pointer-events: none;
   z-index: 1;
 }
 
-/* Header */
-.app-header {
+.ambient-warm-glow {
+  position: fixed;
+  bottom: 5%;
+  left: 10%;
+  width: 500px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(42, 157, 143, 0.18) 0%, transparent 70%);
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* --------------------------------------------------------------------------
+   TOPBAR NAVIGATION
+   -------------------------------------------------------------------------- */
+.app-viewport {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 18px;
-  background: var(--bg-surface);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-glass);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-glass);
+  padding: 16px 28px;
+  background: rgba(26, 32, 44, 0.82);
+  backdrop-filter: blur(14px);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 50;
 }
 
-.brand {
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-badge-3d {
+  width: 38px;
+  height: 38px;
+  background: var(--accent-sun);
+  color: #5c4308;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 3px 0 #d4a31e,
+    0 6px 12px rgba(0, 0, 0, 0.25);
+  transform: rotate(-4deg);
+}
+
+.brand-main-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.brand-tagline {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-mint);
+  font-weight: 600;
+  display: block;
+}
+
+.topbar-controls {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.brand-icon {
-  position: relative;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
-  background: var(--accent-gradient);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  box-shadow: var(--shadow-neon-glow);
-}
-
-.glow-dot {
-  position: absolute;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #fff;
-  top: 8px;
-  right: 8px;
-  box-shadow: 0 0 8px #fff;
-  animation: pulseDot 2s ease-in-out infinite alternate;
-}
-
-@keyframes pulseDot {
-  0% { transform: scale(0.8); opacity: 0.6; }
-  100% { transform: scale(1.3); opacity: 1; }
-}
-
-.brand-title {
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  letter-spacing: 0.15em;
-  font-weight: 800;
-  background: linear-gradient(135deg, #fff 30%, var(--neon-cyan) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.brand-subtitle {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: var(--text-secondary);
-  display: block;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Buttons */
-.btn {
+/* --------------------------------------------------------------------------
+   [SKILL: /animate & /apple-design] TACTILE 3D BUTTONS
+   Hiệu ứng cơ học vật lý: Hover nổi lên, Active lún xuống tức thì trên pointerdown.
+   -------------------------------------------------------------------------- */
+.iso-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 18px;
-  border-radius: var(--radius-full);
-  font-size: 0.88rem;
-  font-weight: 600;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 8px;
   cursor: pointer;
-  border: none;
-  transition: all var(--transition-normal);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #fdfbf7;
+  color: #2b2d42;
+  box-shadow: 
+    0 4px 0 #cfc5b6,
+    0 6px 10px rgba(0, 0, 0, 0.2);
+  transition: transform 0.12s var(--iso-ease), box-shadow 0.12s var(--iso-ease);
 }
 
-.btn-primary {
-  background: var(--accent-gradient);
-  color: #ffffff;
-  box-shadow: 0 4px 18px rgba(121, 40, 202, 0.4);
-}
-
-.btn-primary:hover {
+.iso-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(0, 242, 254, 0.45);
+  box-shadow: 
+    0 6px 0 #cfc5b6,
+    0 10px 16px rgba(0, 0, 0, 0.25);
 }
 
-.btn-primary:active {
-  transform: translateY(0);
+.iso-btn:active {
+  transform: translateY(3px);
+  box-shadow: 
+    0 1px 0 #cfc5b6,
+    0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.btn-cta {
+  background: var(--accent-teal);
+  color: #fff;
+  border-color: #38b2ac;
+  box-shadow: 
+    0 4px 0 #1b6c62,
+    0 6px 12px rgba(42, 157, 143, 0.35);
+}
+
+.btn-cta:hover {
+  box-shadow: 
+    0 6px 0 #1b6c62,
+    0 10px 18px rgba(42, 157, 143, 0.45);
+}
+
+.btn-cta:active {
+  box-shadow: 0 1px 0 #1b6c62;
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-primary);
-  border: 1px solid var(--border-glass);
+  background: #2d3748;
+  color: #edf2f7;
+  border-color: #4a5568;
+  box-shadow: 0 4px 0 #1a202c, 0 6px 10px rgba(0, 0, 0, 0.3);
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: var(--border-glass-hover);
+  box-shadow: 0 6px 0 #1a202c;
 }
 
-/* Main Grid Layout */
-.main-layout {
+.btn-secondary:active {
+  box-shadow: 0 1px 0 #1a202c;
+}
+
+/* --------------------------------------------------------------------------
+   KHÔNG GIAN ISOMETRIC ART (ISOMETRIC WORLD)
+   Phối cảnh góc nghiêng 2.5D và cơ chế chuyển đổi góc nhìn phẳng 2D mượt mà
+   -------------------------------------------------------------------------- */
+.isometric-world-container {
   flex: 1;
-  display: grid;
-  grid-template-columns: 460px 1fr;
-  gap: 16px;
-  min-height: 0;
-}
-
-/* Glass Panels */
-.glass-panel {
-  background: var(--bg-surface);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--border-glass);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-glass);
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-}
-
-/* ==========================================================================
-   LEFT PANEL: PLAYER DECK
-   ========================================================================== */
-.player-panel {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  text-align: center;
-}
-
-/* Stage: Vinyl + Canvas */
-.vinyl-stage {
-  position: relative;
-  width: 100%;
-  height: 270px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
+  padding: 30px 20px;
+  perspective: 1400px;
+  overflow: visible;
 }
 
-.visualizer-canvas {
+/* Sân khấu 2.5D Isometric */
+.isometric-scene {
+  position: relative;
+  width: 100%;
+  max-width: 1180px;
+  transform: rotateX(46deg) rotateZ(-24deg) scale(0.92);
+  transform-style: preserve-3d;
+  transition: transform 0.65s cubic-bezier(0.25, 1, 0.3, 1);
+  will-change: transform;
+}
+
+/* Chế độ góc nhìn phẳng 2D tiện lợi khi người dùng chuyển đổi */
+.isometric-scene.flat-view {
+  transform: rotateX(0deg) rotateZ(0deg) scale(1);
+}
+
+/* Nền sàn gỗ Isometric Cozy Wood Base */
+.room-floor-base {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: -40px;
+  left: -40px;
+  right: -40px;
+  bottom: -40px;
+  background: #d4a373;
+  border-radius: 36px;
+  box-shadow: 
+    -1px 1px 0 #c29162,
+    -3px 3px 0 #b07f51,
+    -6px 6px 0 #9e6e40,
+    -10px 10px 0 #8c5d2f,
+    -15px 15px 0 #7a4c1e,
+    -20px 28px 45px rgba(0, 0, 0, 0.45);
+  border: 4px solid #faedcd;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.room-floor-base::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: 
+    repeating-linear-gradient(0deg, transparent, transparent 38px, rgba(140, 93, 47, 0.3) 38px, rgba(140, 93, 47, 0.3) 40px),
+    radial-gradient(ellipse at 40% 30%, rgba(255, 235, 179, 0.25) 0%, transparent 60%);
+}
+
+/* Chậu cây Monstera & Cốc cafe trang trí Isometric */
+.room-plant-pot {
+  position: absolute;
+  top: 15px;
+  right: 25px;
+  width: 50px;
+  height: 50px;
+}
+.plant-pot-base {
+  width: 44px;
+  height: 32px;
+  background: #e76f51;
+  border-radius: 6px 6px 12px 12px;
+  box-shadow: 0 4px 0 #b34a31, -4px 6px 12px rgba(0,0,0,0.25);
+}
+.plant-leaf {
+  position: absolute;
+  background: #2a9d8f;
+  border-radius: 20px 0;
+  box-shadow: inset 0 0 6px rgba(0,0,0,0.15);
+}
+.leaf-1 { width: 34px; height: 20px; top: -14px; left: -8px; transform: rotate(-30deg); }
+.leaf-2 { width: 30px; height: 18px; top: -12px; right: -4px; transform: rotate(45deg); background: #52b788; }
+
+.coffee-cup {
+  position: absolute;
+  bottom: 25px;
+  left: 30px;
+  width: 32px;
+  height: 28px;
+}
+.cup-body {
+  width: 30px;
+  height: 24px;
+  background: #fdfbf7;
+  border-radius: 4px 4px 10px 10px;
+  box-shadow: -2px 3px 0 #cfc5b6, -4px 6px 8px rgba(0,0,0,0.2);
+}
+
+/* Grid chính chứa 2 khối hộp 3D */
+.iso-main-grid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 480px 1fr;
+  gap: 32px;
+}
+
+/* --------------------------------------------------------------------------
+   KHỐI 3D (ISOMETRIC BLOCK GEOMETRY)
+   Mô phỏng hình khối hộp đùn dày (Extruded 2.5D Blocks) với nhiều lớp bóng
+   -------------------------------------------------------------------------- */
+.iso-block {
+  background: var(--block-top);
+  border-radius: 24px;
+  border: 3px solid #ffffff;
+  /* Đổ bóng 3D nhiều lớp tạo cạnh dày bên trái và đáy */
+  box-shadow: 
+    -2px 2px 0 var(--block-side),
+    -4px 4px 0 var(--block-edge),
+    -7px 7px 0 var(--block-dark-edge),
+    -10px 10px 0 #857764,
+    -14px 14px 0 #675c4c,
+    -18px 24px 35px var(--block-shadow);
+  position: relative;
+  transition: transform 0.3s var(--iso-ease), box-shadow 0.3s var(--iso-ease);
+}
+
+.iso-block:hover {
+  transform: translate(2px, -3px);
+  box-shadow: 
+    -2px 2px 0 var(--block-side),
+    -5px 5px 0 var(--block-edge),
+    -9px 9px 0 var(--block-dark-edge),
+    -13px 13px 0 #857764,
+    -18px 18px 0 #675c4c,
+    -24px 32px 42px var(--block-shadow);
+}
+
+.block-inner {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* --------------------------------------------------------------------------
+   KHỐI 1: BOOMBOX & ĐĨA THAN QUAY ISOMETRIC
+   -------------------------------------------------------------------------- */
+.boombox-roof {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 2px dashed #ded4c5;
+}
+
+.roof-screw {
+  width: 10px;
+  height: 10px;
+  background: #cfc5b6;
+  border-radius: 50%;
+  box-shadow: inset 1px 1px 2px #000;
+  position: relative;
+}
+.roof-screw::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 2px;
+  width: 6px;
+  height: 2px;
+  background: #7a6e5e;
+}
+
+.speaker-grill-mini {
+  display: flex;
+  gap: 4px;
+}
+.speaker-grill-mini span {
+  width: 4px;
+  height: 12px;
+  background: #b5a997;
+  border-radius: 2px;
+}
+
+.brand-plate {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: #7a6e5e;
+  background: #eee6d8;
+  padding: 3px 10px;
+  border-radius: 4px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.15);
+}
+
+/* Khu vực Đĩa than & Visualizer */
+.turntable-deck {
+  position: relative;
+  width: 100%;
+  height: 230px;
+  background: #eae2d3;
+  border-radius: 18px;
+  border: 2px solid #ded5c5;
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.turntable-canvas {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  border-radius: var(--radius-md);
-  pointer-events: none;
   z-index: 1;
-  opacity: 0.9;
+  pointer-events: none;
+  opacity: 0.85;
 }
 
-/* Floating Vinyl Disc */
-.vinyl-wrapper {
+/* Đĩa than Isometric xoay (Vinyl Record) */
+.vinyl-holder {
   position: relative;
-  width: 200px;
-  height: 200px;
+  width: 170px;
+  height: 170px;
   z-index: 2;
-  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-  animation: floatLevitation 6s ease-in-out infinite alternate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-@keyframes floatLevitation {
-  0% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-8px) rotate(1deg); }
-  100% { transform: translateY(4px) rotate(-1deg); }
-}
-
-.vinyl-disc {
+.vinyl-disc-iso {
   width: 100%;
   height: 100%;
   border-radius: 50%;
   background: 
-    repeating-radial-gradient(circle at center, #15161b 0px, #0e0f14 2px, #181a22 3px, #0b0c10 4px),
-    #0d0e12;
+    repeating-radial-gradient(circle at center, #1b2028 0px, #12151b 2px, #262d38 3px, #101318 5px),
+    #181c24;
   box-shadow: 
-    0 15px 35px rgba(0, 0, 0, 0.8),
-    0 0 0 2px rgba(255, 255, 255, 0.05),
-    inset 0 0 15px rgba(0, 0, 0, 0.9);
+    0 8px 24px rgba(0, 0, 0, 0.45),
+    inset 0 0 12px rgba(0, 0, 0, 0.8);
+  border: 2px solid #323c4d;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: spinDisc 14s linear infinite;
+  animation: vinylSpin 10s linear infinite;
   animation-play-state: paused;
   will-change: transform;
 }
 
-.vinyl-disc.playing {
+.vinyl-disc-iso.playing {
   animation-play-state: running;
 }
 
-@keyframes spinDisc {
+@keyframes vinylSpin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-/* Vinyl Grooves */
-.vinyl-groove {
+.disc-groove {
   position: absolute;
   border-radius: 50%;
-  border: 1px dashed rgba(255, 255, 255, 0.04);
-  pointer-events: none;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
 }
+.g-1 { width: 84%; height: 84%; }
+.g-2 { width: 68%; height: 68%; }
+.g-3 { width: 52%; height: 52%; }
 
-.groove-1 { width: 88%; height: 88%; }
-.groove-2 { width: 72%; height: 72%; }
-.groove-3 { width: 56%; height: 56%; }
-
-/* Vinyl Center Label */
-.vinyl-center {
-  width: 76px;
-  height: 76px;
+.disc-center-label {
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
-  background: var(--accent-gradient-vibrant);
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6), 0 0 20px rgba(121, 40, 202, 0.5);
+  background: linear-gradient(135deg, var(--accent-coral) 0%, var(--accent-sun) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(255, 107, 107, 0.4);
   position: relative;
 }
 
-.vinyl-label {
-  color: #fff;
-  opacity: 0.9;
+.disc-pin {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #111;
+  border: 2px solid #eee;
+  border-radius: 50%;
+}
+
+/* Cần gạt đĩa than (Isometric Tonearm) */
+.tonearm-assembly {
+  position: absolute;
+  top: 15px;
+  right: 18px;
+  width: 50px;
+  height: 110px;
+  pointer-events: none;
+  z-index: 3;
+  transform-origin: 35px 15px;
+  transform: rotate(0deg);
+  transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.tonearm-assembly.active {
+  transform: rotate(26deg);
+}
+
+.tonearm-pivot {
+  position: absolute;
+  top: 8px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  background: #a89b88;
+  border: 2px solid #554d42;
+  border-radius: 50%;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+}
+
+.tonearm-rod {
+  position: absolute;
+  top: 24px;
+  right: 15px;
+  width: 5px;
+  height: 85px;
+  background: linear-gradient(to right, #cfc5b6, #968977);
+  border-radius: 2px;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.25);
+}
+
+.tonearm-head {
+  position: absolute;
+  bottom: 0;
+  right: 8px;
+  width: 16px;
+  height: 22px;
+  background: var(--accent-sun);
+  border: 2px solid #8f701a;
+  border-radius: 3px;
+  box-shadow: 2px 3px 5px rgba(0,0,0,0.3);
+}
+
+.iso-btn-mini.vis-toggle {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  z-index: 4;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #fdfbf7;
+  border: 1px solid #cfc5b6;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 0 #b5a997;
+}
+.iso-btn-mini.vis-toggle:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0;
+}
+
+/* Màn hình LCD Retro */
+.retro-lcd-screen {
+  background: var(--lcd-bg);
+  border-radius: 12px;
+  padding: 12px 16px;
+  border: 2px solid #1c362d;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8), 0 0 12px rgba(46, 196, 182, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lcd-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.1em;
 }
 
-.vinyl-spindle {
-  position: absolute;
-  width: 14px;
-  height: 14px;
+.lcd-dot-live {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: #06070d;
-  border: 2px solid #555;
-  box-shadow: inset 0 0 4px #000;
+  background: var(--accent-mint);
+  box-shadow: 0 0 6px var(--accent-mint);
+  animation: lcdBlink 1.5s infinite alternate;
 }
 
-.vinyl-halo {
-  position: absolute;
-  top: -10px;
-  left: -10px;
-  right: -10px;
-  bottom: -10px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(0, 242, 254, 0.15) 0%, transparent 70%);
-  z-index: 1;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.5s ease;
+@keyframes lcdBlink {
+  from { opacity: 0.3; }
+  to { opacity: 1; }
 }
 
-.vinyl-disc.playing + .vinyl-halo {
-  opacity: 1;
+.lcd-status-text {
+  color: var(--lcd-text);
 }
 
-/* Visualizer Mode Badge Switch */
-.mode-badge {
-  position: absolute;
-  bottom: 6px;
-  right: 12px;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-glass);
-  cursor: pointer;
-  transition: all var(--transition-fast);
+.lcd-format-badge {
+  margin-left: auto;
+  color: var(--accent-sun);
+  background: rgba(255, 209, 102, 0.15);
+  padding: 1px 6px;
+  border-radius: 3px;
 }
 
-.mode-badge:hover {
-  color: var(--neon-cyan);
-  border-color: var(--border-active);
-  background: rgba(0, 242, 254, 0.08);
-}
-
-/* Track Information */
-.track-info {
-  width: 100%;
-  margin-bottom: 12px;
-}
-
-.track-title-wrap {
+.lcd-track-title-wrap {
   width: 100%;
   overflow: hidden;
   white-space: nowrap;
 }
 
-.track-title {
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  text-overflow: ellipsis;
-  overflow: hidden;
-  line-height: 1.3;
-}
-
-.track-meta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 6px;
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-}
-
-.meta-separator {
-  opacity: 0.4;
-}
-
-.track-badge {
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 2px 7px;
-  border-radius: 4px;
-  background: rgba(0, 242, 254, 0.12);
-  color: var(--neon-cyan);
-  border: 1px solid rgba(0, 242, 254, 0.25);
-  text-transform: uppercase;
-}
-
-/* Progress Bar */
-.progress-section {
-  width: 100%;
-  margin-bottom: 16px;
-}
-
-.progress-bar-container {
-  position: relative;
-  width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  transition: height var(--transition-fast);
-}
-
-.progress-bar-container:hover {
-  height: 10px;
-}
-
-.progress-bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 0%;
-  background: var(--accent-gradient);
-  border-radius: var(--radius-full);
-  pointer-events: none;
-}
-
-.progress-thumb {
-  position: absolute;
-  top: 50%;
-  left: 0%;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 0 0 10px var(--neon-cyan);
-  transform: translate(-50%, -50%) scale(0);
-  transition: transform var(--transition-fast);
-  pointer-events: none;
-}
-
-.progress-bar-container:hover .progress-thumb {
-  transform: translate(-50%, -50%) scale(1);
-}
-
-.progress-hover-time {
-  position: absolute;
-  bottom: 16px;
-  left: 0;
-  transform: translateX(-50%);
-  background: rgba(10, 13, 22, 0.9);
-  color: var(--text-primary);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.72rem;
-  font-family: monospace;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-  border: 1px solid var(--border-glass);
-}
-
-.time-display {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 8px;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  font-weight: 500;
-}
-
-/* Control Buttons */
-.controls-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  width: 100%;
-  margin-bottom: 16px;
-}
-
-.ctrl-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-glass);
-  color: var(--text-primary);
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  position: relative;
-  transition: all var(--transition-normal);
-}
-
-.ctrl-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: var(--border-glass-hover);
-  transform: translateY(-2px);
-}
-
-.ctrl-btn:active {
-  transform: translateY(0) scale(0.95);
-}
-
-/* Play/Pause Main Button */
-.play-btn {
-  width: 60px;
-  height: 60px;
-  background: var(--accent-gradient);
-  border: none;
+.lcd-track-title {
   color: #fff;
-  box-shadow: 0 4px 20px rgba(121, 40, 202, 0.5);
-}
-
-.play-btn:hover {
-  box-shadow: 0 6px 28px rgba(0, 242, 254, 0.6);
-  transform: scale(1.06);
-}
-
-.play-btn:active {
-  transform: scale(0.96);
-}
-
-/* Active status for Shuffle & Loop */
-.ctrl-btn.active {
-  color: var(--neon-cyan);
-  border-color: var(--border-active);
-  background: rgba(0, 242, 254, 0.1);
-  box-shadow: var(--shadow-cyan-glow);
-}
-
-.btn-dot {
-  position: absolute;
-  bottom: 6px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--neon-cyan);
-  display: none;
-}
-
-.ctrl-btn.active .btn-dot {
-  display: block;
-}
-
-/* Loop Badge for Loop One mode */
-.loop-badge {
-  position: absolute;
-  top: 7px;
-  right: 9px;
-  font-size: 0.6rem;
-  font-weight: 800;
-  color: var(--neon-cyan);
-  display: none;
-}
-
-.ctrl-btn.loop-one .loop-badge {
-  display: block;
-}
-
-/* Volume Control */
-.volume-container {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  max-width: 280px;
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-glass);
-}
-
-.icon-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color var(--transition-fast);
-}
-
-.icon-btn:hover {
-  color: var(--text-primary);
-}
-
-.volume-slider-wrapper {
-  flex: 1;
-  display: flex;
-  align-items: center;
-}
-
-.volume-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 4px;
-  border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.15);
-  outline: none;
-  cursor: pointer;
-}
-
-.volume-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--neon-cyan);
-  box-shadow: 0 0 8px var(--neon-cyan);
-  cursor: pointer;
-  transition: transform var(--transition-fast);
-}
-
-.volume-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.3);
-}
-
-.volume-value {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  width: 32px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ==========================================================================
-   RIGHT PANEL: PLAYLIST
-   ========================================================================== */
-.playlist-panel {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-}
-
-.playlist-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-
-.playlist-title-box {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-
-.panel-heading {
-  font-family: var(--font-display);
   font-size: 1.15rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  text-shadow: 0 0 8px rgba(82, 183, 136, 0.5);
 }
 
-.playlist-count {
+.lcd-track-sub {
+  color: var(--lcd-subtext);
   font-size: 0.78rem;
-  color: var(--text-muted);
-  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.search-box {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-width: 220px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-glass);
-  border-radius: var(--radius-full);
-  padding: 6px 14px;
-  color: var(--text-secondary);
-  transition: border-color var(--transition-fast);
-}
-
-.search-box:focus-within {
-  border-color: var(--neon-cyan);
-  box-shadow: 0 0 10px rgba(0, 242, 254, 0.15);
-}
-
-.search-box input {
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: 0.85rem;
-  margin-left: 8px;
-  width: 100%;
-}
-
-.search-box input::placeholder {
-  color: var(--text-muted);
-}
-
-.clear-search-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.clear-search-btn:hover {
-  color: #fff;
-}
-
-/* Playlist Scroll Area */
-.playlist-scroll-area {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  padding-right: 4px;
-  margin-right: -4px;
-}
-
-/* Custom Scrollbar */
-.playlist-scroll-area::-webkit-scrollbar {
-  width: 6px;
-}
-
-.playlist-scroll-area::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.playlist-scroll-area::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-}
-
-.playlist-scroll-area::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 242, 254, 0.4);
-}
-
-/* Empty State / Drag & Drop Zone */
-.empty-state {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 30px;
-  border: 2px dashed rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.02);
-  transition: all var(--transition-normal);
-}
-
-.empty-state.drag-over {
-  border-color: var(--neon-cyan);
-  background: rgba(0, 242, 254, 0.05);
-  transform: scale(0.99);
-}
-
-.empty-icon {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-  margin-bottom: 16px;
-}
-
-.empty-state h4 {
-  font-size: 1.05rem;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-.empty-state p {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  max-width: 320px;
-  line-height: 1.5;
-  margin-bottom: 14px;
-}
-
-.supported-formats {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.04);
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-}
-
-/* Song List Items */
-.song-list {
-  list-style: none;
+/* Thanh tiến trình Isometric 3D Progress Module */
+.iso-progress-module {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.song-item {
+.progress-track-3d {
+  position: relative;
+  width: 100%;
+  height: 12px;
+  background: #ded5c5;
+  border-radius: 6px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25);
+  border: 1px solid #b5a997;
+  cursor: pointer;
+}
+
+.progress-fill-3d {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent-teal), var(--accent-coral));
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+.progress-handle-3d {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 18px;
+  height: 22px;
+  background: var(--accent-sun);
+  border: 2px solid #6b5311;
+  border-radius: 4px;
+  transform: translate(-50%, -50%);
+  box-shadow: 
+    0 2px 0 #9e7a1b,
+    0 4px 6px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  transition: transform 0.08s;
+}
+
+.progress-track-3d:hover .progress-handle-3d {
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+.progress-tooltip-3d {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  transform: translateX(-50%);
+  background: #111e19;
+  color: var(--accent-sun);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  pointer-events: none;
+  opacity: 0;
+  border: 1px solid #2a9d8f;
+  transition: opacity 0.12s;
+}
+
+.time-readout {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: all var(--transition-fast);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #7a6e5e;
 }
 
-.song-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: var(--border-glass);
-  transform: translateX(4px);
+.iso-sound-bars {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+  align-items: flex-end;
+}
+.v-bar {
+  width: 3px;
+  background: var(--accent-teal);
+  border-radius: 1px;
+}
+.bar-1 { height: 40%; animation: vWave 1s infinite alternate -0.3s; }
+.bar-2 { height: 90%; animation: vWave 1s infinite alternate -0.1s; }
+.bar-3 { height: 60%; animation: vWave 1s infinite alternate -0.5s; }
+.bar-4 { height: 80%; animation: vWave 1s infinite alternate -0.2s; }
+
+@keyframes vWave {
+  from { height: 20%; }
+  to { height: 100%; }
 }
 
-.song-item.active {
-  background: rgba(121, 40, 202, 0.15);
-  border-color: rgba(0, 242, 254, 0.35);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-.song-main-info {
+/* Các nút bấm điều khiển vật lý (Mechanical 3D Tactile Buttons) */
+.tactile-controls-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 14px;
+  padding: 6px 0;
+}
+
+.iso-key-btn {
+  background: #fdfbf7;
+  color: #3d352b;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  border: 2px solid #fdfbf7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 
+    0 5px 0 #cfc5b6,
+    0 8px 12px rgba(0, 0, 0, 0.18);
+  transition: transform 0.08s var(--iso-ease), box-shadow 0.08s var(--iso-ease);
+}
+
+.iso-key-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 7px 0 #cfc5b6,
+    0 11px 16px rgba(0, 0, 0, 0.22);
+}
+
+/* [SKILL: /animate & /apple-design] Nhấn lún xuống cơ học */
+.iso-key-btn:active {
+  transform: translateY(4px);
+  box-shadow: 
+    0 1px 0 #cfc5b6,
+    0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.key-led {
+  position: absolute;
+  bottom: 5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #cfc5b6;
+}
+
+.iso-key-btn.active .key-led {
+  background: var(--accent-coral);
+  box-shadow: 0 0 6px var(--accent-coral);
+}
+
+.loop-one-badge {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  color: var(--accent-coral);
+  display: none;
+}
+
+.iso-key-btn.loop-one .loop-one-badge {
+  display: block;
+}
+
+/* Hero Play Button (Nút to nổi bật) */
+.btn-hero-play {
+  width: 64px;
+  height: 64px;
+  background: var(--accent-coral);
+  color: #fff;
+  border-color: #ff8585;
+  box-shadow: 
+    0 6px 0 #b33939,
+    0 10px 18px rgba(255, 107, 107, 0.4);
+}
+
+.btn-hero-play:hover {
+  transform: translateY(-3px);
+  box-shadow: 
+    0 9px 0 #b33939,
+    0 14px 22px rgba(255, 107, 107, 0.5);
+}
+
+.btn-hero-play:active {
+  transform: translateY(5px);
+  box-shadow: 
+    0 1px 0 #b33939,
+    0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Thanh điều chỉnh âm lượng 3D */
+.iso-volume-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #eee6d8;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1px solid #ded4c5;
+}
+
+.volume-mute-btn {
+  background: #fdfbf7;
+  border: 1px solid #cfc5b6;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 0 #b5a997;
+}
+
+.volume-mute-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0;
+}
+
+.volume-slider-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.iso-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: #cfc5b6;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+  outline: none;
+  cursor: pointer;
+}
+
+.iso-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--accent-teal);
+  border: 2px solid #16524b;
+  box-shadow: 0 2px 0 #16524b, 0 3px 6px rgba(0,0,0,0.25);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.iso-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.vol-num {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #7a6e5e;
+  width: 34px;
+  text-align: right;
+}
+
+/* --------------------------------------------------------------------------
+   KHỐI 2: PLAYLIST CARDS XẾP TẦNG ISOMETRIC
+   -------------------------------------------------------------------------- */
+.playlist-top-module {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.playlist-badge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.iso-tag {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  background: var(--accent-lavender);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 6px;
+  box-shadow: 0 2px 0 #4d047a;
+}
+
+.playlist-counter-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #7a6e5e;
+}
+
+.iso-search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #eee6d8;
+  border: 2px solid #cfc5b6;
+  border-radius: 10px;
+  padding: 6px 12px;
+  min-width: 200px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.iso-search-input-wrap input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-stack);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-left: 6px;
+  width: 100%;
+}
+
+.clear-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  color: #888;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.current-folder-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6c584c;
+  background: #f0e6d6;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px dashed #cfc5b6;
+}
+
+/* Khu vực cuộn danh sách thẻ nhạc */
+.iso-cards-scroll-area {
+  height: 410px;
+  overflow-y: auto;
+  padding: 6px 4px;
+}
+
+.iso-cards-scroll-area::-webkit-scrollbar {
+  width: 8px;
+}
+.iso-cards-scroll-area::-webkit-scrollbar-track {
+  background: #eee6d8;
+  border-radius: 4px;
+}
+.iso-cards-scroll-area::-webkit-scrollbar-thumb {
+  background: #cfc5b6;
+  border-radius: 4px;
+}
+.iso-cards-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-teal);
+}
+
+/* Empty State */
+.iso-empty-zone {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  border: 3px dashed #cfc5b6;
+  border-radius: 16px;
+  background: #f7f3eb;
+  transition: all 0.2s;
+}
+
+.iso-empty-zone.drag-over {
+  border-color: var(--accent-teal);
+  background: rgba(42, 157, 143, 0.1);
+  transform: scale(0.99);
+}
+
+.empty-3d-box {
+  width: 70px;
+  height: 70px;
+  background: #eee6d8;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7a6e5e;
+  box-shadow: 0 4px 0 #cfc5b6, 0 6px 12px rgba(0, 0, 0, 0.15);
+  margin-bottom: 14px;
+}
+
+.iso-empty-zone h3 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #4a3e35;
+  margin-bottom: 6px;
+}
+
+.iso-empty-zone p {
+  font-size: 0.84rem;
+  color: #7a6e5e;
+  max-width: 300px;
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.iso-formats-strip {
+  display: flex;
+  gap: 6px;
+}
+.iso-formats-strip span {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: #eee6d8;
+  color: #7a6e5e;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Danh sách thẻ nhạc xếp tầng 2.5D (Stacked Cards) */
+.iso-card-stack {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.iso-card-item {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  /* Hiệu ứng cạnh nổi của thẻ xếp tầng */
+  box-shadow: 
+    0 3px 0 #cfc5b6,
+    0 5px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.12s var(--iso-ease), box-shadow 0.12s var(--iso-ease), background 0.12s;
+}
+
+.iso-card-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 
+    0 6px 0 #cfc5b6,
+    0 10px 16px rgba(0, 0, 0, 0.15);
+  background: #fdfbf7;
+}
+
+.iso-card-item:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #cfc5b6;
+}
+
+/* Thẻ bài hát đang phát nổi bật */
+.iso-card-item.active {
+  background: #fff8e7;
+  border-color: var(--accent-sun);
+  box-shadow: 
+    0 4px 0 #c29d38,
+    0 8px 18px rgba(255, 209, 102, 0.35);
+}
+
+.card-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
   flex: 1;
 }
 
-.song-index {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  width: 24px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
+.card-num-box {
+  width: 28px;
+  height: 28px;
+  background: #eee6d8;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #7a6e5e;
+  box-shadow: 0 2px 0 #cfc5b6;
   flex-shrink: 0;
 }
 
-/* Equalizer bounce in playlist */
-.eq-bars {
-  display: none;
-  align-items: flex-end;
-  gap: 2px;
-  height: 14px;
-  width: 24px;
-  justify-content: center;
+.iso-card-item.active .card-num-box {
+  background: var(--accent-sun);
+  color: #4a3608;
+  box-shadow: 0 2px 0 #a37c17;
 }
 
-.song-item.active .eq-bars {
-  display: flex;
-}
-
-.song-item.active .song-index-text {
-  display: none;
-}
-
-.eq-bar {
-  width: 3px;
-  background: var(--neon-cyan);
-  border-radius: 1px;
-  animation: eqBounce 1s ease-in-out infinite alternate;
-}
-
-.eq-bar:nth-child(1) { height: 40%; animation-delay: -0.2s; }
-.eq-bar:nth-child(2) { height: 90%; animation-delay: -0.6s; }
-.eq-bar:nth-child(3) { height: 60%; animation-delay: -0.4s; }
-
-@keyframes eqBounce {
-  0% { height: 20%; }
-  100% { height: 100%; }
-}
-
-.song-text-meta {
+.card-text {
   min-width: 0;
   flex: 1;
 }
 
-.song-name {
+.card-title {
   font-size: 0.88rem;
-  font-weight: 500;
-  color: var(--text-primary);
+  font-weight: 700;
+  color: #2d3748;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   display: block;
 }
 
-.song-item.active .song-name {
-  color: #fff;
-  font-weight: 700;
+.iso-card-item.active .card-title {
+  color: #b76300;
 }
 
-.song-sub {
+.card-meta-line {
   font-size: 0.72rem;
-  color: var(--text-muted);
+  color: #8c7e6c;
+  font-weight: 600;
   margin-top: 2px;
 }
 
-.song-side-badge {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 2px 6px;
+.card-right-badge {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 7px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-glass);
-  text-transform: uppercase;
+  background: #eee6d8;
+  color: #7a6e5e;
+  border: 1px solid #cfc5b6;
   flex-shrink: 0;
-  margin-left: 8px;
 }
 
-.song-item.active .song-side-badge {
-  background: rgba(0, 242, 254, 0.15);
-  color: var(--neon-cyan);
-  border-color: rgba(0, 242, 254, 0.3);
+.iso-card-item.active .card-right-badge {
+  background: var(--accent-sun);
+  color: #4a3608;
+  border-color: #c29d38;
 }
 
 /* Playlist Footer */
-.playlist-footer {
+.playlist-bottom-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-glass);
+  padding-top: 10px;
+  border-top: 2px dashed #ded4c5;
   font-size: 0.76rem;
-  color: var(--text-muted);
+  color: #7a6e5e;
 }
 
-.shortcuts-hint {
+.offline-ready-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.green-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--accent-mint);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--accent-mint);
+}
+
+.shortcut-tip {
   cursor: help;
-  transition: color var(--transition-fast);
+  font-weight: 700;
+  color: #5c4e43;
 }
 
-.shortcuts-hint:hover {
-  color: var(--neon-cyan);
-}
-
-/* ==========================================================================
-   TOAST & UTILITIES
-   ========================================================================== */
-.toast {
+/* --------------------------------------------------------------------------
+   LOFI TOAST NOTIFICATION
+   -------------------------------------------------------------------------- */
+.iso-toast {
   position: fixed;
-  bottom: 24px;
+  bottom: 28px;
   left: 50%;
   transform: translateX(-50%) translateY(0);
-  background: rgba(18, 22, 35, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-active);
-  color: #fff;
-  padding: 10px 20px;
-  border-radius: var(--radius-full);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), var(--shadow-cyan-glow);
-  font-size: 0.85rem;
-  font-weight: 600;
+  background: #111e19;
+  color: var(--accent-sun);
+  padding: 10px 22px;
+  border-radius: 12px;
+  border: 2px solid var(--accent-teal);
+  box-shadow: 0 6px 0 #0d1a15, 0 10px 24px rgba(0, 0, 0, 0.4);
+  font-size: 0.88rem;
+  font-weight: 700;
   z-index: 999;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s var(--spring-bounce);
   pointer-events: none;
 }
 
-.toast.hidden {
+.iso-toast.hidden {
   opacity: 0;
-  transform: translateX(-50%) translateY(20px);
+  transform: translateX(-50%) translateY(25px) scale(0.9);
 }
 
 .hidden {
   display: none !important;
 }
 
-/* ==========================================================================
-   RESPONSIVE BREAKPOINTS
-   ========================================================================== */
-@media (max-width: 960px) {
-  .app-container {
-    height: auto;
-    max-height: none;
-    padding: 12px;
+/* --------------------------------------------------------------------------
+   RESPONSIVE DESIGN (TABLET & MOBILE)
+   Tự động thích ứng khi màn hình nhỏ hơn
+   -------------------------------------------------------------------------- */
+@media (max-width: 1080px) {
+  .isometric-scene {
+    transform: rotateX(32deg) rotateZ(-16deg) scale(0.9);
   }
-
-  .main-layout {
+  .iso-main-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .player-panel {
     max-width: 600px;
     margin: 0 auto;
-    width: 100%;
   }
-
-  .playlist-panel {
-    height: 480px;
+  .iso-cards-scroll-area {
+    height: 320px;
   }
 }
 
-@media (max-width: 600px) {
-  .brand-title {
-    font-size: 1.05rem;
+@media (max-width: 680px) {
+  /* Trên điện thoại, tự động chuyển về góc phẳng 2D để dễ bấm */
+  .isometric-scene {
+    transform: rotateX(0deg) rotateZ(0deg) scale(1) !important;
   }
-
-  .brand-subtitle, .desktop-only {
+  .room-floor-base {
     display: none;
   }
-
-  .vinyl-stage {
-    height: 220px;
+  .app-topbar {
+    padding: 12px 16px;
   }
-
-  .vinyl-wrapper {
-    width: 160px;
-    height: 160px;
+  .brand-tagline {
+    display: none;
   }
-
-  .vinyl-center {
-    width: 60px;
-    height: 60px;
+  .iso-block {
+    border-radius: 18px;
   }
-
-  .controls-row {
-    gap: 10px;
+  .turntable-deck {
+    height: 190px;
   }
-
-  .ctrl-btn {
-    width: 38px;
-    height: 38px;
+  .vinyl-holder {
+    width: 135px;
+    height: 135px;
   }
-
-  .play-btn {
+  .tactile-controls-row {
+    gap: 8px;
+  }
+  .iso-key-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .btn-hero-play {
     width: 52px;
     height: 52px;
-  }
-
-  .search-box {
-    min-width: 100%;
   }
 }
