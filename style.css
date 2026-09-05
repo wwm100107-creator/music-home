@@ -1,6 +1,6 @@
 /* ==========================================================================
    MUSIC HOME • STUDIO GHIBLI & MY NEIGHBOR TOTORO SOUND STATION
-   100% Offline Local Playback + WebTorrent P2P Browser Streaming & File Access
+   Local Playback + WebTorrent P2P + Cloud Sync & Custom Acorn Loop
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
@@ -39,6 +39,8 @@
   --sun-gold: #ffd166;
   --flower-pink: #ff758f;
   --torrent-sky: #0284c7;
+  --acorn-brown: #8d5b4c;
+  --acorn-cap: #583101;
 
   /* Font chữ bo tròn dễ thương, thân thiện (100% Offline) */
   --font-ghibli: "Nunito", "Quicksand", "Comfortaa", "Comic Sans MS", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, cursive, sans-serif;
@@ -122,18 +124,8 @@ body.ghibli-world {
   left: -250px;
   animation: cloudDrift 42s linear infinite;
 }
-.cloud-1::before {
-  width: 100px;
-  height: 100px;
-  top: -45px;
-  left: 35px;
-}
-.cloud-1::after {
-  width: 80px;
-  height: 80px;
-  top: -30px;
-  left: 110px;
-}
+.cloud-1::before { width: 100px; height: 100px; top: -45px; left: 35px; }
+.cloud-1::after  { width: 80px;  height: 80px;  top: -30px; left: 110px; }
 
 .cloud-2 {
   width: 180px;
@@ -144,18 +136,8 @@ body.ghibli-world {
   opacity: 0.75;
   transform: scale(0.85);
 }
-.cloud-2::before {
-  width: 75px;
-  height: 75px;
-  top: -35px;
-  left: 25px;
-}
-.cloud-2::after {
-  width: 60px;
-  height: 60px;
-  top: -22px;
-  left: 85px;
-}
+.cloud-2::before { width: 75px; height: 75px; top: -35px; left: 25px; }
+.cloud-2::after  { width: 60px; height: 60px; top: -22px; left: 85px; }
 
 .cloud-3 {
   width: 280px;
@@ -166,18 +148,8 @@ body.ghibli-world {
   opacity: 0.65;
   transform: scale(0.9);
 }
-.cloud-3::before {
-  width: 110px;
-  height: 110px;
-  top: -50px;
-  left: 45px;
-}
-.cloud-3::after {
-  width: 90px;
-  height: 90px;
-  top: -35px;
-  left: 130px;
-}
+.cloud-3::before { width: 110px; height: 110px; top: -50px; left: 45px; }
+.cloud-3::after  { width: 90px;  height: 90px;  top: -35px; left: 130px; }
 
 .cloud-4 {
   width: 140px;
@@ -187,12 +159,7 @@ body.ghibli-world {
   animation: cloudDrift 36s linear infinite 6s;
   opacity: 0.8;
 }
-.cloud-4::before {
-  width: 55px;
-  height: 55px;
-  top: -25px;
-  left: 20px;
-}
+.cloud-4::before { width: 55px; height: 55px; top: -25px; left: 20px; }
 
 @keyframes cloudDrift {
   0% { transform: translateX(0); }
@@ -216,33 +183,11 @@ body.ghibli-world {
   border-radius: 50% 50% 0 0;
 }
 
-.hill-back {
-  width: 120vw;
-  height: 35vh;
-  left: -10vw;
-  background: var(--grass-far);
-  opacity: 0.85;
-}
+.hill-back  { width: 120vw; height: 35vh; left: -10vw; background: var(--grass-far); opacity: 0.85; }
+.hill-mid   { width: 130vw; height: 28vh; right: -15vw; background: var(--grass-mid); opacity: 0.9; }
+.hill-front { width: 140vw; height: 18vh; left: -20vw; background: var(--grass-front); box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08); }
 
-.hill-mid {
-  width: 130vw;
-  height: 28vh;
-  right: -15vw;
-  background: var(--grass-mid);
-  opacity: 0.9;
-}
-
-.hill-front {
-  width: 140vw;
-  height: 18vh;
-  left: -20vw;
-  background: var(--grass-front);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
-}
-
-/* --------------------------------------------------------------------------
-   [SKILL: /animate] ĐOM ĐÓM BAY LÊN TỪ ĐĨA NHẠC
-   -------------------------------------------------------------------------- */
+/* Đom đóm bay lên từ đĩa nhạc */
 .fireflies-container {
   position: fixed;
   inset: 0;
@@ -280,21 +225,10 @@ body.music-playing .fireflies-container {
 .f8 { left: 23%; animation-delay: 2.8s; animation-duration: 6.5s; --dx: 40px; }
 
 @keyframes fireflyFloat {
-  0% {
-    transform: translate(0, 0) scale(0.4);
-    opacity: 0;
-  }
-  30% {
-    opacity: 0.95;
-    transform: translate(calc(var(--dx) * 0.5), -70px) scale(1.1);
-  }
-  80% {
-    opacity: 0.7;
-  }
-  100% {
-    transform: translate(var(--dx), -220px) scale(0.2);
-    opacity: 0;
-  }
+  0% { transform: translate(0, 0) scale(0.4); opacity: 0; }
+  30% { opacity: 0.95; transform: translate(calc(var(--dx) * 0.5), -70px) scale(1.1); }
+  80% { opacity: 0.7; }
+  100% { transform: translate(var(--dx), -220px) scale(0.2); opacity: 0; }
 }
 
 /* --------------------------------------------------------------------------
@@ -312,9 +246,7 @@ body.music-playing .fireflies-container {
   gap: 20px;
 }
 
-/* --------------------------------------------------------------------------
-   THANH TIÊU ĐỀ: BẢNG GỖ MỘC TREO DÂY (WOODEN HEADER)
-   -------------------------------------------------------------------------- */
+/* THANH TIÊU ĐỀ: BẢNG GỖ MỘC TREO DÂY (WOODEN HEADER) */
 .wooden-header {
   display: flex;
   align-items: center;
@@ -359,9 +291,7 @@ body.music-playing .fireflies-container {
   height: 100%;
   border-radius: 50%;
   background: #1c1917;
-  box-shadow: 
-    0 0 0 3px #292524,
-    0 4px 10px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 0 3px #292524, 0 4px 10px rgba(0, 0, 0, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -418,7 +348,7 @@ body.music-playing .fireflies-container {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 /* Các nút bấm chất liệu gỗ mộc & dây thừng */
@@ -426,10 +356,10 @@ body.music-playing .fireflies-container {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 18px;
+  padding: 9px 16px;
   border-radius: 20px;
   font-family: var(--font-ghibli);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 800;
   cursor: pointer;
   border: 2px solid var(--bark-border);
@@ -439,65 +369,59 @@ body.music-playing .fireflies-container {
 .btn-wood-primary {
   background: var(--leaf-bright);
   color: #ffffff;
-  box-shadow: 
-    0 4px 0 #1b6c62,
-    0 8px 14px rgba(45, 106, 79, 0.3);
+  box-shadow: 0 4px 0 #1b6c62, 0 8px 14px rgba(45, 106, 79, 0.3);
   text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
-
 .btn-wood-primary:hover {
   transform: translateY(-3px) scale(1.03);
-  box-shadow: 
-    0 7px 0 #1b6c62,
-    0 12px 20px rgba(45, 106, 79, 0.4);
+  box-shadow: 0 7px 0 #1b6c62, 0 12px 20px rgba(45, 106, 79, 0.4);
 }
-
-.btn-wood-primary:active {
-  transform: translateY(3px);
-  box-shadow: 0 1px 0 #1b6c62;
-}
+.btn-wood-primary:active { transform: translateY(3px); box-shadow: 0 1px 0 #1b6c62; }
 
 .btn-wood-secondary {
   background: #fdfbf7;
   color: #4a2810;
-  box-shadow: 
-    0 4px 0 var(--wood-warm),
-    0 6px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 0 var(--wood-warm), 0 6px 12px rgba(0, 0, 0, 0.12);
 }
+.btn-wood-secondary:hover { transform: translateY(-2px); box-shadow: 0 6px 0 var(--wood-warm); }
+.btn-wood-secondary:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--wood-warm); }
 
-.btn-wood-secondary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 0 var(--wood-warm);
-}
-
-.btn-wood-secondary:active {
-  transform: translateY(3px);
-  box-shadow: 0 1px 0 var(--wood-warm);
-}
-
-/* Nút mở bảng WebTorrent */
 .btn-torrent-toggle {
   background: #0284c7;
   color: #ffffff;
   border-color: #0369a1;
-  box-shadow: 
-    0 4px 0 #075985,
-    0 8px 14px rgba(2, 132, 199, 0.35);
+  box-shadow: 0 4px 0 #075985, 0 8px 14px rgba(2, 132, 199, 0.35);
   text-shadow: 0 1px 2px rgba(0,0,0,0.25);
 }
-
 .btn-torrent-toggle:hover {
   transform: translateY(-2px) scale(1.03);
   box-shadow: 0 7px 0 #075985, 0 12px 20px rgba(2, 132, 199, 0.45);
 }
+.btn-torrent-toggle:active { transform: translateY(3px); box-shadow: 0 1px 0 #075985; }
 
-.btn-torrent-toggle:active {
-  transform: translateY(3px);
-  box-shadow: 0 1px 0 #075985;
+/* Nút bấm Auth & Cloud Sync Pill */
+.btn-auth-pill {
+  background: #fefae0;
+  color: #583101;
+  border-color: #bc6c25;
+  box-shadow: 0 4px 0 #8c5d2f, 0 6px 12px rgba(90, 50, 20, 0.2);
+}
+.btn-auth-pill:hover {
+  transform: translateY(-2px) scale(1.03);
+  background: #fff;
+  box-shadow: 0 6px 0 #8c5d2f;
+}
+.btn-auth-pill:active { transform: translateY(3px); box-shadow: 0 1px 0 #8c5d2f; }
+
+.btn-auth-pill.logged-in {
+  background: #d8f3dc;
+  color: #1b4332;
+  border-color: #2d6a4f;
+  box-shadow: 0 4px 0 #2d6a4f;
 }
 
 /* --------------------------------------------------------------------------
-   [SKILL: /impeccable & /animate] BẢNG WEBTORRENT GHIBLI COTTAGE PANEL
+   BẢNG WEBTORRENT GHIBLI COTTAGE PANEL
    -------------------------------------------------------------------------- */
 .torrent-cottage-panel {
   background: var(--parchment-bg);
@@ -573,19 +497,9 @@ body.music-playing .fireflies-container {
   box-shadow: 0 2px 0 var(--wood-warm);
   transition: all 0.12s;
 }
+.sample-btn:hover { background: #fefae0; transform: translateY(-2px); box-shadow: 0 4px 0 var(--wood-warm); }
+.sample-btn:active { transform: translateY(2px); box-shadow: 0 0 0; }
 
-.sample-btn:hover {
-  background: #fefae0;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 0 var(--wood-warm);
-}
-
-.sample-btn:active {
-  transform: translateY(2px);
-  box-shadow: 0 0 0;
-}
-
-/* Thanh nhập Magnet / Search Bar */
 .torrent-input-bar {
   display: flex;
   align-items: center;
@@ -615,36 +529,20 @@ body.music-playing .fireflies-container {
   color: #3b220d;
   margin-left: 10px;
 }
-
-.torrent-input-wrapper input::placeholder {
-  color: #a08060;
-}
+.torrent-input-wrapper input::placeholder { color: #a08060; }
 
 .btn-torrent-action {
   background: var(--grass-mid);
   color: #ffffff;
   border-color: var(--grass-front);
-  box-shadow: 
-    0 4px 0 var(--moss-dark),
-    0 8px 14px rgba(45, 106, 79, 0.3);
+  box-shadow: 0 4px 0 var(--moss-dark), 0 8px 14px rgba(45, 106, 79, 0.3);
   padding: 10px 22px;
   white-space: nowrap;
 }
+.btn-torrent-action:hover { transform: translateY(-2px); box-shadow: 0 6px 0 var(--moss-dark); }
+.btn-torrent-action:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--moss-dark); }
 
-.btn-torrent-action:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 0 var(--moss-dark);
-}
-
-.btn-torrent-action:active {
-  transform: translateY(3px);
-  box-shadow: 0 1px 0 var(--moss-dark);
-}
-
-/* --------------------------------------------------------------------------
-   [SKILL: /animate & /animation-vocabulary] 
-   SUSUWATARI WORK CREW LOADING ANIMATION & TIẾN TRÌNH TORRENT
-   -------------------------------------------------------------------------- */
+/* Susuwatari Loading Animation */
 .torrent-status-card {
   background: #ffffff;
   border: 2px dashed #95d5b2;
@@ -656,7 +554,6 @@ body.music-playing .fireflies-container {
   gap: 14px;
 }
 
-/* Hoạt ảnh Susuwatari chuyền lá */
 .susuwatari-work-crew {
   display: flex;
   align-items: center;
@@ -677,7 +574,6 @@ body.music-playing .fireflies-container {
   box-shadow: 0 3px 6px rgba(0,0,0,0.25);
   animation: workerBounce 1.2s ease-in-out infinite alternate;
 }
-
 .sprite-left { animation-delay: 0s; }
 .sprite-right { animation-delay: 0.6s; }
 
@@ -690,13 +586,7 @@ body.music-playing .fireflies-container {
   align-items: center;
   justify-content: center;
 }
-
-.worker-eyes .pupil {
-  width: 4px;
-  height: 4px;
-  background: #000;
-  border-radius: 50%;
-}
+.worker-eyes .pupil { width: 4px; height: 4px; background: #000; border-radius: 50%; }
 
 .flying-leaf-leaf {
   font-size: 1.4rem;
@@ -745,14 +635,8 @@ body.music-playing .fireflies-container {
   color: #7f5539;
   flex-wrap: wrap;
 }
-
-.stat-pill strong {
-  color: var(--grass-front);
-}
-
-.stat-separator {
-  color: #d4a373;
-}
+.stat-pill strong { color: var(--grass-front); }
+.stat-separator { color: #d4a373; }
 
 .torrent-actions-right {
   display: flex;
@@ -768,16 +652,8 @@ body.music-playing .fireflies-container {
   font-size: 0.84rem;
   padding: 8px 14px;
 }
-
-.btn-save-disk:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 0 #1b4332;
-}
-
-.btn-save-disk:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 #1b4332;
-}
+.btn-save-disk:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #1b4332; }
+.btn-save-disk:active { transform: translateY(2px); box-shadow: 0 1px 0 #1b4332; }
 
 .btn-play-torrent {
   background: #ffd166;
@@ -797,7 +673,6 @@ body.music-playing .fireflies-container {
   padding: 8px 12px;
 }
 
-/* Thanh tiến trình Torrent dây leo & mây trôi */
 .torrent-progress-bar-container {
   position: relative;
   width: 100%;
@@ -847,7 +722,6 @@ body.music-playing .fireflies-container {
   gap: 28px;
 }
 
-/* Khung chung: Hộp gỗ tự nhiên & Giấy da cổ điển */
 .nature-card {
   background: var(--parchment-bg);
   border: 3px solid var(--wood-warm);
@@ -958,9 +832,7 @@ body.music-playing .fireflies-container {
   will-change: transform;
 }
 
-.trunk-record.playing {
-  animation-play-state: running;
-}
+.trunk-record.playing { animation-play-state: running; }
 
 @keyframes recordSpin {
   from { transform: rotate(0deg); }
@@ -1011,10 +883,7 @@ body.music-playing .fireflies-container {
   transform: rotate(0deg);
   transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-
-.twig-tonearm.active {
-  transform: rotate(26deg);
-}
+.twig-tonearm.active { transform: rotate(26deg); }
 
 .twig-base-acorn {
   position: absolute;
@@ -1068,14 +937,8 @@ body.music-playing .fireflies-container {
   box-shadow: 0 3px 0 var(--wood-warm);
   transition: all 0.12s;
 }
-.leaf-toggle-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 0 var(--wood-warm);
-}
-.leaf-toggle-btn:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 var(--wood-warm);
-}
+.leaf-toggle-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 0 var(--wood-warm); }
+.leaf-toggle-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--wood-warm); }
 
 /* Màn hình cuộn giấy da */
 .parchment-scroll {
@@ -1099,10 +962,6 @@ body.music-playing .fireflies-container {
   font-size: 0.75rem;
   font-weight: 800;
   color: var(--moss-dark);
-}
-
-.status-msg {
-  letter-spacing: 0.05em;
 }
 
 .format-tag {
@@ -1315,17 +1174,31 @@ body.music-playing .fireflies-container {
   box-shadow: 0 0 6px var(--leaf-bright);
 }
 
-.loop-one-sprout {
+/* 
+  CHẾ ĐỘ LOOP 4 TRẠNG THÁI:
+  Tắt -> Tất cả -> 1 Bài -> Các bài đã chọn (Custom Loop hạt dẻ)
+*/
+.loop-badge-indicator {
   position: absolute;
-  top: 4px;
-  right: 7px;
-  font-size: 0.7rem;
+  top: 3px;
+  right: 6px;
+  font-size: 0.72rem;
   font-weight: 900;
-  color: var(--leaf-bright);
   display: none;
 }
-.nature-key-btn.loop-one .loop-one-sprout {
+
+.nature-key-btn.loop-all .loop-badge-indicator {
+  display: none; /* Icon xanh sáng đại diện */
+}
+
+.nature-key-btn.loop-one .loop-badge-indicator {
   display: block;
+  color: var(--leaf-bright);
+}
+
+.nature-key-btn.loop-custom .loop-badge-indicator {
+  display: block;
+  color: #d97706;
 }
 
 .hero-leaf-btn {
@@ -1454,6 +1327,23 @@ body.music-playing .fireflies-container {
   color: #7f5539;
 }
 
+/* Chip thông báo đang bật Custom Loop Hạt Dẻ */
+.custom-loop-chip {
+  font-size: 0.72rem;
+  font-weight: 900;
+  background: #faedcd;
+  color: #8c5d2f;
+  border: 1px dashed #d4a373;
+  padding: 3px 8px;
+  border-radius: 10px;
+  animation: pulseLoopChip 2s infinite ease-in-out;
+}
+
+@keyframes pulseLoopChip {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
 .twig-search-box {
   position: relative;
   display: flex;
@@ -1487,6 +1377,14 @@ body.music-playing .fireflies-container {
   line-height: 1;
 }
 
+.nature-subbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .nature-folder-pill {
   display: flex;
   align-items: center;
@@ -1500,26 +1398,32 @@ body.music-playing .fireflies-container {
   border: 1px dashed var(--wood-dark);
 }
 
+.sync-tiny-btn {
+  background: #ffffff;
+  border: 1px solid var(--wood-warm);
+  color: #7f5539;
+  font-family: var(--font-ghibli);
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 0 var(--wood-warm);
+  transition: all 0.12s;
+}
+.sync-tiny-btn:hover { background: #fefae0; transform: translateY(-2px); }
+.sync-tiny-btn:active { transform: translateY(2px); box-shadow: 0 0 0; }
+
 .parchment-scroll-area {
   height: 420px;
   overflow-y: auto;
   padding-right: 6px;
 }
 
-.parchment-scroll-area::-webkit-scrollbar {
-  width: 8px;
-}
-.parchment-scroll-area::-webkit-scrollbar-track {
-  background: #faedcd;
-  border-radius: 4px;
-}
-.parchment-scroll-area::-webkit-scrollbar-thumb {
-  background: #d4a373;
-  border-radius: 4px;
-}
-.parchment-scroll-area::-webkit-scrollbar-thumb:hover {
-  background: var(--moss-dark);
-}
+.parchment-scroll-area::-webkit-scrollbar { width: 8px; }
+.parchment-scroll-area::-webkit-scrollbar-track { background: #faedcd; border-radius: 4px; }
+.parchment-scroll-area::-webkit-scrollbar-thumb { background: #d4a373; border-radius: 4px; }
+.parchment-scroll-area::-webkit-scrollbar-thumb:hover { background: var(--moss-dark); }
 
 /* Empty State */
 .empty-nature-state {
@@ -1584,7 +1488,10 @@ body.music-playing .fireflies-container {
   border-radius: 8px;
 }
 
-/* [SKILL: /animation-vocabulary & /animate] SUSUWATARI BOUNCE HOVER */
+/* --------------------------------------------------------------------------
+   [SKILL: /impeccable & /animate] 
+   CHECKBOX HẠT DẺ (ACORN CHECKBOX) & CHẾ ĐỘ CUSTOM LOOP
+   -------------------------------------------------------------------------- */
 .nature-song-list {
   list-style: none;
   display: flex;
@@ -1605,6 +1512,7 @@ body.music-playing .fireflies-container {
     0 3px 0 var(--wood-light),
     0 5px 10px rgba(80, 50, 20, 0.08);
   transition: background 0.15s, border-color 0.15s, transform 0.2s var(--spring-bounce);
+  position: relative;
 }
 
 .nature-song-card:hover {
@@ -1632,15 +1540,80 @@ body.music-playing .fireflies-container {
 .nature-song-card.active {
   background: #d8f3dc;
   border-color: var(--grass-front);
-  box-shadow: 
-    0 4px 0 var(--grass-mid),
-    0 8px 18px rgba(45, 106, 79, 0.2);
+  box-shadow: 0 4px 0 var(--grass-mid), 0 8px 18px rgba(45, 106, 79, 0.2);
+}
+
+/* 
+  Ô CHECKBOX HÌNH LÁ CÂY & HẠT DẺ (ACORN CHECKBOX)
+  Mặc định ẩn, chỉ hiển thị mượt mà khi bật Custom Loop
+*/
+.acorn-checkbox-wrapper {
+  display: none;
+  width: 28px;
+  height: 28px;
+  margin-right: 10px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+}
+
+/* Khi chế độ Custom Loop được kích hoạt */
+.custom-loop-active .acorn-checkbox-wrapper {
+  display: flex;
+}
+
+.acorn-checkbox-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.acorn-checkbox-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #faedcd;
+  border: 1.5px solid var(--wood-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s var(--spring-soft);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Trạng thái chưa chọn: Chiếc lá */
+.acorn-checkbox-icon::before {
+  content: "🍃";
+  font-size: 0.85rem;
+  transition: transform 0.2s;
+}
+
+/* Trạng thái đã chọn hạt dẻ: Acorn Bouncy Pop & Sparkle */
+.acorn-checkbox-input:checked + .acorn-checkbox-icon {
+  background: #ffe8d6;
+  border-color: #a76b3f;
+  box-shadow: 0 0 10px rgba(212, 163, 115, 0.6), 0 2px 0 #6f4518;
+}
+
+.acorn-checkbox-input:checked + .acorn-checkbox-icon::before {
+  content: "🌰";
+  font-size: 1rem;
+  animation: acornPop 0.35s var(--spring-bounce);
+}
+
+@keyframes acornPop {
+  0% { transform: scale(0.5) rotate(-15deg); }
+  60% { transform: scale(1.35) rotate(10deg); }
+  100% { transform: scale(1) rotate(0deg); }
 }
 
 .card-left-group {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
   flex: 1;
 }
@@ -1721,18 +1694,238 @@ body.music-playing .fireflies-container {
   color: #7f5539;
 }
 
-.eco-status {
+.eco-status { display: flex; align-items: center; gap: 6px; }
+.nature-shortcut-hint { cursor: help; color: var(--moss-dark); }
+.nature-shortcut-hint:hover { text-decoration: underline; }
+
+/* --------------------------------------------------------------------------
+   [SKILL: /animate & /impeccable] 
+   MODAL ĐĂNG NHẬP / ĐĂNG KÝ: LÁ THƯ TAY GHIBLI (LETTER MODAL)
+   Hiệu ứng chiếc lá rơi từ trên trời xuống nhẹ nhàng chao nghiêng
+   -------------------------------------------------------------------------- */
+.auth-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(27, 67, 50, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 900;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  padding: 20px;
+  transition: opacity 0.3s ease;
 }
 
-.nature-shortcut-hint {
-  cursor: help;
-  color: var(--moss-dark);
+.ghibli-letter-modal {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  background: #fffdf5;
+  border: 4px solid var(--bark-border);
+  border-radius: 28px;
+  padding: 32px 28px 24px;
+  box-shadow: 
+    0 14px 0 var(--wood-dark),
+    0 24px 50px rgba(45, 25, 10, 0.35);
+  /* [SKILL: /animate] Hiệu ứng lá rơi chao nghiêng */
+  animation: leafModalDrop 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
-.nature-shortcut-hint:hover {
-  text-decoration: underline;
+
+@keyframes leafModalDrop {
+  0% {
+    transform: translateY(-120%) rotate(-12deg) scale(0.85);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(12px) rotate(4deg) scale(1.02);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(-5px) rotate(-2deg) scale(0.99);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Dây thừng treo lá thư */
+.letter-ropes {
+  position: absolute;
+  top: -24px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-around;
+  pointer-events: none;
+}
+.rope {
+  width: 4px;
+  height: 24px;
+  background: repeating-linear-gradient(0deg, #d4a373, #d4a373 4px, #a66a38 4px, #a66a38 8px);
+  border-radius: 2px;
+}
+
+.close-letter-btn {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #faedcd;
+  border: 2px solid var(--bark-border);
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #4a2810;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 0 var(--wood-dark);
+  transition: all 0.12s;
+}
+.close-letter-btn:hover { background: #e63946; color: #fff; transform: scale(1.1); }
+
+.letter-header {
+  text-align: center;
+}
+.wax-seal-icon {
+  font-size: 2.2rem;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.15));
+}
+.letter-title {
+  font-family: var(--font-hand);
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #4a2810;
+}
+.letter-subtitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #7f5539;
+  margin-top: 2px;
+}
+
+/* Tabs */
+.letter-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px dashed #d4a373;
+  padding-bottom: 10px;
+}
+.letter-tab {
+  flex: 1;
+  background: #faedcd;
+  border: 1px solid var(--bark-border);
+  color: #6f4518;
+  font-family: var(--font-ghibli);
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 6px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.letter-tab.active {
+  background: var(--leaf-bright);
+  color: #ffffff;
+  border-color: #2d6a4f;
+  box-shadow: 0 2px 0 #1b4332;
+}
+
+/* Form fields */
+.letter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+.form-group label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #6f4518;
+}
+.form-group input {
+  background: #ffffff;
+  border: 2px solid var(--wood-warm);
+  border-radius: 14px;
+  padding: 8px 14px;
+  font-family: var(--font-ghibli);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #3b220d;
+  outline: none;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+}
+.form-group input:focus {
+  border-color: var(--grass-mid);
+  box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.25);
+}
+
+.config-tip {
+  font-size: 0.74rem;
+  color: #7f5539;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.btn-send-letter {
+  width: 100%;
+  justify-content: center;
+  background: var(--grass-mid);
+  color: #ffffff;
+  border-color: var(--grass-front);
+  box-shadow: 0 4px 0 var(--moss-dark), 0 8px 14px rgba(45, 106, 79, 0.3);
+  padding: 10px 20px;
+}
+
+/* Logged In Status Card */
+.logged-in-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #d8f3dc;
+  border: 2px solid #52b788;
+  border-radius: 18px;
+  padding: 14px;
+}
+.acorn-avatar {
+  font-size: 2rem;
+}
+.logged-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.user-greeting {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #2d6a4f;
+}
+.user-email-display {
+  font-size: 0.92rem;
+  color: #1b4332;
+}
+.sync-count-info {
+  font-size: 0.74rem;
+  color: #52b788;
+  font-weight: 700;
+}
+.btn-logout {
+  padding: 6px 12px;
+  font-size: 0.8rem;
 }
 
 /* --------------------------------------------------------------------------
@@ -1772,52 +1965,20 @@ body.music-playing .fireflies-container {
    RESPONSIVE DESIGN (TABLET & MOBILE)
    -------------------------------------------------------------------------- */
 @media (max-width: 960px) {
-  .app-canvas {
-    padding: 12px;
-  }
-  .ghibli-main-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-  .parchment-scroll-area {
-    height: 340px;
-  }
-  .torrent-input-bar {
-    flex-direction: column;
-  }
-  .btn-torrent-action {
-    width: 100%;
-    justify-content: center;
-  }
+  .app-canvas { padding: 12px; }
+  .ghibli-main-grid { grid-template-columns: 1fr; gap: 20px; }
+  .parchment-scroll-area { height: 340px; }
+  .torrent-input-bar { flex-direction: column; }
+  .btn-torrent-action { width: 100%; justify-content: center; }
 }
 
 @media (max-width: 600px) {
-  .ghibli-title {
-    font-size: 1.2rem;
-  }
-  .ghibli-subtitle {
-    display: none;
-  }
-  .wood-turntable-deck {
-    height: 200px;
-  }
-  .trunk-disc-wrapper {
-    width: 140px;
-    height: 140px;
-  }
-  .record-sprout-center {
-    width: 52px;
-    height: 52px;
-  }
-  .nature-controls-panel {
-    gap: 10px;
-  }
-  .nature-key-btn {
-    width: 42px;
-    height: 42px;
-  }
-  .hero-leaf-btn {
-    width: 56px;
-    height: 56px;
-  }
+  .ghibli-title { font-size: 1.2rem; }
+  .ghibli-subtitle { display: none; }
+  .wood-turntable-deck { height: 200px; }
+  .trunk-disc-wrapper { width: 140px; height: 140px; }
+  .record-sprout-center { width: 52px; height: 52px; }
+  .nature-controls-panel { gap: 10px; }
+  .nature-key-btn { width: 42px; height: 42px; }
+  .hero-leaf-btn { width: 56px; height: 56px; }
 }

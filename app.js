@@ -47,14 +47,15 @@
   // [SKILL: /ponytail] STATE MANAGEMENT: Quản lý trạng thái bài hát & WebTorrent
   // --------------------------------------------------------------------------
   const state = {
-    playlist: [],           // Danh sách bài hát [{ id, file, name, title, artist, format, size, url, isTorrent, torrentFile }]
+    playlist: [],           // Danh sách bài hát [{ id, file, name, title, artist, format, size, url, isTorrent, torrentFile, magnet }]
     filteredIndices: [],    // Index các bài đang hiển thị theo tìm kiếm
     currentIndex: -1,       // Index bài đang phát
     isPlaying: false,
     volume: 0.8,
     previousVolume: 0.8,
     isMuted: false,
-    loopMode: 'all',        // 'off' | 'all' | 'one'
+    loopMode: 'all',        // 'off' | 'all' | 'one' | 'custom'
+    selectedLoopTrackIds: new Set(), // [SKILL: /ponytail] Set lưu ID các bài hát được tích chọn hạt dẻ (Acorn)
     isShuffle: false,
     shuffleOrder: [],       // Mảng hoán vị Fisher-Yates
     shufflePosition: 0,
@@ -64,7 +65,13 @@
     // WebTorrent Client State
     wtClient: null,         // Khởi tạo lười khi user thực sự cần
     activeTorrent: null,    // Torrent đang tải
-    currentTorrentFile: null// File audio trong torrent đang tải
+    currentTorrentFile: null,// File audio trong torrent đang tải
+
+    // Cloud Sync & Supabase BaaS State
+    currentUser: null,      // User session: { email, id }
+    supabaseClient: null,   // Supabase instance nếu được người dùng cấu hình
+    activeAuthTab: 'login', // 'login' | 'register' | 'config'
+    isSyncing: false        // Cờ báo đang đồng bộ
   };
 
   // --- DOM ELEMENTS CACHE ---
@@ -132,14 +139,40 @@
     volumeSlider: document.getElementById('volumeSlider'),
     volumePercent: document.getElementById('volumePercent'),
 
-    // Bảng danh sách bài hát
+    // Bảng danh sách bài hát & Custom Loop
+    playlistCottage: document.getElementById('playlistCottage'),
     playlistCount: document.getElementById('playlistCount'),
+    customLoopChip: document.getElementById('customLoopChip'),
     searchInput: document.getElementById('searchInput'),
     clearSearchBtn: document.getElementById('clearSearchBtn'),
     folderNameBadge: document.getElementById('folderNameBadge'),
+    manualSyncBtn: document.getElementById('manualSyncBtn'),
     playlistContainer: document.getElementById('playlistContainer'),
     emptyState: document.getElementById('emptyState'),
     songList: document.getElementById('songList'),
+
+    // [SKILL: /impeccable] Cloud Sync & Lá Thư Ghibli Modal
+    authModalTriggerBtn: document.getElementById('authModalTriggerBtn'),
+    syncStatusIcon: document.getElementById('syncStatusIcon'),
+    userAuthBadgeText: document.getElementById('userAuthBadgeText'),
+    authModalOverlay: document.getElementById('authModalOverlay'),
+    ghibliLetterModal: document.getElementById('ghibliLetterModal'),
+    closeAuthModalBtn: document.getElementById('closeAuthModalBtn'),
+    letterTabs: document.querySelectorAll('.letter-tab'),
+    authForm: document.getElementById('authForm'),
+    authEmail: document.getElementById('authEmail'),
+    authPassword: document.getElementById('authPassword'),
+    emailGroup: document.getElementById('emailGroup'),
+    passwordGroup: document.getElementById('passwordGroup'),
+    configFieldsGroup: document.getElementById('configFieldsGroup'),
+    supabaseUrl: document.getElementById('supabaseUrl'),
+    supabaseKey: document.getElementById('supabaseKey'),
+    authSubmitBtn: document.getElementById('authSubmitBtn'),
+    authSubmitText: document.getElementById('authSubmitText'),
+    loggedInBox: document.getElementById('loggedInBox'),
+    userEmailDisplay: document.getElementById('userEmailDisplay'),
+    syncCountInfo: document.getElementById('syncCountInfo'),
+    logoutBtn: document.getElementById('logoutBtn'),
 
     // Thông báo Toast Ghibli
     toast: document.getElementById('toast')
@@ -337,7 +370,8 @@
       size: formatBytes(file.length),
       url: null,
       isTorrent: true,
-      torrentFile: file
+      torrentFile: file,
+      magnet: torrent ? (torrent.magnetURI || torrent.infoHash) : null
     };
 
     state.playlist.unshift(newTrack);
@@ -346,6 +380,11 @@
     renderPlaylist();
     updatePlaylistCount();
     updateActiveCard();
+
+    // Tự động đồng bộ lên Cloud nếu người dùng đã đăng nhập
+    if (state.currentUser) {
+      syncPlaylistToCloud();
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -600,6 +639,10 @@
     updatePlaylistCount();
     loadTrack(0, true);
     showToast(`Đã thức tỉnh ${newTracks.length} giai điệu Ghibli!`);
+
+    if (state.currentUser) {
+      syncPlaylistToCloud();
+    }
   }
 
   function cleanTitle(fileName) {
@@ -641,15 +684,34 @@
 
     state.currentIndex = index;
 
-    if (track.isTorrent && track.torrentFile) {
-      // Stream trực tiếp từ WebTorrent File
-      streamAudioFile(track.torrentFile, track.title);
-      updateActiveCard();
-      return;
+    if (track.isTorrent) {
+      if (track.torrentFile) {
+        // Stream trực tiếp từ WebTorrent File đã có
+        streamAudioFile(track.torrentFile, track.title);
+        updateActiveCard();
+        return;
+      } else if (track.magnet) {
+        // [SKILL: /ponytail] Tự động kết nối WebTorrent và stream từ Magnet URL khi kéo từ Cloud về!
+        showToast(`Đang kết nối WebTorrent cho "${track.title}"... 📡🍃`);
+        startTorrentDownload(track.magnet, track.title);
+        updateActiveCard();
+        return;
+      }
     }
 
     if (!track.url && track.file) {
       track.url = URL.createObjectURL(track.file);
+    }
+
+    if (!track.url && !track.file && !track.isTorrent) {
+      // Bài hát từ Cloud nhưng file gốc nằm ở thiết bị khác
+      showToast(`Bài "${track.title}" được đồng bộ từ thiết bị khác. Vui lòng mở thư mục trên máy này để nghe! 🍃`);
+      dom.trackTitle.textContent = track.title;
+      dom.trackTitle.title = track.name;
+      dom.trackArtist.textContent = `${track.artist} • Cần file cục bộ`;
+      dom.trackFormat.textContent = track.format;
+      updateActiveCard();
+      return;
     }
 
     dom.audio.src = track.url;
@@ -731,6 +793,40 @@
       return;
     }
 
+    // [SKILL: /ponytail] 4-STATE LOOP MACHINE: Custom Loop Hạt Dẻ (Acorn)
+    if (state.loopMode === 'custom') {
+      const selectedIndices = [];
+      state.playlist.forEach((track, idx) => {
+        if (state.selectedLoopTrackIds.has(track.id)) {
+          selectedIndices.push(idx);
+        }
+      });
+
+      if (selectedIndices.length === 0) {
+        // Nếu chưa tích bài nào, tự động tích bài hiện tại
+        if (state.currentIndex >= 0) {
+          state.selectedLoopTrackIds.add(state.playlist[state.currentIndex].id);
+          renderPlaylist();
+          updateCustomLoopChip();
+        }
+        dom.audio.currentTime = 0;
+        dom.audio.play();
+        showToast('Hãy tích hạt dẻ 🌰 vào các bài bạn muốn lặp!');
+        return;
+      }
+
+      const currentPosInSelected = selectedIndices.indexOf(state.currentIndex);
+      let targetIdx;
+      if (currentPosInSelected === -1 || currentPosInSelected >= selectedIndices.length - 1) {
+        targetIdx = selectedIndices[0]; // Vòng lại hạt dẻ đầu tiên
+      } else {
+        targetIdx = selectedIndices[currentPosInSelected + 1];
+      }
+
+      loadTrack(targetIdx, true);
+      return;
+    }
+
     if (state.isShuffle) {
       state.shufflePosition++;
       if (state.shufflePosition >= state.shuffleOrder.length) {
@@ -764,6 +860,28 @@
     if (dom.audio.currentTime > 3) {
       dom.audio.currentTime = 0;
       return;
+    }
+
+    // [SKILL: /ponytail] Custom Loop Hạt Dẻ lùi về bài trước
+    if (state.loopMode === 'custom') {
+      const selectedIndices = [];
+      state.playlist.forEach((track, idx) => {
+        if (state.selectedLoopTrackIds.has(track.id)) {
+          selectedIndices.push(idx);
+        }
+      });
+
+      if (selectedIndices.length > 0) {
+        const currentPosInSelected = selectedIndices.indexOf(state.currentIndex);
+        let targetIdx;
+        if (currentPosInSelected <= 0) {
+          targetIdx = selectedIndices[selectedIndices.length - 1];
+        } else {
+          targetIdx = selectedIndices[currentPosInSelected - 1];
+        }
+        loadTrack(targetIdx, true);
+        return;
+      }
     }
 
     if (state.isShuffle) {
@@ -812,21 +930,87 @@
     }
   }
 
+  // --------------------------------------------------------------------------
+  // [SKILL: /ponytail & /animate] STATE MACHINE LOOP 4 TRẠNG THÁI:
+  // 1. Tắt (off) -> 2. Lặp tất cả (all) -> 3. Lặp 1 bài (one) -> 4. Lặp hạt dẻ (custom)
+  // --------------------------------------------------------------------------
   function cycleLoopMode() {
     if (state.loopMode === 'all') {
-      state.loopMode = 'one';
-      dom.loopBtn.classList.add('active', 'loop-one');
-      showToast('Lặp lại: 1 BÀI HIỆN TẠI 🌿');
+      setLoopMode('one');
     } else if (state.loopMode === 'one') {
-      state.loopMode = 'off';
-      dom.loopBtn.classList.remove('active', 'loop-one');
-      showToast('Lặp lại: TẮT');
+      setLoopMode('custom');
+    } else if (state.loopMode === 'custom') {
+      setLoopMode('off');
     } else {
-      state.loopMode = 'all';
-      dom.loopBtn.classList.add('active');
-      dom.loopBtn.classList.remove('loop-one');
-      showToast('Lặp lại: TOÀN BỘ KHU VƯỜN 🌾');
+      setLoopMode('all');
     }
+  }
+
+  function setLoopMode(mode) {
+    state.loopMode = mode;
+    dom.loopBtn.classList.remove('active', 'loop-all', 'loop-one', 'loop-custom');
+
+    switch (mode) {
+      case 'all':
+        dom.loopBtn.classList.add('active', 'loop-all');
+        dom.loopBadge.style.display = 'none';
+        dom.playlistCottage.classList.remove('custom-loop-active');
+        dom.customLoopChip.classList.add('hidden');
+        showToast('Lặp lại: TOÀN BỘ KHU VƯỜN 🌾');
+        break;
+
+      case 'one':
+        dom.loopBtn.classList.add('active', 'loop-one');
+        dom.loopBadge.textContent = '1';
+        dom.loopBadge.style.display = 'block';
+        dom.playlistCottage.classList.remove('custom-loop-active');
+        dom.customLoopChip.classList.add('hidden');
+        showToast('Lặp lại: 1 BÀI HIỆN TẠI 🌿');
+        break;
+
+      case 'custom':
+        dom.loopBtn.classList.add('active', 'loop-custom');
+        dom.loopBadge.textContent = '🌰';
+        dom.loopBadge.style.display = 'block';
+        dom.playlistCottage.classList.add('custom-loop-active');
+        dom.customLoopChip.classList.remove('hidden');
+
+        // Nếu chưa chọn bài nào và đang có bài hát, tự tích bài hiện tại
+        if (state.selectedLoopTrackIds.size === 0 && state.currentIndex >= 0) {
+          const currentTrack = state.playlist[state.currentIndex];
+          if (currentTrack) {
+            state.selectedLoopTrackIds.add(currentTrack.id);
+          }
+        }
+        updateCustomLoopChip();
+        renderPlaylist();
+        showToast('Lặp lại: BÀI ĐÃ CHỌN HẠT DẺ (CUSTOM LOOP) 🌰✨');
+        break;
+
+      case 'off':
+      default:
+        dom.loopBadge.style.display = 'none';
+        dom.playlistCottage.classList.remove('custom-loop-active');
+        dom.customLoopChip.classList.add('hidden');
+        showToast('Lặp lại: TẮT');
+        break;
+    }
+  }
+
+  function updateCustomLoopChip() {
+    const count = state.selectedLoopTrackIds.size;
+    dom.customLoopChip.textContent = `🌰 Đang Lặp Hạt Dẻ (${count} bài)`;
+  }
+
+  function toggleTrackAcorn(trackId, isChecked) {
+    if (isChecked) {
+      state.selectedLoopTrackIds.add(trackId);
+      showToast('Đã gieo Hạt Dẻ 🌰 vào vòng lặp!');
+    } else {
+      state.selectedLoopTrackIds.delete(trackId);
+      showToast('Đã gỡ Hạt Dẻ 🍃 khỏi vòng lặp.');
+    }
+    updateCustomLoopChip();
   }
 
   // --------------------------------------------------------------------------
@@ -903,8 +1087,15 @@
       li.className = 'nature-song-card' + (playlistIdx === state.currentIndex ? ' active' : '');
       li.dataset.index = playlistIdx;
 
+      const isAcornChecked = state.selectedLoopTrackIds.has(track.id);
+
       li.innerHTML = `
         <div class="card-left-group">
+          <!-- [SKILL: /impeccable & /animate] Checkbox Hạt Dẻ (Tự động hiển thị khi bật Custom Loop) -->
+          <label class="acorn-checkbox-wrapper" title="Tích chọn bài này để lặp Hạt Dẻ 🌰">
+            <input type="checkbox" class="acorn-checkbox-input" data-id="${track.id}" ${isAcornChecked ? 'checked' : ''}>
+            <span class="acorn-checkbox-icon"></span>
+          </label>
           <div class="leaf-num-stamp">${displayIdx + 1}</div>
           <div class="card-song-details">
             <span class="card-title" title="${track.name}">${track.title}</span>
@@ -913,6 +1104,18 @@
         </div>
         <span class="card-leaf-badge">${track.format}</span>
       `;
+
+      // Bắt sự kiện chọn Hạt Dẻ mà không làm kích hoạt phát nhạc
+      const checkbox = li.querySelector('.acorn-checkbox-input');
+      if (checkbox) {
+        checkbox.addEventListener('click', (e) => {
+          e.stopPropagation();
+        });
+        checkbox.addEventListener('change', (e) => {
+          e.stopPropagation();
+          toggleTrackAcorn(track.id, e.target.checked);
+        });
+      }
 
       li.addEventListener('click', () => {
         loadTrack(playlistIdx, true);
@@ -968,6 +1171,383 @@
     toastTimer = setTimeout(() => {
       dom.toast.classList.add('hidden');
     }, 2500);
+  }
+
+  // --------------------------------------------------------------------------
+  // [SKILL: /impeccable & /ponytail] CLOUD SYNC & SUPABASE BAAS QUẢN LÝ TÀI KHOẢN
+  // Tích hợp BaaS thuần trình duyệt (Pure Browser CDN / ES Module)
+  // Hỗ trợ cả 2 chế độ:
+  // 1. Supabase Real Cloud (khi người dùng cấu hình URL + Anon Key)
+  // 2. Local Cloud Simulator (hoạt động ngay 100% với LocalStorage multi-tab broadcast)
+  // --------------------------------------------------------------------------
+  const STORAGE_KEYS = {
+    SESSION: 'ghibli_music_session',
+    USERS: 'ghibli_music_users',
+    PLAYLISTS: 'ghibli_music_cloud_playlists',
+    CONFIG: 'ghibli_supabase_config'
+  };
+
+  function getSavedSupabaseConfig() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.CONFIG);
+      return raw ? JSON.parse(raw) : { url: '', key: '' };
+    } catch (_) {
+      return { url: '', key: '' };
+    }
+  }
+
+  function getSupabaseClient() {
+    const cfg = getSavedSupabaseConfig();
+    if (cfg.url && cfg.key && window.supabase) {
+      if (!state.supabaseClient || state.supabaseClient.__cfgUrl !== cfg.url) {
+        state.supabaseClient = window.supabase.createClient(cfg.url, cfg.key);
+        state.supabaseClient.__cfgUrl = cfg.url;
+      }
+      return state.supabaseClient;
+    }
+    return null;
+  }
+
+  function initAuthSession() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.SESSION);
+      if (raw) {
+        const session = JSON.parse(raw);
+        if (session && session.user) {
+          state.currentUser = session.user;
+          updateAuthUI();
+          // Tự động kéo dữ liệu bài hát về từ Cloud
+          fetchPlaylistFromCloud(false);
+        }
+      }
+    } catch (e) {
+      console.warn('Lỗi đọc phiên làm việc Cloud:', e);
+    }
+
+    // Lắng nghe sự kiện đồng bộ đa tab/cửa sổ thời gian thực (Cross-tab realtime sync)
+    window.addEventListener('storage', (e) => {
+      if (e.key === STORAGE_KEYS.PLAYLISTS && state.currentUser) {
+        fetchPlaylistFromCloud(false);
+      }
+    });
+  }
+
+  function updateAuthUI() {
+    if (state.currentUser) {
+      dom.syncStatusIcon.textContent = '🟢';
+      const shortEmail = state.currentUser.email.split('@')[0];
+      dom.userAuthBadgeText.textContent = `🌰 ${shortEmail}`;
+      dom.authModalTriggerBtn.title = `Tài khoản: ${state.currentUser.email} (Đã kết nối Cloud)`;
+
+      dom.loggedInBox.classList.remove('hidden');
+      dom.authForm.classList.add('hidden');
+      dom.userEmailDisplay.textContent = state.currentUser.email;
+      dom.syncCountInfo.textContent = `Đang đồng bộ ${state.playlist.length} bài hát trong khu rừng`;
+    } else {
+      dom.syncStatusIcon.textContent = '☁️';
+      dom.userAuthBadgeText.textContent = 'Đăng Nhập';
+      dom.authModalTriggerBtn.title = 'Đăng nhập & Đồng bộ Playlist lên Cloud';
+
+      dom.loggedInBox.classList.add('hidden');
+      dom.authForm.classList.remove('hidden');
+    }
+  }
+
+  function openAuthModal() {
+    dom.authModalOverlay.classList.remove('hidden');
+    const cfg = getSavedSupabaseConfig();
+    dom.supabaseUrl.value = cfg.url || '';
+    dom.supabaseKey.value = cfg.key || '';
+
+    if (!state.currentUser) {
+      switchAuthTab(state.activeAuthTab || 'login');
+    } else {
+      updateAuthUI();
+    }
+  }
+
+  function closeAuthModal() {
+    dom.authModalOverlay.classList.add('hidden');
+  }
+
+  function switchAuthTab(tab) {
+    state.activeAuthTab = tab;
+    dom.letterTabs.forEach(btn => {
+      if (btn.dataset.tab === tab) btn.classList.add('active');
+      else btn.classList.remove('active');
+    });
+
+    if (tab === 'login') {
+      dom.emailGroup.classList.remove('hidden');
+      dom.passwordGroup.classList.remove('hidden');
+      dom.configFieldsGroup.classList.add('hidden');
+      dom.authSubmitText.textContent = '🍃 Gửi Thư • Đăng Nhập';
+      dom.authEmail.required = true;
+      dom.authPassword.required = true;
+    } else if (tab === 'register') {
+      dom.emailGroup.classList.remove('hidden');
+      dom.passwordGroup.classList.remove('hidden');
+      dom.configFieldsGroup.classList.add('hidden');
+      dom.authSubmitText.textContent = '🌱 Khởi Tạo • Đăng Ký';
+      dom.authEmail.required = true;
+      dom.authPassword.required = true;
+    } else if (tab === 'config') {
+      dom.emailGroup.classList.add('hidden');
+      dom.passwordGroup.classList.add('hidden');
+      dom.configFieldsGroup.classList.remove('hidden');
+      dom.authSubmitText.textContent = '💾 Lưu Cấu Hình Supabase';
+      dom.authEmail.required = false;
+      dom.authPassword.required = false;
+    }
+  }
+
+  async function handleAuthFormSubmit(e) {
+    e.preventDefault();
+    const tab = state.activeAuthTab;
+
+    if (tab === 'config') {
+      const url = dom.supabaseUrl.value.trim();
+      const key = dom.supabaseKey.value.trim();
+      localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify({ url, key }));
+      state.supabaseClient = null;
+      showToast('Đã lưu cấu hình Supabase Cloud! ☁️🍃');
+      switchAuthTab('login');
+      return;
+    }
+
+    const email = dom.authEmail.value.trim();
+    const password = dom.authPassword.value.trim();
+
+    if (!email || !password) {
+      showToast('Vui lòng nhập đầy đủ Email và Mật khẩu!');
+      return;
+    }
+
+    const client = getSupabaseClient();
+
+    if (tab === 'login') {
+      if (client) {
+        dom.authSubmitText.textContent = 'Đang gửi thư lên mây...';
+        const { data, error } = await client.auth.signInWithPassword({ email, password });
+        if (error) {
+          showToast('Lỗi Supabase: ' + error.message);
+          dom.authSubmitText.textContent = '🍃 Gửi Thư • Đăng Nhập';
+          return;
+        }
+        state.currentUser = data.user;
+      } else {
+        // [SKILL: /ponytail] Local Cloud Simulator
+        const rawUsers = localStorage.getItem(STORAGE_KEYS.USERS);
+        const users = rawUsers ? JSON.parse(rawUsers) : {};
+        if (users[email] && users[email].password !== password) {
+          showToast('Mật khẩu khu rừng không đúng!');
+          return;
+        }
+        if (!users[email]) {
+          users[email] = { password, createdAt: Date.now() };
+          localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+        }
+        state.currentUser = { email, id: 'usr_' + btoa(email) };
+      }
+
+      localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify({ user: state.currentUser }));
+      updateAuthUI();
+      closeAuthModal();
+      showToast(`Chào mừng bạn quay lại khu rừng Ghibli, ${email}! 🍃✨`);
+      await fetchPlaylistFromCloud(true);
+
+    } else if (tab === 'register') {
+      if (client) {
+        dom.authSubmitText.textContent = 'Đang khởi tạo tài khoản...';
+        const { data, error } = await client.auth.signUp({ email, password });
+        if (error) {
+          showToast('Lỗi Đăng Ký: ' + error.message);
+          dom.authSubmitText.textContent = '🌱 Khởi Tạo • Đăng Ký';
+          return;
+        }
+        state.currentUser = data.user || { email, id: 'temp_' + Date.now() };
+      } else {
+        // Local Cloud Simulator
+        const rawUsers = localStorage.getItem(STORAGE_KEYS.USERS);
+        const users = rawUsers ? JSON.parse(rawUsers) : {};
+        users[email] = { password, createdAt: Date.now() };
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+        state.currentUser = { email, id: 'usr_' + btoa(email) };
+      }
+
+      localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify({ user: state.currentUser }));
+      updateAuthUI();
+      closeAuthModal();
+      showToast(`Tạo tài khoản khu rừng thành công! Chào mừng ${email} 🌱`);
+
+      if (state.playlist.length > 0) {
+        syncPlaylistToCloud();
+      }
+    }
+  }
+
+  function handleLogout() {
+    const client = getSupabaseClient();
+    if (client) {
+      try { client.auth.signOut(); } catch (_) {}
+    }
+    state.currentUser = null;
+    localStorage.removeItem(STORAGE_KEYS.SESSION);
+    updateAuthUI();
+    closeAuthModal();
+    showToast('Đã đăng xuất khỏi khu rừng. Hẹn gặp lại bạn! 🍂');
+  }
+
+  /**
+   * [SKILL: /ponytail] ĐỒNG BỘ PLAYLIST LÊN CLOUD (SUPABASE / LOCAL PERSISTENCE)
+   */
+  async function syncPlaylistToCloud() {
+    if (!state.currentUser) {
+      openAuthModal();
+      showToast('Vui lòng đăng nhập để đồng bộ Playlist lên Cloud!');
+      return;
+    }
+
+    dom.syncStatusIcon.textContent = '🔄';
+    state.isSyncing = true;
+
+    // Chuẩn hóa Metadata playlist (Đặc biệt lưu trữ Magnet Link của WebTorrent)
+    const payload = state.playlist.map(t => ({
+      id: t.id,
+      name: t.name,
+      title: t.title,
+      artist: t.artist,
+      format: t.format,
+      size: t.size,
+      isTorrent: !!t.isTorrent,
+      magnet: t.magnet || (t.torrentFile && state.activeTorrent ? state.activeTorrent.magnetURI : null)
+    }));
+
+    const client = getSupabaseClient();
+
+    try {
+      if (client) {
+        // Cố gắng cập nhật user metadata (Zero-SQL setup)
+        const { error: metaErr } = await client.auth.updateUser({
+          data: { ghibli_playlist: payload }
+        });
+        if (metaErr) {
+          // Fallback lưu vào bảng playlists nếu có
+          await client.from('playlists').upsert({
+            user_id: state.currentUser.id,
+            tracks: payload,
+            updated_at: new Date().toISOString()
+          });
+        }
+      }
+
+      // Lưu trữ đồng bộ trên LocalStorage
+      const rawPlaylists = localStorage.getItem(STORAGE_KEYS.PLAYLISTS);
+      const playlistsMap = rawPlaylists ? JSON.parse(rawPlaylists) : {};
+      playlistsMap[state.currentUser.email] = payload;
+      localStorage.setItem(STORAGE_KEYS.PLAYLISTS, JSON.stringify(playlistsMap));
+
+      dom.syncStatusIcon.textContent = '🟢';
+      state.isSyncing = false;
+      dom.syncCountInfo.textContent = `Đang đồng bộ ${payload.length} bài hát`;
+      showToast(`Đã đồng bộ ${payload.length} bài hát lên Cloud thành công! ☁️✨`);
+    } catch (err) {
+      console.error('Lỗi khi đồng bộ lên Cloud:', err);
+      dom.syncStatusIcon.textContent = '⚠️';
+      state.isSyncing = false;
+      showToast('Có lỗi khi đồng bộ: ' + err.message);
+    }
+  }
+
+  /**
+   * [SKILL: /ponytail] KÉO PLAYLIST TỪ CLOUD VỀ MÁY & AUTO-STREAM WEBTORRENT
+   */
+  async function fetchPlaylistFromCloud(showToastNotice = false) {
+    if (!state.currentUser) return;
+
+    dom.syncStatusIcon.textContent = '🔄';
+
+    let remoteTracks = null;
+    const client = getSupabaseClient();
+
+    try {
+      if (client) {
+        if (state.currentUser.user_metadata && state.currentUser.user_metadata.ghibli_playlist) {
+          remoteTracks = state.currentUser.user_metadata.ghibli_playlist;
+        } else {
+          const { data } = await client.from('playlists').select('tracks').eq('user_id', state.currentUser.id).maybeSingle();
+          if (data && data.tracks) remoteTracks = data.tracks;
+        }
+      }
+
+      if (!remoteTracks) {
+        const rawPlaylists = localStorage.getItem(STORAGE_KEYS.PLAYLISTS);
+        if (rawPlaylists) {
+          const playlistsMap = JSON.parse(rawPlaylists);
+          remoteTracks = playlistsMap[state.currentUser.email] || null;
+        }
+      }
+
+      if (remoteTracks && Array.isArray(remoteTracks) && remoteTracks.length > 0) {
+        const existingNames = new Set(state.playlist.map(t => t.name));
+        let addedCount = 0;
+        let firstTorrentToStream = null;
+
+        remoteTracks.forEach(rt => {
+          if (!existingNames.has(rt.name)) {
+            const reconstructed = {
+              id: rt.id || ('cloud_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4)),
+              file: null,
+              name: rt.name,
+              title: rt.title,
+              artist: rt.artist || (rt.isTorrent ? 'WebTorrent Stream' : 'Cloud Synchronized'),
+              format: rt.format || 'AUDIO',
+              size: rt.size || 'Cloud',
+              url: null,
+              isTorrent: !!rt.isTorrent,
+              torrentFile: null,
+              magnet: rt.magnet || null
+            };
+
+            state.playlist.push(reconstructed);
+            existingNames.add(rt.name);
+            addedCount++;
+
+            if (rt.isTorrent && rt.magnet && !firstTorrentToStream) {
+              firstTorrentToStream = reconstructed;
+            }
+          }
+        });
+
+        if (addedCount > 0 || state.playlist.length > 0) {
+          state.filteredIndices = state.playlist.map((_, i) => i);
+          renderPlaylist();
+          updatePlaylistCount();
+          dom.folderNameBadge.textContent = `Cloud Sync: ${state.playlist.length} bài hát`;
+          
+          if (state.currentIndex === -1 && state.playlist.length > 0) {
+            loadTrack(0, false);
+          }
+
+          // [Yêu cầu đặc biệt]: Tự động gọi WebTorrent stream/tải lại ngầm để phát được ngay
+          if (firstTorrentToStream && firstTorrentToStream.magnet) {
+            showToast(`Đang tự động nạp bài WebTorrent "${firstTorrentToStream.title}" từ Cloud... 📡🍃`);
+            startTorrentDownload(firstTorrentToStream.magnet, firstTorrentToStream.title);
+          }
+        }
+
+        dom.syncStatusIcon.textContent = '🟢';
+        dom.syncCountInfo.textContent = `Đang đồng bộ ${state.playlist.length} bài hát`;
+        if (showToastNotice) {
+          showToast(`Đã đồng bộ về ${remoteTracks.length} bài hát từ Cloud! ☁️🎶`);
+        }
+      } else {
+        dom.syncStatusIcon.textContent = '🟢';
+      }
+    } catch (err) {
+      console.warn('Lỗi kéo dữ liệu từ Cloud:', err);
+      dom.syncStatusIcon.textContent = '⚠️';
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -1153,7 +1733,34 @@
       }
     });
 
-    // 12. Phím tắt toàn cục
+    // 12. Modal Đăng Nhập / Đăng Ký & Lá Thư Ghibli Cloud Sync
+    if (dom.authModalTriggerBtn) {
+      dom.authModalTriggerBtn.addEventListener('click', openAuthModal);
+    }
+    if (dom.closeAuthModalBtn) {
+      dom.closeAuthModalBtn.addEventListener('click', closeAuthModal);
+    }
+    if (dom.authModalOverlay) {
+      dom.authModalOverlay.addEventListener('click', (e) => {
+        if (e.target === dom.authModalOverlay) closeAuthModal();
+      });
+    }
+    if (dom.letterTabs) {
+      dom.letterTabs.forEach(btn => {
+        btn.addEventListener('click', () => switchAuthTab(btn.dataset.tab));
+      });
+    }
+    if (dom.authForm) {
+      dom.authForm.addEventListener('submit', handleAuthFormSubmit);
+    }
+    if (dom.logoutBtn) {
+      dom.logoutBtn.addEventListener('click', handleLogout);
+    }
+    if (dom.manualSyncBtn) {
+      dom.manualSyncBtn.addEventListener('click', syncPlaylistToCloud);
+    }
+
+    // 13. Phím tắt toàn cục
     window.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT') return;
 
@@ -1200,9 +1807,10 @@
   // --- KHỞI ĐỘNG ---
   function init() {
     setVolume(0.8);
-    dom.loopBtn.classList.add('active');
+    setLoopMode('all');
     initCanvas();
     setupEvents();
+    initAuthSession();
   }
 
   document.addEventListener('DOMContentLoaded', init);
