@@ -1,53 +1,55 @@
 /* ==========================================================================
-   MUSIC HOME • ISOMETRIC LO-FI SOUND STATION (2.5D ART)
-   100% Offline • Pure CSS Isometric Projection & Mechanical Tactile Motion
+   MUSIC HOME • STUDIO GHIBLI & MY NEIGHBOR TOTORO SOUND STATION
+   100% Offline • Pure CSS Art, Cloud Physics, Susuwatari Bounce & Organic Vines
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   [SKILL: /apple-design & /impeccable] DESIGN TOKENS & SYSTEM FOUNDATIONS
-   Typography, optical spacing, Lofi pastel palette inspired by cozy room art.
+   [SKILL: /impeccable & /redesign-existing-projects] DESIGN TOKENS
+   Bảng màu thiên nhiên Ghibli: Bầu trời trong vắt, đồng cỏ xanh, gỗ mộc, giấy da
    -------------------------------------------------------------------------- */
 :root {
-  /* Bảng màu Lofi Pastel & Cozy Room Watercolor */
-  --bg-room: #1e2430;
-  --bg-room-grad: radial-gradient(circle at 20% 20%, #2f3b52 0%, #1a202c 70%, #121620 100%);
-  --wood-floor: #d4a373;
-  --wood-shadow: #bc8a5f;
-  --wood-highlight: #faedcd;
+  /* Bầu trời & Mây trắng Ghibli */
+  --sky-top: #1f6fb2;
+  --sky-mid: #4ea8de;
+  --sky-horizon: #90e0ef;
+  --cloud-white: rgba(255, 255, 255, 0.92);
+  --cloud-shadow: rgba(180, 215, 240, 0.4);
 
-  /* Khối Boombox Chassis (Vỏ máy phát dạng khối hộp 3D) */
-  --block-top: #fbf8f3;
-  --block-side: #e5ded3;
-  --block-edge: #cfc5b6;
-  --block-dark-edge: #a89b88;
-  --block-shadow: rgba(14, 18, 28, 0.45);
+  /* Đồi cỏ & Cây lá xanh Totoro */
+  --grass-far: #74c69d;
+  --grass-mid: #52b788;
+  --grass-front: #2d6a4f;
+  --moss-dark: #1b4332;
+  --leaf-bright: #38b000;
 
-  /* Màu điểm nhấn Lofi & Pastel Neon */
-  --accent-teal: #2a9d8f;
-  --accent-mint: #52b788;
-  --accent-coral: #ff6b6b;
-  --accent-pink: #f72585;
-  --accent-sun: #ffd166;
-  --accent-lavender: #7209b7;
+  /* Gỗ mộc, Giấy da & Vỏ cây */
+  --wood-cream: #fffdf7;
+  --wood-light: #faedcd;
+  --wood-warm: #d4a373;
+  --wood-dark: #8c5d2f;
+  --bark-border: #6f4518;
+  
+  --parchment-bg: #fffbf0;
+  --parchment-border: #e6ccb2;
+  --parchment-shadow: rgba(140, 93, 47, 0.15);
 
-  /* Màn hình LCD cổ điển */
-  --lcd-bg: #111e19;
-  --lcd-glow: #2ec4b6;
-  --lcd-text: #b7e4c7;
-  --lcd-subtext: #74a892;
+  /* Điểm nhấn hoa quả & bọ rùa */
+  --ladybug-red: #e63946;
+  --ladybug-dark: #9b2226;
+  --sun-gold: #ffd166;
+  --flower-pink: #ff758f;
 
-  /* Typography hệ thống (100% Offline - Không phụ thuộc CDN) */
-  --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "SF Mono", Menlo, Consolas, Monaco, "Liberation Mono", monospace;
+  /* Font chữ bo tròn dễ thương, thân thiện (100% Offline) */
+  --font-ghibli: "Nunito", "Quicksand", "Comfortaa", "Comic Sans MS", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, cursive, sans-serif;
+  --font-hand: "Comic Sans MS", "Chalkboard SE", "Segoe Print", cursive, sans-serif;
 
-  /* Thông số khối 3D Isometric Extrusion */
-  --iso-depth: 8px;
-  --iso-depth-active: 2px;
-  --iso-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Easing chuyển động nảy mềm mại */
+  --spring-soft: cubic-bezier(0.34, 1.56, 0.64, 1);
   --spring-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-wind: cubic-bezier(0.45, 0.05, 0.55, 0.95);
 }
 
-/* Reset & Box-Sizing */
+/* Reset & Box Sizing */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -55,413 +57,520 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-body {
-  font-family: var(--font-stack);
-  background: var(--bg-room-grad);
-  color: #2d3748;
+body.ghibli-world {
+  font-family: var(--font-ghibli);
   min-height: 100vh;
+  color: #33271e;
   overflow-x: hidden;
   position: relative;
   display: flex;
   flex-direction: column;
+  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 35%, var(--sky-horizon) 65%, #d8f3dc 85%, #b7e4c7 100%);
   user-select: none;
 }
 
 /* --------------------------------------------------------------------------
-   HIỆU ỨNG ÁNH SÁNG PHÒNG & NOISE GRAIN
+   [TÙY CHỌN] LỚP HÌNH NỀN TOTORO CỤC BỘ (.ghibli-bg)
+   Nếu bạn đặt file ảnh `bg.jpg` cùng thư mục, ảnh nền sẽ tự động hiển thị mượt mà
    -------------------------------------------------------------------------- */
-.svg-noise-filter {
-  position: absolute;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
-
-.noise-overlay {
+.ghibli-bg-layer {
   position: fixed;
   inset: 0;
-  filter: url(#cozy-grain);
-  opacity: 0.25;
-  pointer-events: none;
-  z-index: 99;
-}
-
-.sunlight-ray {
-  position: fixed;
-  top: -20%;
-  right: 15%;
-  width: 350px;
-  height: 140vh;
-  background: linear-gradient(135deg, rgba(255, 235, 179, 0.14) 0%, rgba(255, 235, 179, 0.04) 50%, transparent 80%);
-  transform: rotate(-35deg);
-  pointer-events: none;
-  z-index: 1;
-}
-
-.ambient-warm-glow {
-  position: fixed;
-  bottom: 5%;
-  left: 10%;
-  width: 500px;
-  height: 350px;
-  background: radial-gradient(circle, rgba(42, 157, 143, 0.18) 0%, transparent 70%);
-  filter: blur(80px);
+  background-size: cover;
+  background-position: center bottom;
+  opacity: 0.95;
   pointer-events: none;
   z-index: 0;
 }
 
-/* --------------------------------------------------------------------------
-   TOPBAR NAVIGATION
-   -------------------------------------------------------------------------- */
-.app-viewport {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
+.ghibli-bg {
+  /* Tự động tải bg.jpg nếu người dùng có sẵn file */
+  background-image: url('./bg.jpg');
 }
 
-.app-topbar {
+/* --------------------------------------------------------------------------
+   [SKILL: /animate] BẦU TRỜI GHIBLI: HỆ THỐNG MÂY TRẮNG TRÔI TỰ NHIÊN
+   -------------------------------------------------------------------------- */
+.cloud-sky {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 55vh;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.cloud {
+  position: absolute;
+  background: var(--cloud-white);
+  border-radius: 100px;
+  filter: drop-shadow(0 8px 14px var(--cloud-shadow));
+  opacity: 0.88;
+  will-change: transform;
+}
+
+.cloud::before, .cloud::after {
+  content: "";
+  position: absolute;
+  background: inherit;
+  border-radius: 50%;
+}
+
+/* Mây 1: To xốp trôi tầng cao */
+.cloud-1 {
+  width: 240px;
+  height: 70px;
+  top: 8%;
+  left: -250px;
+  animation: cloudDrift 42s linear infinite;
+}
+.cloud-1::before {
+  width: 100px;
+  height: 100px;
+  top: -45px;
+  left: 35px;
+}
+.cloud-1::after {
+  width: 80px;
+  height: 80px;
+  top: -30px;
+  left: 110px;
+}
+
+/* Mây 2: Trôi tầng giữa */
+.cloud-2 {
+  width: 180px;
+  height: 55px;
+  top: 22%;
+  left: -200px;
+  animation: cloudDrift 58s linear infinite 14s;
+  opacity: 0.75;
+  transform: scale(0.85);
+}
+.cloud-2::before {
+  width: 75px;
+  height: 75px;
+  top: -35px;
+  left: 25px;
+}
+.cloud-2::after {
+  width: 60px;
+  height: 60px;
+  top: -22px;
+  left: 85px;
+}
+
+/* Mây 3: Trôi chậm xa xa */
+.cloud-3 {
+  width: 280px;
+  height: 80px;
+  top: 36%;
+  left: -300px;
+  animation: cloudDrift 70s linear infinite 28s;
+  opacity: 0.65;
+  transform: scale(0.9);
+}
+.cloud-3::before {
+  width: 110px;
+  height: 110px;
+  top: -50px;
+  left: 45px;
+}
+.cloud-3::after {
+  width: 90px;
+  height: 90px;
+  top: -35px;
+  left: 130px;
+}
+
+/* Mây 4: Nhỏ nhẹ */
+.cloud-4 {
+  width: 140px;
+  height: 45px;
+  top: 15%;
+  left: -150px;
+  animation: cloudDrift 36s linear infinite 6s;
+  opacity: 0.8;
+}
+.cloud-4::before {
+  width: 55px;
+  height: 55px;
+  top: -25px;
+  left: 20px;
+}
+
+@keyframes cloudDrift {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(calc(100vw + 350px)); }
+}
+
+/* --------------------------------------------------------------------------
+   ĐỒI CỎ XANH NHẤP NHÔ PHÍA CHÂN TRỜI (GHIBLI ROLLING HILLS)
+   -------------------------------------------------------------------------- */
+.hills-backdrop {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 38vh;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hill {
+  position: absolute;
+  bottom: 0;
+  border-radius: 50% 50% 0 0;
+}
+
+.hill-back {
+  width: 120vw;
+  height: 35vh;
+  left: -10vw;
+  background: var(--grass-far);
+  opacity: 0.85;
+}
+
+.hill-mid {
+  width: 130vw;
+  height: 28vh;
+  right: -15vw;
+  background: var(--grass-mid);
+  opacity: 0.9;
+}
+
+.hill-front {
+  width: 140vw;
+  height: 18vh;
+  left: -20vw;
+  background: var(--grass-front);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* --------------------------------------------------------------------------
+   [SKILL: /animate] ĐOM ĐÓM & BÀO TỬ ÁNH SÁNG BAY LÊN TỪ ĐĨA NHẠC
+   -------------------------------------------------------------------------- */
+.fireflies-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+
+body.music-playing .fireflies-container {
+  opacity: 1;
+}
+
+.firefly {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sun-gold);
+  box-shadow: 0 0 10px 3px rgba(255, 209, 102, 0.85);
+  bottom: 25%;
+  left: 25%;
+  opacity: 0;
+  animation: fireflyFloat 6s infinite ease-in-out;
+}
+
+.f1 { left: 22%; animation-delay: 0s;   animation-duration: 5.5s; --dx: -35px; }
+.f2 { left: 26%; animation-delay: 1.2s; animation-duration: 6.8s; --dx: 45px; width: 8px; height: 8px; }
+.f3 { left: 20%; animation-delay: 2.5s; animation-duration: 4.9s; --dx: -20px; }
+.f4 { left: 28%; animation-delay: 0.8s; animation-duration: 7.2s; --dx: 60px; }
+.f5 { left: 24%; animation-delay: 3.4s; animation-duration: 5.8s; --dx: -50px; width: 7px; height: 7px; }
+.f6 { left: 19%; animation-delay: 1.9s; animation-duration: 6.2s; --dx: 30px; }
+.f7 { left: 30%; animation-delay: 4.1s; animation-duration: 5.2s; --dx: -15px; }
+.f8 { left: 23%; animation-delay: 2.8s; animation-duration: 6.5s; --dx: 40px; }
+
+@keyframes fireflyFloat {
+  0% {
+    transform: translate(0, 0) scale(0.4);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.95;
+    transform: translate(calc(var(--dx) * 0.5), -70px) scale(1.1);
+  }
+  80% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(var(--dx), -220px) scale(0.2);
+    opacity: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   KHUNG BỐ CỤC ỨNG DỤNG (APP CANVAS)
+   -------------------------------------------------------------------------- */
+.app-canvas {
+  position: relative;
+  z-index: 10;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px 24px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* --------------------------------------------------------------------------
+   THANH TIÊU ĐỀ: BẢNG GỖ MỘC TREO DÂY (WOODEN HEADER)
+   -------------------------------------------------------------------------- */
+.wooden-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 28px;
-  background: rgba(26, 32, 44, 0.82);
-  backdrop-filter: blur(14px);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  z-index: 50;
+  padding: 14px 24px;
+  background: var(--wood-light);
+  border: 3px solid var(--bark-border);
+  border-radius: 28px;
+  box-shadow: 
+    0 8px 0 var(--wood-dark),
+    0 14px 28px rgba(60, 40, 20, 0.25);
+  position: relative;
 }
 
-.topbar-brand {
+/* Ốc gỗ trang trí 4 góc */
+.wooden-header::before, .wooden-header::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--bark-border);
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.5);
+}
+.wooden-header::before { top: 12px; left: 12px; }
+.wooden-header::after { top: 12px; right: 12px; }
+
+.header-brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
-.brand-badge-3d {
-  width: 38px;
-  height: 38px;
-  background: var(--accent-sun);
-  color: #5c4308;
-  border-radius: 10px;
+/* Susuwatari (Bụi bồ hóng nhí) nháy mắt đáng yêu */
+.soot-sprite {
+  width: 44px;
+  height: 44px;
+  position: relative;
+  animation: spriteWiggle 3s ease-in-out infinite;
+}
+
+.sprite-body {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #1c1917;
+  box-shadow: 
+    0 0 0 3px #292524,
+    0 4px 10px rgba(0, 0, 0, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 
-    0 3px 0 #d4a31e,
-    0 6px 12px rgba(0, 0, 0, 0.25);
-  transform: rotate(-4deg);
+  gap: 6px;
+  position: relative;
 }
 
-.brand-main-title {
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  color: #fff;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+.sprite-eye {
+  width: 12px;
+  height: 12px;
+  background: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.brand-tagline {
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent-mint);
-  font-weight: 600;
+.sprite-eye .pupil {
+  width: 5px;
+  height: 5px;
+  background: #000000;
+  border-radius: 50%;
+  animation: eyeLook 4s infinite;
+}
+
+@keyframes spriteWiggle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-4px) rotate(4deg); }
+}
+
+@keyframes eyeLook {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(2px, -1px); }
+  75% { transform: translate(-2px, 1px); }
+}
+
+.ghibli-title {
+  font-family: var(--font-hand);
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: #4a2810;
+  text-shadow: 1px 1px 0 #fff;
+  line-height: 1.2;
+}
+
+.ghibli-subtitle {
+  font-size: 0.8rem;
+  color: var(--moss-dark);
+  font-weight: 700;
   display: block;
 }
 
-.topbar-controls {
+.header-actions {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-/* --------------------------------------------------------------------------
-   [SKILL: /animate & /apple-design] TACTILE 3D BUTTONS
-   Hiệu ứng cơ học vật lý: Hover nổi lên, Active lún xuống tức thì trên pointerdown.
-   -------------------------------------------------------------------------- */
-.iso-btn {
+/* Các nút bấm chất liệu gỗ mộc & dây thừng */
+.ghibli-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  border-radius: 8px;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-family: var(--font-ghibli);
+  font-size: 0.9rem;
+  font-weight: 800;
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: #fdfbf7;
-  color: #2b2d42;
-  box-shadow: 
-    0 4px 0 #cfc5b6,
-    0 6px 10px rgba(0, 0, 0, 0.2);
-  transition: transform 0.12s var(--iso-ease), box-shadow 0.12s var(--iso-ease);
+  border: 2px solid var(--bark-border);
+  transition: all 0.16s var(--spring-soft);
 }
 
-.iso-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 
-    0 6px 0 #cfc5b6,
-    0 10px 16px rgba(0, 0, 0, 0.25);
-}
-
-.iso-btn:active {
-  transform: translateY(3px);
-  box-shadow: 
-    0 1px 0 #cfc5b6,
-    0 2px 4px rgba(0, 0, 0, 0.15);
-}
-
-.btn-cta {
-  background: var(--accent-teal);
-  color: #fff;
-  border-color: #38b2ac;
+.btn-wood-primary {
+  background: var(--leaf-bright);
+  color: #ffffff;
   box-shadow: 
     0 4px 0 #1b6c62,
-    0 6px 12px rgba(42, 157, 143, 0.35);
+    0 8px 14px rgba(45, 106, 79, 0.3);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 
-.btn-cta:hover {
+.btn-wood-primary:hover {
+  transform: translateY(-3px) scale(1.03);
   box-shadow: 
-    0 6px 0 #1b6c62,
-    0 10px 18px rgba(42, 157, 143, 0.45);
+    0 7px 0 #1b6c62,
+    0 12px 20px rgba(45, 106, 79, 0.4);
 }
 
-.btn-cta:active {
+.btn-wood-primary:active {
+  transform: translateY(3px);
   box-shadow: 0 1px 0 #1b6c62;
 }
 
-.btn-secondary {
-  background: #2d3748;
-  color: #edf2f7;
-  border-color: #4a5568;
-  box-shadow: 0 4px 0 #1a202c, 0 6px 10px rgba(0, 0, 0, 0.3);
-}
-
-.btn-secondary:hover {
-  box-shadow: 0 6px 0 #1a202c;
-}
-
-.btn-secondary:active {
-  box-shadow: 0 1px 0 #1a202c;
-}
-
-/* --------------------------------------------------------------------------
-   KHÔNG GIAN ISOMETRIC ART (ISOMETRIC WORLD)
-   Phối cảnh góc nghiêng 2.5D và cơ chế chuyển đổi góc nhìn phẳng 2D mượt mà
-   -------------------------------------------------------------------------- */
-.isometric-world-container {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 30px 20px;
-  perspective: 1400px;
-  overflow: visible;
-}
-
-/* Sân khấu 2.5D Isometric */
-.isometric-scene {
-  position: relative;
-  width: 100%;
-  max-width: 1180px;
-  transform: rotateX(46deg) rotateZ(-24deg) scale(0.92);
-  transform-style: preserve-3d;
-  transition: transform 0.65s cubic-bezier(0.25, 1, 0.3, 1);
-  will-change: transform;
-}
-
-/* Chế độ góc nhìn phẳng 2D tiện lợi khi người dùng chuyển đổi */
-.isometric-scene.flat-view {
-  transform: rotateX(0deg) rotateZ(0deg) scale(1);
-}
-
-/* Nền sàn gỗ Isometric Cozy Wood Base */
-.room-floor-base {
-  position: absolute;
-  top: -40px;
-  left: -40px;
-  right: -40px;
-  bottom: -40px;
-  background: #d4a373;
-  border-radius: 36px;
-  box-shadow: 
-    -1px 1px 0 #c29162,
-    -3px 3px 0 #b07f51,
-    -6px 6px 0 #9e6e40,
-    -10px 10px 0 #8c5d2f,
-    -15px 15px 0 #7a4c1e,
-    -20px 28px 45px rgba(0, 0, 0, 0.45);
-  border: 4px solid #faedcd;
-  overflow: hidden;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.room-floor-base::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: 
-    repeating-linear-gradient(0deg, transparent, transparent 38px, rgba(140, 93, 47, 0.3) 38px, rgba(140, 93, 47, 0.3) 40px),
-    radial-gradient(ellipse at 40% 30%, rgba(255, 235, 179, 0.25) 0%, transparent 60%);
-}
-
-/* Chậu cây Monstera & Cốc cafe trang trí Isometric */
-.room-plant-pot {
-  position: absolute;
-  top: 15px;
-  right: 25px;
-  width: 50px;
-  height: 50px;
-}
-.plant-pot-base {
-  width: 44px;
-  height: 32px;
-  background: #e76f51;
-  border-radius: 6px 6px 12px 12px;
-  box-shadow: 0 4px 0 #b34a31, -4px 6px 12px rgba(0,0,0,0.25);
-}
-.plant-leaf {
-  position: absolute;
-  background: #2a9d8f;
-  border-radius: 20px 0;
-  box-shadow: inset 0 0 6px rgba(0,0,0,0.15);
-}
-.leaf-1 { width: 34px; height: 20px; top: -14px; left: -8px; transform: rotate(-30deg); }
-.leaf-2 { width: 30px; height: 18px; top: -12px; right: -4px; transform: rotate(45deg); background: #52b788; }
-
-.coffee-cup {
-  position: absolute;
-  bottom: 25px;
-  left: 30px;
-  width: 32px;
-  height: 28px;
-}
-.cup-body {
-  width: 30px;
-  height: 24px;
+.btn-wood-secondary {
   background: #fdfbf7;
-  border-radius: 4px 4px 10px 10px;
-  box-shadow: -2px 3px 0 #cfc5b6, -4px 6px 8px rgba(0,0,0,0.2);
+  color: #4a2810;
+  box-shadow: 
+    0 4px 0 var(--wood-warm),
+    0 6px 12px rgba(0, 0, 0, 0.12);
 }
 
-/* Grid chính chứa 2 khối hộp 3D */
-.iso-main-grid {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  grid-template-columns: 480px 1fr;
-  gap: 32px;
+.btn-wood-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--wood-warm);
+}
+
+.btn-wood-secondary:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--wood-warm);
 }
 
 /* --------------------------------------------------------------------------
-   KHỐI 3D (ISOMETRIC BLOCK GEOMETRY)
-   Mô phỏng hình khối hộp đùn dày (Extruded 2.5D Blocks) với nhiều lớp bóng
+   BỐ CỤC CHÍNH (GHIBLI MAIN GRID: PLAYER & PLAYLIST)
    -------------------------------------------------------------------------- */
-.iso-block {
-  background: var(--block-top);
-  border-radius: 24px;
-  border: 3px solid #ffffff;
-  /* Đổ bóng 3D nhiều lớp tạo cạnh dày bên trái và đáy */
-  box-shadow: 
-    -2px 2px 0 var(--block-side),
-    -4px 4px 0 var(--block-edge),
-    -7px 7px 0 var(--block-dark-edge),
-    -10px 10px 0 #857764,
-    -14px 14px 0 #675c4c,
-    -18px 24px 35px var(--block-shadow);
-  position: relative;
-  transition: transform 0.3s var(--iso-ease), box-shadow 0.3s var(--iso-ease);
+.ghibli-main-grid {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  gap: 28px;
 }
 
-.iso-block:hover {
-  transform: translate(2px, -3px);
+/* Khung chung: Hộp gỗ tự nhiên & Giấy da cổ điển */
+.nature-card {
+  background: var(--parchment-bg);
+  border: 3px solid var(--wood-warm);
+  border-radius: 32px;
   box-shadow: 
-    -2px 2px 0 var(--block-side),
-    -5px 5px 0 var(--block-edge),
-    -9px 9px 0 var(--block-dark-edge),
-    -13px 13px 0 #857764,
-    -18px 18px 0 #675c4c,
-    -24px 32px 42px var(--block-shadow);
-}
-
-.block-inner {
-  padding: 22px;
+    0 10px 0 var(--wood-dark),
+    0 20px 40px var(--parchment-shadow);
+  padding: 26px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
+  position: relative;
 }
 
 /* --------------------------------------------------------------------------
-   KHỐI 1: BOOMBOX & ĐĨA THAN QUAY ISOMETRIC
+   [SKILL: /improve-animations] CÀNH LÁ DÂY LEO ĐUNG ĐƯA THEO GIÓ
    -------------------------------------------------------------------------- */
-.boombox-roof {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 12px;
-  border-bottom: 2px dashed #ded4c5;
-}
-
-.roof-screw {
-  width: 10px;
-  height: 10px;
-  background: #cfc5b6;
-  border-radius: 50%;
-  box-shadow: inset 1px 1px 2px #000;
-  position: relative;
-}
-.roof-screw::after {
-  content: "";
+.swaying-vine-branch {
   position: absolute;
-  top: 4px;
-  left: 2px;
-  width: 6px;
-  height: 2px;
-  background: #7a6e5e;
+  top: -12px;
+  right: 28px;
+  width: 90px;
+  height: 50px;
+  pointer-events: none;
+  transform-origin: top right;
+  animation: gentleBreeze 4.5s var(--ease-wind) infinite alternate;
+  z-index: 12;
 }
 
-.speaker-grill-mini {
-  display: flex;
-  gap: 4px;
-}
-.speaker-grill-mini span {
-  width: 4px;
-  height: 12px;
-  background: #b5a997;
-  border-radius: 2px;
+.vine-stem {
+  position: absolute;
+  width: 70px;
+  height: 3px;
+  background: var(--moss-dark);
+  border-radius: 3px;
+  transform: rotate(-10deg);
 }
 
-.brand-plate {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  color: #7a6e5e;
-  background: #eee6d8;
-  padding: 3px 10px;
-  border-radius: 4px;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.15);
+.vine-leaf {
+  position: absolute;
+  width: 18px;
+  height: 10px;
+  background: var(--leaf-bright);
+  border-radius: 12px 0;
+  box-shadow: inset 0 0 3px rgba(0,0,0,0.15);
+}
+.vine-leaf.l1 { top: 6px;  right: 20px; transform: rotate(-25deg); }
+.vine-leaf.l2 { top: -6px; right: 40px; transform: rotate(35deg); background: #52b788; }
+.vine-leaf.l3 { top: 8px;  right: 55px; transform: rotate(-40deg); }
+.vine-leaf.l4 { top: -4px; right: 70px; transform: rotate(20deg); background: #74c69d; }
+
+@keyframes gentleBreeze {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(8deg); }
+  100% { transform: rotate(-4deg); }
 }
 
-/* Khu vực Đĩa than & Visualizer */
-.turntable-deck {
+/* --------------------------------------------------------------------------
+   ĐĨA THAN VÂN GỖ CÂY & VISUALIZER SÓNG GIÓ (TURNTABLE DECK)
+   -------------------------------------------------------------------------- */
+.wood-turntable-deck {
   position: relative;
   width: 100%;
-  height: 230px;
-  background: #eae2d3;
-  border-radius: 18px;
-  border: 2px solid #ded5c5;
-  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.12);
+  height: 250px;
+  background: #f4ecd8;
+  border-radius: 24px;
+  border: 3px solid #e0ceb5;
+  box-shadow: inset 0 4px 10px rgba(120, 80, 40, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
 }
 
-.turntable-canvas {
+.ghibli-visualizer {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -471,831 +580,860 @@ body {
   opacity: 0.85;
 }
 
-/* Đĩa than Isometric xoay (Vinyl Record) */
-.vinyl-holder {
+/* Đĩa than vân gỗ (Tree Trunk Record) */
+.trunk-disc-wrapper {
   position: relative;
-  width: 170px;
-  height: 170px;
+  width: 180px;
+  height: 180px;
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.vinyl-disc-iso {
+.trunk-record {
   width: 100%;
   height: 100%;
   border-radius: 50%;
+  /* Các vòng vân gỗ tròn đồng tâm mộc mạc */
   background: 
-    repeating-radial-gradient(circle at center, #1b2028 0px, #12151b 2px, #262d38 3px, #101318 5px),
-    #181c24;
+    repeating-radial-gradient(circle at center, #c99355 0px, #b07d42 2px, #d4a373 4px, #9e6d34 6px, #bc8a52 8px),
+    #b07d42;
+  border: 4px solid var(--bark-border);
   box-shadow: 
-    0 8px 24px rgba(0, 0, 0, 0.45),
-    inset 0 0 12px rgba(0, 0, 0, 0.8);
-  border: 2px solid #323c4d;
+    0 10px 24px rgba(80, 50, 20, 0.3),
+    inset 0 0 15px rgba(0, 0, 0, 0.25);
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: vinylSpin 10s linear infinite;
+  animation: recordSpin 12s linear infinite;
   animation-play-state: paused;
   will-change: transform;
 }
 
-.vinyl-disc-iso.playing {
+.trunk-record.playing {
   animation-play-state: running;
 }
 
-@keyframes vinylSpin {
+@keyframes recordSpin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-.disc-groove {
+.growth-ring {
   position: absolute;
   border-radius: 50%;
-  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  pointer-events: none;
 }
-.g-1 { width: 84%; height: 84%; }
-.g-2 { width: 68%; height: 68%; }
-.g-3 { width: 52%; height: 52%; }
+.r1 { width: 84%; height: 84%; }
+.r2 { width: 68%; height: 68%; }
+.r3 { width: 50%; height: 50%; }
 
-.disc-center-label {
-  width: 62px;
-  height: 62px;
+/* Nhãn tâm đĩa: Mầm cây Totoro */
+.record-sprout-center {
+  width: 66px;
+  height: 66px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent-coral) 0%, var(--accent-sun) 100%);
+  background: #faedcd;
+  border: 3px solid var(--bark-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  box-shadow: 0 0 10px rgba(255, 107, 107, 0.4);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
   position: relative;
 }
 
-.disc-pin {
+.record-pin {
   position: absolute;
   width: 12px;
   height: 12px;
-  background: #111;
-  border: 2px solid #eee;
+  background: #4a2810;
   border-radius: 50%;
+  border: 2px solid #fff;
 }
 
-/* Cần gạt đĩa than (Isometric Tonearm) */
-.tonearm-assembly {
+/* Cần gạt nhánh cây (Twig Tonearm) */
+.twig-tonearm {
   position: absolute;
-  top: 15px;
-  right: 18px;
-  width: 50px;
-  height: 110px;
+  top: 10px;
+  right: 12px;
+  width: 45px;
+  height: 115px;
   pointer-events: none;
   z-index: 3;
-  transform-origin: 35px 15px;
+  transform-origin: 30px 15px;
   transform: rotate(0deg);
-  transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.tonearm-assembly.active {
+.twig-tonearm.active {
   transform: rotate(26deg);
 }
 
-.tonearm-pivot {
+.twig-base-acorn {
   position: absolute;
-  top: 8px;
-  right: 6px;
+  top: 6px;
+  right: 4px;
   width: 22px;
   height: 22px;
-  background: #a89b88;
-  border: 2px solid #554d42;
+  background: var(--wood-dark);
+  border: 2px solid var(--bark-border);
   border-radius: 50%;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.25);
 }
 
-.tonearm-rod {
+.twig-arm {
   position: absolute;
-  top: 24px;
-  right: 15px;
+  top: 22px;
+  right: 13px;
   width: 5px;
   height: 85px;
-  background: linear-gradient(to right, #cfc5b6, #968977);
-  border-radius: 2px;
-  box-shadow: 2px 2px 4px rgba(0,0,0,0.25);
+  background: #6f4518;
+  border-radius: 3px;
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
 }
 
-.tonearm-head {
+.twig-leaf-stylus {
   position: absolute;
   bottom: 0;
-  right: 8px;
+  right: 6px;
   width: 16px;
-  height: 22px;
-  background: var(--accent-sun);
-  border: 2px solid #8f701a;
-  border-radius: 3px;
-  box-shadow: 2px 3px 5px rgba(0,0,0,0.3);
+  height: 18px;
+  background: var(--leaf-bright);
+  border-radius: 12px 0;
+  border: 1px solid var(--moss-dark);
+  box-shadow: 1px 2px 4px rgba(0,0,0,0.25);
 }
 
-.iso-btn-mini.vis-toggle {
+/* Nút đổi chế độ sóng âm chiếc lá */
+.leaf-toggle-btn {
   position: absolute;
-  bottom: 8px;
-  right: 12px;
+  bottom: 10px;
+  right: 14px;
   z-index: 4;
-  padding: 3px 10px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  background: #fdfbf7;
-  border: 1px solid #cfc5b6;
-  border-radius: 6px;
+  padding: 4px 12px;
+  font-family: var(--font-ghibli);
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: #ffffff;
+  color: var(--moss-dark);
+  border: 2px solid var(--wood-warm);
+  border-radius: 16px;
   cursor: pointer;
-  box-shadow: 0 2px 0 #b5a997;
+  box-shadow: 0 3px 0 var(--wood-warm);
+  transition: all 0.12s;
 }
-.iso-btn-mini.vis-toggle:active {
+.leaf-toggle-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 0 var(--wood-warm);
+}
+.leaf-toggle-btn:active {
   transform: translateY(2px);
-  box-shadow: 0 0 0;
+  box-shadow: 0 1px 0 var(--wood-warm);
 }
 
-/* Màn hình LCD Retro */
-.retro-lcd-screen {
-  background: var(--lcd-bg);
-  border-radius: 12px;
-  padding: 12px 16px;
-  border: 2px solid #1c362d;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8), 0 0 12px rgba(46, 196, 182, 0.15);
+/* --------------------------------------------------------------------------
+   MÀN HÌNH CUỘN GIẤY DA (PARCHMENT SCROLL)
+   -------------------------------------------------------------------------- */
+.parchment-scroll {
+  background: #ffffff;
+  border: 2px dashed #d4a373;
+  border-radius: 20px;
+  padding: 14px 18px;
+  box-shadow: 
+    0 4px 0 #faedcd,
+    inset 0 0 12px rgba(212, 163, 115, 0.12);
   display: flex;
   flex-direction: column;
   gap: 4px;
+  position: relative;
 }
 
-.lcd-header {
+.scroll-status-line {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.68rem;
-  font-family: var(--font-mono);
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--moss-dark);
 }
 
-.lcd-dot-live {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent-mint);
-  box-shadow: 0 0 6px var(--accent-mint);
-  animation: lcdBlink 1.5s infinite alternate;
+.status-msg {
+  letter-spacing: 0.05em;
 }
 
-@keyframes lcdBlink {
-  from { opacity: 0.3; }
-  to { opacity: 1; }
-}
-
-.lcd-status-text {
-  color: var(--lcd-text);
-}
-
-.lcd-format-badge {
+.format-tag {
   margin-left: auto;
-  color: var(--accent-sun);
-  background: rgba(255, 209, 102, 0.15);
-  padding: 1px 6px;
-  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: #e9d8a6;
+  color: #4a2810;
+  padding: 2px 8px;
+  border-radius: 10px;
 }
 
-.lcd-track-title-wrap {
+.track-title-container {
   width: 100%;
   overflow: hidden;
   white-space: nowrap;
 }
 
-.lcd-track-title {
-  color: #fff;
-  font-size: 1.15rem;
-  font-weight: 700;
+.parchment-title {
+  font-family: var(--font-hand);
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #3b220d;
   text-overflow: ellipsis;
   overflow: hidden;
-  text-shadow: 0 0 8px rgba(82, 183, 136, 0.5);
+  line-height: 1.3;
 }
 
-.lcd-track-sub {
-  color: var(--lcd-subtext);
-  font-size: 0.78rem;
+.parchment-artist {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #7f5539;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Thanh tiến trình Isometric 3D Progress Module */
-.iso-progress-module {
+/* --------------------------------------------------------------------------
+   THANH TIẾN TRÌNH: SỢI DÂY LEO & CON BỌ RÙA (LADYBUG THUMB)
+   -------------------------------------------------------------------------- */
+.vine-progress-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
-.progress-track-3d {
+.vine-progress-track {
   position: relative;
   width: 100%;
-  height: 12px;
-  background: #ded5c5;
-  border-radius: 6px;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25);
-  border: 1px solid #b5a997;
+  height: 14px;
+  /* Sợi dây leo màu xanh rêu */
+  background: #d8f3dc;
+  border-radius: 10px;
+  border: 2px solid #95d5b2;
+  box-shadow: inset 0 2px 4px rgba(45, 106, 79, 0.15);
   cursor: pointer;
 }
 
-.progress-fill-3d {
+.vine-progress-fill {
   position: absolute;
   top: 0;
   left: 0;
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, var(--accent-teal), var(--accent-coral));
-  border-radius: 5px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  background: linear-gradient(90deg, #52b788, #2d6a4f);
+  border-radius: 8px;
   pointer-events: none;
 }
 
-.progress-handle-3d {
+/* Chú Bọ Rùa (Ladybug) trượt trên sợi dây leo */
+.ladybug-thumb {
   position: absolute;
   top: 50%;
   left: 0%;
-  width: 18px;
+  width: 22px;
   height: 22px;
-  background: var(--accent-sun);
-  border: 2px solid #6b5311;
-  border-radius: 4px;
   transform: translate(-50%, -50%);
-  box-shadow: 
-    0 2px 0 #9e7a1b,
-    0 4px 6px rgba(0, 0, 0, 0.3);
   pointer-events: none;
-  transition: transform 0.08s;
+  transition: transform 0.1s;
 }
 
-.progress-track-3d:hover .progress-handle-3d {
-  transform: translate(-50%, -50%) scale(1.15);
+.vine-progress-track:hover .ladybug-thumb {
+  transform: translate(-50%, -50%) scale(1.25);
 }
 
-.progress-tooltip-3d {
+.ladybug-shell {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--ladybug-red);
+  border: 2px solid #49111c;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.ladybug-head {
   position: absolute;
-  bottom: 20px;
+  top: 0;
+  left: 5px;
+  width: 8px;
+  height: 6px;
+  background: #111;
+  border-radius: 50% 50% 0 0;
+}
+
+.ladybug-dot {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: #111;
+  border-radius: 50%;
+}
+.ladybug-dot.d1 { top: 6px;  left: 3px; }
+.ladybug-dot.d2 { top: 6px;  right: 3px; }
+.ladybug-dot.d3 { bottom: 4px; left: 4px; }
+.ladybug-dot.d4 { bottom: 4px; right: 4px; }
+
+/* Bong bóng chiếc lá hiện thời gian */
+.leaf-time-bubble {
+  position: absolute;
+  bottom: 22px;
   left: 0;
   transform: translateX(-50%);
-  background: #111e19;
-  color: var(--accent-sun);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.72rem;
-  font-family: var(--font-mono);
-  font-weight: 700;
+  background: var(--leaf-bright);
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
   pointer-events: none;
   opacity: 0;
-  border: 1px solid #2a9d8f;
-  transition: opacity 0.12s;
+  transition: opacity 0.15s;
 }
 
 .time-readout {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #7a6e5e;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #7f5539;
 }
 
-.iso-sound-bars {
+.breeze-indicator {
   display: flex;
-  gap: 3px;
-  height: 10px;
-  align-items: flex-end;
+  gap: 4px;
 }
-.v-bar {
-  width: 3px;
-  background: var(--accent-teal);
-  border-radius: 1px;
+.sprout {
+  width: 4px;
+  background: var(--grass-mid);
+  border-radius: 2px;
 }
-.bar-1 { height: 40%; animation: vWave 1s infinite alternate -0.3s; }
-.bar-2 { height: 90%; animation: vWave 1s infinite alternate -0.1s; }
-.bar-3 { height: 60%; animation: vWave 1s infinite alternate -0.5s; }
-.bar-4 { height: 80%; animation: vWave 1s infinite alternate -0.2s; }
+.s1 { height: 6px;  animation: sproutWave 1.2s infinite alternate -0.3s; }
+.s2 { height: 14px; animation: sproutWave 1.2s infinite alternate -0.7s; }
+.s3 { height: 9px;  animation: sproutWave 1.2s infinite alternate -0.1s; }
 
-@keyframes vWave {
-  from { height: 20%; }
-  to { height: 100%; }
+@keyframes sproutWave {
+  from { height: 4px; }
+  to { height: 16px; }
 }
 
-/* Các nút bấm điều khiển vật lý (Mechanical 3D Tactile Buttons) */
-.tactile-controls-row {
+/* --------------------------------------------------------------------------
+   CÁC PHÍM ĐIỀU KHIỂN BẰNG GỖ MỘC & INLINE SVG THIÊN NHIÊN
+   -------------------------------------------------------------------------- */
+.nature-controls-panel {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  padding: 6px 0;
+  gap: 16px;
+  padding: 4px 0;
 }
 
-.iso-key-btn {
-  background: #fdfbf7;
-  color: #3d352b;
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
-  border: 2px solid #fdfbf7;
+.nature-key-btn {
+  background: #ffffff;
+  color: #4a2810;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px solid var(--wood-warm);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   position: relative;
   box-shadow: 
-    0 5px 0 #cfc5b6,
-    0 8px 12px rgba(0, 0, 0, 0.18);
-  transition: transform 0.08s var(--iso-ease), box-shadow 0.08s var(--iso-ease);
+    0 4px 0 var(--wood-dark),
+    0 8px 12px rgba(80, 50, 20, 0.2);
+  transition: transform 0.12s var(--spring-soft), box-shadow 0.12s;
 }
 
-.iso-key-btn:hover {
-  transform: translateY(-2px);
+.nature-key-btn:hover {
+  transform: translateY(-3px) scale(1.05);
   box-shadow: 
-    0 7px 0 #cfc5b6,
-    0 11px 16px rgba(0, 0, 0, 0.22);
+    0 7px 0 var(--wood-dark),
+    0 12px 18px rgba(80, 50, 20, 0.25);
+  background: #fdfbf7;
 }
 
-/* [SKILL: /animate & /apple-design] Nhấn lún xuống cơ học */
-.iso-key-btn:active {
-  transform: translateY(4px);
-  box-shadow: 
-    0 1px 0 #cfc5b6,
-    0 2px 4px rgba(0, 0, 0, 0.15);
+.nature-key-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--wood-dark);
 }
 
-.key-led {
+.wood-active-dot {
   position: absolute;
   bottom: 5px;
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: #cfc5b6;
+  background: #d4a373;
 }
 
-.iso-key-btn.active .key-led {
-  background: var(--accent-coral);
-  box-shadow: 0 0 6px var(--accent-coral);
+.nature-key-btn.active .wood-active-dot {
+  background: var(--leaf-bright);
+  box-shadow: 0 0 6px var(--leaf-bright);
 }
 
-.loop-one-badge {
+.loop-one-sprout {
   position: absolute;
-  top: 3px;
-  right: 5px;
-  font-size: 0.65rem;
+  top: 4px;
+  right: 7px;
+  font-size: 0.7rem;
   font-weight: 900;
-  color: var(--accent-coral);
+  color: var(--leaf-bright);
   display: none;
 }
-
-.iso-key-btn.loop-one .loop-one-badge {
+.nature-key-btn.loop-one .loop-one-sprout {
   display: block;
 }
 
-/* Hero Play Button (Nút to nổi bật) */
-.btn-hero-play {
-  width: 64px;
-  height: 64px;
-  background: var(--accent-coral);
-  color: #fff;
-  border-color: #ff8585;
+/* Nút Play / Pause hình chiếc lá to nổi bật */
+.hero-leaf-btn {
+  width: 68px;
+  height: 68px;
+  background: var(--leaf-bright);
+  color: #ffffff;
+  border-color: #2d6a4f;
   box-shadow: 
-    0 6px 0 #b33939,
-    0 10px 18px rgba(255, 107, 107, 0.4);
+    0 6px 0 #1b4332,
+    0 12px 20px rgba(45, 106, 79, 0.4);
 }
 
-.btn-hero-play:hover {
-  transform: translateY(-3px);
+.hero-leaf-btn:hover {
+  transform: translateY(-4px) scale(1.06);
   box-shadow: 
-    0 9px 0 #b33939,
-    0 14px 22px rgba(255, 107, 107, 0.5);
+    0 10px 0 #1b4332,
+    0 16px 24px rgba(45, 106, 79, 0.5);
 }
 
-.btn-hero-play:active {
-  transform: translateY(5px);
-  box-shadow: 
-    0 1px 0 #b33939,
-    0 2px 6px rgba(0, 0, 0, 0.2);
+.hero-leaf-btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #1b4332;
 }
 
-/* Thanh điều chỉnh âm lượng 3D */
-.iso-volume-strip {
+/* Thanh chỉnh âm lượng gỗ mộc */
+.wood-volume-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #eee6d8;
-  padding: 8px 14px;
-  border-radius: 12px;
-  border: 1px solid #ded4c5;
+  background: #f4ecd8;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 2px solid #e0ceb5;
 }
 
-.volume-mute-btn {
-  background: #fdfbf7;
-  border: 1px solid #cfc5b6;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+.leaf-icon-btn {
+  background: transparent;
+  border: none;
+  color: #6f4518;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 0 #b5a997;
+  transition: transform 0.15s;
+}
+.leaf-icon-btn:hover {
+  transform: scale(1.2);
+  color: var(--leaf-bright);
 }
 
-.volume-mute-btn:active {
-  transform: translateY(2px);
-  box-shadow: 0 0 0;
-}
-
-.volume-slider-box {
+.wood-slider-shell {
   flex: 1;
   display: flex;
   align-items: center;
 }
 
-.iso-slider {
+.nature-slider {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
   height: 8px;
-  border-radius: 4px;
-  background: #cfc5b6;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  background: #d8c3a5;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
   outline: none;
   cursor: pointer;
 }
 
-.iso-slider::-webkit-slider-thumb {
+.nature-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
+  width: 18px;
   height: 18px;
-  border-radius: 4px;
-  background: var(--accent-teal);
-  border: 2px solid #16524b;
-  box-shadow: 0 2px 0 #16524b, 0 3px 6px rgba(0,0,0,0.25);
+  border-radius: 50%;
+  background: var(--wood-warm);
+  border: 2px solid var(--bark-border);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
   cursor: pointer;
-  transition: transform 0.1s;
+  transition: transform 0.12s;
 }
 
-.iso-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
+.nature-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  background: var(--leaf-bright);
 }
 
-.vol-num {
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #7a6e5e;
-  width: 34px;
+.volume-text {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #7f5539;
+  width: 36px;
   text-align: right;
 }
 
 /* --------------------------------------------------------------------------
-   KHỐI 2: PLAYLIST CARDS XẾP TẦNG ISOMETRIC
+   PHẦN 2: BẢNG DANH SÁCH BÀI HÁT GIẤY DA (PARCHMENT PLAYLIST)
    -------------------------------------------------------------------------- */
-.playlist-top-module {
+.playlist-wood-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
 }
 
-.playlist-badge-wrap {
+.pl-header-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
-.iso-tag {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
+.moss-badge {
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  background: var(--moss-dark);
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 12px;
+  box-shadow: 0 2px 0 #0d281e;
+}
+
+.acorn-counter {
+  font-size: 0.85rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
-  background: var(--accent-lavender);
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 6px;
-  box-shadow: 0 2px 0 #4d047a;
+  color: #7f5539;
 }
 
-.playlist-counter-badge {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #7a6e5e;
-}
-
-.iso-search-input-wrap {
+.twig-search-box {
   position: relative;
   display: flex;
   align-items: center;
-  background: #eee6d8;
-  border: 2px solid #cfc5b6;
-  border-radius: 10px;
-  padding: 6px 12px;
-  min-width: 200px;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+  border: 2px solid var(--wood-warm);
+  border-radius: 18px;
+  padding: 6px 14px;
+  min-width: 220px;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.06);
 }
 
-.iso-search-input-wrap input {
+.twig-search-box input {
   background: transparent;
   border: none;
   outline: none;
-  font-family: var(--font-stack);
-  font-size: 0.84rem;
-  font-weight: 600;
-  color: #2d3748;
-  margin-left: 6px;
+  font-family: var(--font-ghibli);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #4a2810;
+  margin-left: 8px;
   width: 100%;
 }
 
-.clear-btn {
+.clear-wood-btn {
   background: transparent;
   border: none;
   font-size: 1.1rem;
-  color: #888;
+  color: #a08060;
   cursor: pointer;
   line-height: 1;
 }
 
-.current-folder-pill {
+.nature-folder-pill {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #6c584c;
-  background: #f0e6d6;
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px dashed #cfc5b6;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #6f4518;
+  background: #faedcd;
+  padding: 6px 14px;
+  border-radius: 14px;
+  border: 1px dashed var(--wood-dark);
 }
 
-/* Khu vực cuộn danh sách thẻ nhạc */
-.iso-cards-scroll-area {
-  height: 410px;
+/* Khu vực cuộn danh sách */
+.parchment-scroll-area {
+  height: 420px;
   overflow-y: auto;
-  padding: 6px 4px;
+  padding-right: 6px;
 }
 
-.iso-cards-scroll-area::-webkit-scrollbar {
+.parchment-scroll-area::-webkit-scrollbar {
   width: 8px;
 }
-.iso-cards-scroll-area::-webkit-scrollbar-track {
-  background: #eee6d8;
+.parchment-scroll-area::-webkit-scrollbar-track {
+  background: #faedcd;
   border-radius: 4px;
 }
-.iso-cards-scroll-area::-webkit-scrollbar-thumb {
-  background: #cfc5b6;
+.parchment-scroll-area::-webkit-scrollbar-thumb {
+  background: #d4a373;
   border-radius: 4px;
 }
-.iso-cards-scroll-area::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-teal);
+.parchment-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: var(--moss-dark);
 }
 
 /* Empty State */
-.iso-empty-zone {
+.empty-nature-state {
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 24px;
-  border: 3px dashed #cfc5b6;
-  border-radius: 16px;
-  background: #f7f3eb;
+  padding: 30px;
+  border: 3px dashed var(--wood-warm);
+  border-radius: 24px;
+  background: rgba(250, 237, 205, 0.4);
   transition: all 0.2s;
 }
 
-.iso-empty-zone.drag-over {
-  border-color: var(--accent-teal);
-  background: rgba(42, 157, 143, 0.1);
+.empty-nature-state.drag-over {
+  border-color: var(--leaf-bright);
+  background: rgba(116, 198, 157, 0.25);
   transform: scale(0.99);
 }
 
-.empty-3d-box {
-  width: 70px;
-  height: 70px;
-  background: #eee6d8;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #7a6e5e;
-  box-shadow: 0 4px 0 #cfc5b6, 0 6px 12px rgba(0, 0, 0, 0.15);
-  margin-bottom: 14px;
+.acorn-basket-art {
+  margin-bottom: 12px;
+  animation: basketBob 2.5s ease-in-out infinite;
 }
 
-.iso-empty-zone h3 {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #4a3e35;
+@keyframes basketBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.empty-nature-state h3 {
+  font-family: var(--font-hand);
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #4a2810;
   margin-bottom: 6px;
 }
 
-.iso-empty-zone p {
-  font-size: 0.84rem;
-  color: #7a6e5e;
-  max-width: 300px;
-  line-height: 1.4;
-  margin-bottom: 12px;
+.empty-nature-state p {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #7f5539;
+  max-width: 320px;
+  line-height: 1.5;
+  margin-bottom: 14px;
 }
 
-.iso-formats-strip {
+.format-leaf-pills {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
-.iso-formats-strip span {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
+.format-leaf-pills span {
+  font-size: 0.72rem;
   font-weight: 800;
-  background: #eee6d8;
-  color: #7a6e5e;
-  padding: 2px 6px;
-  border-radius: 4px;
+  background: #faedcd;
+  color: #6f4518;
+  padding: 3px 8px;
+  border-radius: 8px;
 }
 
-/* Danh sách thẻ nhạc xếp tầng 2.5D (Stacked Cards) */
-.iso-card-stack {
+/* --------------------------------------------------------------------------
+   [SKILL: /animation-vocabulary & /animate] SUSUWATARI BOUNCE HOVER
+   Khi hover, thẻ bài hát nhún nhảy tưng tưng như cục bụi bồ hóng nhí
+   -------------------------------------------------------------------------- */
+.nature-song-list {
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.iso-card-item {
+.nature-song-card {
   background: #ffffff;
-  border-radius: 12px;
-  padding: 12px 14px;
+  border: 2px solid var(--parchment-border);
+  border-radius: 18px;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
-  border: 2px solid #ffffff;
-  /* Hiệu ứng cạnh nổi của thẻ xếp tầng */
   box-shadow: 
-    0 3px 0 #cfc5b6,
-    0 5px 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.12s var(--iso-ease), box-shadow 0.12s var(--iso-ease), background 0.12s;
+    0 3px 0 var(--wood-light),
+    0 5px 10px rgba(80, 50, 20, 0.08);
+  transition: background 0.15s, border-color 0.15s, transform 0.2s var(--spring-bounce);
 }
 
-.iso-card-item:hover {
+/* [SKILL: /animation-vocabulary] Susuwatari Bounce: Nảy nhẹ & giãn nở */
+.nature-song-card:hover {
+  animation: susuwatariBounce 0.4s var(--spring-bounce);
+  background: #fefae0;
+  border-color: var(--grass-mid);
   transform: translateY(-3px);
   box-shadow: 
-    0 6px 0 #cfc5b6,
-    0 10px 16px rgba(0, 0, 0, 0.15);
-  background: #fdfbf7;
+    0 6px 0 var(--wood-warm),
+    0 10px 16px rgba(80, 50, 20, 0.15);
 }
 
-.iso-card-item:active {
+@keyframes susuwatariBounce {
+  0% { transform: translateY(0) scale(1, 1); }
+  35% { transform: translateY(-6px) scale(0.97, 1.05); }
+  70% { transform: translateY(1px) scale(1.03, 0.96); }
+  100% { transform: translateY(-3px) scale(1, 1); }
+}
+
+.nature-song-card:active {
   transform: translateY(2px);
-  box-shadow: 0 1px 0 #cfc5b6;
+  box-shadow: 0 1px 0 var(--wood-warm);
 }
 
-/* Thẻ bài hát đang phát nổi bật */
-.iso-card-item.active {
-  background: #fff8e7;
-  border-color: var(--accent-sun);
+/* Bài hát đang phát nổi bật */
+.nature-song-card.active {
+  background: #d8f3dc;
+  border-color: var(--grass-front);
   box-shadow: 
-    0 4px 0 #c29d38,
-    0 8px 18px rgba(255, 209, 102, 0.35);
+    0 4px 0 var(--grass-mid),
+    0 8px 18px rgba(45, 106, 79, 0.2);
 }
 
-.card-left {
+.card-left-group {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
   flex: 1;
 }
 
-.card-num-box {
-  width: 28px;
-  height: 28px;
-  background: #eee6d8;
-  border-radius: 6px;
+.leaf-num-stamp {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #faedcd;
+  color: #6f4518;
+  font-family: var(--font-hand);
+  font-size: 0.85rem;
+  font-weight: 900;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  font-weight: 800;
-  color: #7a6e5e;
-  box-shadow: 0 2px 0 #cfc5b6;
   flex-shrink: 0;
+  box-shadow: 0 2px 0 var(--wood-warm);
 }
 
-.iso-card-item.active .card-num-box {
-  background: var(--accent-sun);
-  color: #4a3608;
-  box-shadow: 0 2px 0 #a37c17;
+.nature-song-card.active .leaf-num-stamp {
+  background: var(--leaf-bright);
+  color: #ffffff;
+  box-shadow: 0 2px 0 var(--moss-dark);
 }
 
-.card-text {
+.card-song-details {
   min-width: 0;
   flex: 1;
 }
 
 .card-title {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #2d3748;
+  font-family: var(--font-hand);
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #3b220d;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   display: block;
 }
 
-.iso-card-item.active .card-title {
-  color: #b76300;
+.nature-song-card.active .card-title {
+  color: #1b4332;
 }
 
-.card-meta-line {
-  font-size: 0.72rem;
-  color: #8c7e6c;
-  font-weight: 600;
+.card-subtext {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #7f5539;
   margin-top: 2px;
 }
 
-.card-right-badge {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
+.card-leaf-badge {
+  font-size: 0.7rem;
   font-weight: 800;
-  padding: 2px 7px;
-  border-radius: 4px;
-  background: #eee6d8;
-  color: #7a6e5e;
-  border: 1px solid #cfc5b6;
+  background: #faedcd;
+  color: #6f4518;
+  padding: 3px 8px;
+  border-radius: 8px;
   flex-shrink: 0;
 }
 
-.iso-card-item.active .card-right-badge {
-  background: var(--accent-sun);
-  color: #4a3608;
-  border-color: #c29d38;
+.nature-song-card.active .card-leaf-badge {
+  background: var(--grass-front);
+  color: #ffffff;
 }
 
 /* Playlist Footer */
-.playlist-bottom-bar {
+.playlist-footer-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 10px;
-  border-top: 2px dashed #ded4c5;
-  font-size: 0.76rem;
-  color: #7a6e5e;
+  padding-top: 12px;
+  border-top: 2px dashed var(--wood-warm);
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #7f5539;
 }
 
-.offline-ready-indicator {
+.eco-status {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-weight: 700;
 }
 
-.green-dot {
-  width: 7px;
-  height: 7px;
-  background: var(--accent-mint);
-  border-radius: 50%;
-  box-shadow: 0 0 6px var(--accent-mint);
-}
-
-.shortcut-tip {
+.nature-shortcut-hint {
   cursor: help;
-  font-weight: 700;
-  color: #5c4e43;
+  color: var(--moss-dark);
+}
+.nature-shortcut-hint:hover {
+  text-decoration: underline;
 }
 
 /* --------------------------------------------------------------------------
-   LOFI TOAST NOTIFICATION
+   THÔNG BÁO TOAST KIỂU BẢNG GỖ GHIBLI
    -------------------------------------------------------------------------- */
-.iso-toast {
+.ghibli-toast {
   position: fixed;
-  bottom: 28px;
+  bottom: 30px;
   left: 50%;
   transform: translateX(-50%) translateY(0);
-  background: #111e19;
-  color: var(--accent-sun);
-  padding: 10px 22px;
-  border-radius: 12px;
-  border: 2px solid var(--accent-teal);
-  box-shadow: 0 6px 0 #0d1a15, 0 10px 24px rgba(0, 0, 0, 0.4);
-  font-size: 0.88rem;
-  font-weight: 700;
+  background: var(--wood-light);
+  border: 3px solid var(--bark-border);
+  color: #4a2810;
+  padding: 10px 24px;
+  border-radius: 20px;
+  font-family: var(--font-hand);
+  font-size: 0.95rem;
+  font-weight: 900;
+  box-shadow: 
+    0 6px 0 var(--wood-dark),
+    0 12px 24px rgba(60, 40, 20, 0.35);
   z-index: 999;
-  transition: all 0.25s var(--spring-bounce);
+  transition: all 0.25s var(--spring-soft);
   pointer-events: none;
 }
 
-.iso-toast.hidden {
+.ghibli-toast.hidden {
   opacity: 0;
-  transform: translateX(-50%) translateY(25px) scale(0.9);
+  transform: translateX(-50%) translateY(30px) scale(0.9);
 }
 
 .hidden {
@@ -1304,55 +1442,47 @@ body {
 
 /* --------------------------------------------------------------------------
    RESPONSIVE DESIGN (TABLET & MOBILE)
-   Tự động thích ứng khi màn hình nhỏ hơn
    -------------------------------------------------------------------------- */
-@media (max-width: 1080px) {
-  .isometric-scene {
-    transform: rotateX(32deg) rotateZ(-16deg) scale(0.9);
+@media (max-width: 960px) {
+  .app-canvas {
+    padding: 12px;
   }
-  .iso-main-grid {
+  .ghibli-main-grid {
     grid-template-columns: 1fr;
-    max-width: 600px;
-    margin: 0 auto;
+    gap: 20px;
   }
-  .iso-cards-scroll-area {
-    height: 320px;
+  .parchment-scroll-area {
+    height: 340px;
   }
 }
 
-@media (max-width: 680px) {
-  /* Trên điện thoại, tự động chuyển về góc phẳng 2D để dễ bấm */
-  .isometric-scene {
-    transform: rotateX(0deg) rotateZ(0deg) scale(1) !important;
+@media (max-width: 600px) {
+  .ghibli-title {
+    font-size: 1.2rem;
   }
-  .room-floor-base {
+  .ghibli-subtitle {
     display: none;
   }
-  .app-topbar {
-    padding: 12px 16px;
+  .wood-turntable-deck {
+    height: 200px;
   }
-  .brand-tagline {
-    display: none;
+  .trunk-disc-wrapper {
+    width: 140px;
+    height: 140px;
   }
-  .iso-block {
-    border-radius: 18px;
-  }
-  .turntable-deck {
-    height: 190px;
-  }
-  .vinyl-holder {
-    width: 135px;
-    height: 135px;
-  }
-  .tactile-controls-row {
-    gap: 8px;
-  }
-  .iso-key-btn {
-    width: 40px;
-    height: 40px;
-  }
-  .btn-hero-play {
+  .record-sprout-center {
     width: 52px;
     height: 52px;
+  }
+  .nature-controls-panel {
+    gap: 10px;
+  }
+  .nature-key-btn {
+    width: 42px;
+    height: 42px;
+  }
+  .hero-leaf-btn {
+    width: 56px;
+    height: 56px;
   }
 }

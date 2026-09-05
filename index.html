@@ -3,73 +3,85 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MUSIC HOME • Isometric Lofi Sound Station</title>
-  <meta name="description" content="Trình phát nhạc cục bộ MUSIC HOME phong cách Isometric Art 2.5D Lofi Chill, chạy 100% offline.">
-  <!-- 100% OFFLINE: Không dùng bất kỳ CDN nào (Không Google Fonts, Không Tailwind CDN) -->
+  <title>MUSIC HOME • Studio Ghibli & Totoro Vibe</title>
+  <meta name="description" content="Trình phát nhạc cục bộ MUSIC HOME mang phong cách thiên nhiên trong trẻo, hoài niệm của Studio Ghibli và My Neighbor Totoro. 100% Offline.">
+  <!-- 100% OFFLINE: Không dùng bất kỳ liên kết CDN hay font ngoài nào -->
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <!-- SVG Grain Texture Filter cho hiệu ứng giấy tranh màu nước Lofi (100% offline) -->
-  <svg class="svg-noise-filter" aria-hidden="true">
-    <filter id="cozy-grain">
-      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-      <feColorMatrix type="matrix" values="0 0 0 0 0.2  0 0 0 0 0.15  0 0 0 0 0.1  0 0 0 0.04 0" />
-    </filter>
-  </svg>
-  <div class="noise-overlay"></div>
+<body class="ghibli-world">
+  <!-- 
+    ========================================================================
+    [SKILL: /impeccable & /redesign-existing-projects] 
+    BẦU TRỜI GHIBLI, MÂY TRÔI & ĐỒNG CỎ XANH BÌNH YÊN
+    Chừa sẵn class .ghibli-bg để người dùng có thể đặt ảnh bg.jpg cục bộ
+    ========================================================================
+  -->
+  <div class="ghibli-bg-layer ghibli-bg"></div>
 
-  <!-- Ambient Cozy Lighting & Window Sunlight Rays -->
-  <div class="sunlight-ray"></div>
-  <div class="ambient-warm-glow"></div>
+  <!-- Hệ thống mây trôi tự nhiên bằng CSS Animation -->
+  <div class="cloud-sky" aria-hidden="true">
+    <div class="cloud cloud-1"></div>
+    <div class="cloud cloud-2"></div>
+    <div class="cloud cloud-3"></div>
+    <div class="cloud cloud-4"></div>
+  </div>
 
-  <!-- App Wrapper -->
-  <div class="app-viewport">
+  <!-- Những ngọn đồi cỏ xanh nhấp nhô phía chân trời -->
+  <div class="hills-backdrop">
+    <div class="hill hill-back"></div>
+    <div class="hill hill-mid"></div>
+    <div class="hill hill-front"></div>
+  </div>
+
+  <!-- [SKILL: /animate] Đom đóm & Bào tử ánh sáng bay bổng khi phát nhạc -->
+  <div class="fireflies-container" id="firefliesContainer" aria-hidden="true">
+    <span class="firefly f1"></span>
+    <span class="firefly f2"></span>
+    <span class="firefly f3"></span>
+    <span class="firefly f4"></span>
+    <span class="firefly f5"></span>
+    <span class="firefly f6"></span>
+    <span class="firefly f7"></span>
+    <span class="firefly f8"></span>
+  </div>
+
+  <!-- KHUNG ỨNG DỤNG CHÍNH -->
+  <div class="app-canvas">
     
-    <!-- Top Bar Navigation -->
-    <header class="app-topbar">
-      <div class="topbar-brand">
-        <div class="brand-badge-3d">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-            <polyline points="9 22 9 12 15 12 15 22"></polyline>
-          </svg>
+    <!-- THANH TIÊU ĐỀ: BẢNG GỖ MỘC TREO DÂY -->
+    <header class="wooden-header">
+      <div class="header-brand">
+        <!-- Linh vật Susuwatari (Bụi bồ hóng nhí) đáng yêu -->
+        <div class="soot-sprite" title="Susuwatari • Bụi bồ hóng nhí">
+          <div class="sprite-body">
+            <div class="sprite-eye left"><div class="pupil"></div></div>
+            <div class="sprite-eye right"><div class="pupil"></div></div>
+          </div>
         </div>
-        <div class="brand-text-group">
-          <h1 class="brand-main-title">MUSIC HOME</h1>
-          <span class="brand-tagline">2.5D Isometric Lofi Station</span>
+        <div class="brand-titles">
+          <h1 class="ghibli-title">MUSIC HOME</h1>
+          <span class="ghibli-subtitle">Ghibli & Totoro Melodies • Bản Mộc Tự Nhiên</span>
         </div>
       </div>
 
-      <div class="topbar-controls">
-        <!-- Chuyển đổi góc nhìn Isometric 2.5D / Góc nhìn phẳng 2D tiện lợi -->
-        <button id="viewToggleBtn" class="iso-btn top-btn" title="Chuyển đổi góc nhìn 2.5D Isometric / Phẳng">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="m21.12 6.4-6.05-4a2 2 0 0 0-2.17 0l-5.4 3.6"></path>
-            <path d="m2.88 17.6 6.05 4a2 2 0 0 0 2.17 0l5.4-3.6"></path>
-            <polygon points="12 22 12 12 2.88 6.4 2.88 17.6 12 22"></polygon>
-            <polygon points="12 12 21.12 6.4 21.12 17.6 12 22 12 12"></polygon>
-            <polygon points="12 2 21.12 7.6 12 12 2.88 7.6 12 2"></polygon>
+      <!-- Nút thao tác bằng gỗ mộc & dây thừng -->
+      <div class="header-actions">
+        <!-- Nút nạp thư mục nhạc -->
+        <label for="folderInput" class="ghibli-btn btn-wood-primary" title="Mở thư mục chứa nhạc trên máy">
+          <!-- Inline SVG: Chiếc giỏ mây đựng hạt dẻ & lá cây -->
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2Z"></path>
+            <path d="M2 13.5h20"></path>
+            <path d="M7 6a5 5 0 0 1 10 0"></path>
           </svg>
-          <span id="viewToggleText">Góc nhìn: 2.5D</span>
-        </button>
-
-        <!-- Nút chọn thư mục nhạc (WebkitDirectory) -->
-        <label for="folderInput" class="iso-btn top-btn btn-cta" title="Chọn thư mục chứa nhạc cục bộ trên máy tính">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
-            <path d="M12 10v6"></path>
-            <path d="m9 13 3-3 3 3"></path>
-          </svg>
-          <span>Mở Thư Mục</span>
+          <span>Mở Thư Mục Nhạc</span>
         </label>
         <input type="file" id="folderInput" webkitdirectory directory multiple accept="audio/*" style="display: none;">
 
-        <!-- Nút chọn file phụ -->
-        <label for="fileInput" class="iso-btn top-btn btn-secondary" title="Chọn một số file nhạc riêng lẻ">
+        <!-- Nút chọn file lẻ -->
+        <label for="fileInput" class="ghibli-btn btn-wood-secondary" title="Chọn file nhạc lẻ">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path d="M9 18V5l12-2v13"></path>
-            <circle cx="6" cy="18" r="3"></circle>
-            <circle cx="18" cy="16" r="3"></circle>
+            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 14.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Zm0-7V5l5 1v3.5Z"></path>
           </svg>
           <span>Chọn File</span>
         </label>
@@ -77,269 +89,283 @@
       </div>
     </header>
 
-    <!-- SÂN KHẤU ISOMETRIC ART (ISOMETRIC WORLD CONTAINER) -->
-    <div class="isometric-world-container" id="isoWorldContainer">
-      <div class="isometric-scene" id="isoScene">
+    <!-- BỐ CỤC CHÍNH (2 PHẦN: MÁY PHÁT GỖ & BẢNG DANH SÁCH GIẤY DA) -->
+    <main class="ghibli-main-grid">
 
-        <!-- DECORATION: Lưới sàn gỗ Cozy Wood Planks & Bóng đổ nền -->
-        <div class="room-floor-base">
-          <div class="wood-slat"></div>
-          <div class="wood-slat"></div>
-          <div class="wood-slat"></div>
-          <div class="wood-slat"></div>
-          <div class="room-plant-pot" title="Cây xanh Monstera trong phòng">
-            <div class="plant-leaf leaf-1"></div>
-            <div class="plant-leaf leaf-2"></div>
-            <div class="plant-pot-base"></div>
-          </div>
-          <div class="coffee-cup" title="Cốc cà phê ấm">
-            <div class="coffee-steam"></div>
-            <div class="cup-body"></div>
-          </div>
+      <!-- ====================================================================
+           PHẦN 1: MÁY PHÁT NHẠC THÂN CÂY (NATURE SOUND STATION)
+           ==================================================================== -->
+      <section class="nature-card player-cottage">
+        
+        <!-- [SKILL: /improve-animations] Cành dây leo đung đưa theo làn gió -->
+        <div class="swaying-vine-branch" aria-hidden="true">
+          <div class="vine-stem"></div>
+          <div class="vine-leaf l1"></div>
+          <div class="vine-leaf l2"></div>
+          <div class="vine-leaf l3"></div>
+          <div class="vine-leaf l4"></div>
         </div>
 
-        <!-- MAIN LAYOUT: ISOMETRIC MUSIC CONSOLE + PLAYLIST CARDS -->
-        <div class="iso-main-grid">
+        <!-- Khu vực đĩa than vân gỗ (Tree trunk ring record) & Visualizer sóng gió -->
+        <div class="wood-turntable-deck">
+          <!-- Canvas Visualizer sóng âm thiên nhiên -->
+          <canvas id="visualizerCanvas" class="ghibli-visualizer"></canvas>
 
-          <!-- ==============================================================
-               KHỐI 1: BÀN ĐIỀU KHIỂN & ĐĨA THAN ISOMETRIC BOOMBOX
-               ============================================================== -->
-          <section class="iso-block boombox-block">
-            <div class="block-inner">
-              
-              <!-- Boombox Header: Màn hình hiển thị retro & Logo -->
-              <div class="boombox-roof">
-                <div class="roof-screw left"></div>
-                <div class="speaker-grill-mini">
-                  <span></span><span></span><span></span><span></span>
-                </div>
-                <div class="brand-plate">LO-FI AUDIO 2.5D</div>
-                <div class="roof-screw right"></div>
-              </div>
-
-              <!-- Khu vực Đĩa than Isometric & Visualizer -->
-              <div class="turntable-deck">
-                <!-- Visualizer Canvas nền -->
-                <canvas id="visualizerCanvas" class="turntable-canvas"></canvas>
-
-                <!-- Đĩa than Isometric (Vinyl Record) -->
-                <div class="vinyl-holder" id="vinylHolder">
-                  <div class="vinyl-disc-iso" id="vinylDisc">
-                    <div class="disc-groove g-1"></div>
-                    <div class="disc-groove g-2"></div>
-                    <div class="disc-groove g-3"></div>
-                    <div class="disc-center-label">
-                      <div class="center-art">
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
-                          <circle cx="12" cy="12" r="10"></circle>
-                          <polygon points="10 8 16 12 10 16 10 8" fill="currentColor"></polygon>
-                        </svg>
-                      </div>
-                      <div class="disc-pin"></div>
-                    </div>
-                  </div>
-                  <!-- Cần gạt đĩa than (Tonearm) phong cách Isometric -->
-                  <div class="tonearm-assembly" id="tonearm">
-                    <div class="tonearm-pivot"></div>
-                    <div class="tonearm-rod"></div>
-                    <div class="tonearm-head"></div>
-                  </div>
-                </div>
-
-                <!-- Chuyển đổi chế độ Visualizer -->
-                <button id="visualizerModeBtn" class="iso-btn-mini vis-toggle" title="Đổi giao diện sóng âm: Cột Lofi / Sóng Mềm">
-                  <span id="visModeLabel">📊 Cột Lofi</span>
-                </button>
-              </div>
-
-              <!-- Màn hình LCD Retro hiển thị bài hát -->
-              <div class="retro-lcd-screen">
-                <div class="lcd-header">
-                  <span class="lcd-dot-live"></span>
-                  <span class="lcd-status-text" id="playStatusText">STANDBY</span>
-                  <span class="lcd-format-badge" id="trackFormat">OFFLINE</span>
-                </div>
-                <div class="lcd-track-title-wrap">
-                  <h2 class="lcd-track-title" id="trackTitle">Chưa mở bài hát nào</h2>
-                </div>
-                <div class="lcd-track-sub" id="trackArtist">Hãy chọn thư mục nhạc để bắt đầu</div>
-              </div>
-
-              <!-- Thanh tiến trình Isometric Progress Bar -->
-              <div class="iso-progress-module">
-                <div class="progress-track-3d" id="progressContainer">
-                  <div class="progress-fill-3d" id="progressBar"></div>
-                  <div class="progress-handle-3d" id="progressThumb"></div>
-                  <div class="progress-tooltip-3d" id="progressHoverTime">00:00</div>
-                </div>
-                <div class="time-readout">
-                  <span id="currentTime">00:00</span>
-                  <div class="iso-sound-bars">
-                    <span class="v-bar bar-1"></span>
-                    <span class="v-bar bar-2"></span>
-                    <span class="v-bar bar-3"></span>
-                    <span class="v-bar bar-4"></span>
-                  </div>
-                  <span id="totalDuration">00:00</span>
-                </div>
-              </div>
-
-              <!-- Các nút bấm điều khiển vật lý (Mechanical 3D Tactile Buttons) -->
-              <div class="tactile-controls-row">
-                <!-- Nút Shuffle -->
-                <button id="shuffleBtn" class="iso-key-btn" title="Phát ngẫu nhiên (Shuffle) [S]">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"></path>
-                    <path d="m18 2 4 4-4 4"></path>
-                    <path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"></path>
-                    <path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"></path>
-                    <path d="m18 14 4 4-4 4"></path>
-                  </svg>
-                  <span class="key-led"></span>
-                </button>
-
-                <!-- Nút Prev -->
-                <button id="prevBtn" class="iso-key-btn" title="Bài trước [P]">
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="19 20 9 12 19 4 19 20"></polygon>
-                    <line x1="5" y1="19" x2="5" y2="5"></line>
-                  </svg>
-                </button>
-
-                <!-- Nút Play / Pause Trung Tâm (Khối 3D to nổi bật) -->
-                <button id="playPauseBtn" class="iso-key-btn btn-hero-play" title="Phát / Tạm dừng [Space]">
-                  <svg id="playIcon" viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
-                    <polygon points="6 3 20 12 6 21 6 3"></polygon>
-                  </svg>
-                  <svg id="pauseIcon" class="hidden" viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
-                    <rect x="6" y="4" width="4" height="16" rx="1.5"></rect>
-                    <rect x="14" y="4" width="4" height="16" rx="1.5"></rect>
-                  </svg>
-                </button>
-
-                <!-- Nút Next -->
-                <button id="nextBtn" class="iso-key-btn" title="Bài tiếp [N]">
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="5 4 15 12 5 20 5 4"></polygon>
-                    <line x1="19" y1="5" x2="19" y2="19"></line>
-                  </svg>
-                </button>
-
-                <!-- Nút Loop 3 trạng thái -->
-                <button id="loopBtn" class="iso-key-btn" title="Lặp lại: Tắt / Toàn bộ / 1 Bài [L]">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m17 2 4 4-4 4"></path>
-                    <path d="M3 11v-1a4 4 0 0 1 4-4h14"></path>
-                    <path d="m7 22-4-4 4-4"></path>
-                    <path d="M21 13v1a4 4 0 0 1-4 4H3"></path>
-                  </svg>
-                  <span class="loop-one-badge" id="loopBadge">1</span>
-                  <span class="key-led"></span>
-                </button>
-              </div>
-
-              <!-- Thanh chỉnh âm lượng 3D -->
-              <div class="iso-volume-strip">
-                <button id="muteBtn" class="iso-btn-mini volume-mute-btn" title="Bật/Tắt âm [M]">
-                  <svg id="volumeHighIcon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-                  </svg>
-                  <svg id="volumeMutedIcon" class="hidden" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                    <line x1="23" y1="9" x2="17" y2="15"></line>
-                    <line x1="17" y1="9" x2="23" y2="15"></line>
-                  </svg>
-                </button>
-                <div class="volume-slider-box">
-                  <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.8" class="iso-slider">
-                </div>
-                <span id="volumePercent" class="vol-num">80%</span>
-              </div>
-
-            </div>
-          </section>
-
-          <!-- ==============================================================
-               KHỐI 2: PLAYLIST ISOMETRIC CARDS XẾP TẦNG
-               ============================================================== -->
-          <section class="iso-block playlist-block">
-            <div class="block-inner">
-              
-              <!-- Playlist Top: Tiêu đề & Ô tìm kiếm -->
-              <div class="playlist-top-module">
-                <div class="playlist-badge-wrap">
-                  <span class="iso-tag">DANH SÁCH PHÁT</span>
-                  <span class="playlist-counter-badge" id="playlistCount">0 Bài Hát</span>
-                </div>
-
-                <!-- Tìm kiếm bài hát -->
-                <div class="iso-search-input-wrap">
-                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  </svg>
-                  <input type="text" id="searchInput" placeholder="Tìm kiếm bài hát...">
-                  <button id="clearSearchBtn" class="clear-btn hidden">&times;</button>
-                </div>
-              </div>
-
-              <!-- Thư mục đang mở -->
-              <div class="current-folder-pill">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+          <!-- Đĩa than vân gỗ tự nhiên -->
+          <div class="trunk-disc-wrapper" id="discWrapper">
+            <div class="trunk-record" id="trunkRecord">
+              <div class="bark-edge"></div>
+              <div class="growth-ring r1"></div>
+              <div class="growth-ring r2"></div>
+              <div class="growth-ring r3"></div>
+              <!-- Nhãn tâm đĩa: Chiếc lá mầm non Totoro -->
+              <div class="record-sprout-center">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#2d6a4f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M7 20h10"></path>
+                  <path d="M12 20v-8"></path>
+                  <path d="M12 12c-4-4-2-9 4-9 0 6-4 9-4 9Z" fill="#74c69d"></path>
+                  <path d="M12 12c0-5-5-7-7-4 0 5 7 4 7 4Z" fill="#52b788"></path>
                 </svg>
-                <span id="folderNameBadge">Chưa chọn thư mục nào</span>
+                <div class="record-pin"></div>
               </div>
-
-              <!-- Khu vực danh sách thẻ nhạc Isometric (Scrollable) -->
-              <div class="iso-cards-scroll-area" id="playlistContainer">
-                
-                <!-- Trạng thái trống (Empty Drop Zone) -->
-                <div class="iso-empty-zone" id="emptyState">
-                  <div class="empty-3d-box">
-                    <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.8">
-                      <rect x="2" y="2" width="20" height="20" rx="4"></rect>
-                      <path d="M9 18V5l12-2v13"></path>
-                      <circle cx="6" cy="18" r="3"></circle>
-                      <circle cx="18" cy="16" r="3"></circle>
-                    </svg>
-                  </div>
-                  <h3>CHƯA CÓ BÀI HÁT</h3>
-                  <p>Kéo thả thư mục nhạc hoặc bấm <strong>"Mở Thư Mục"</strong> để tải playlist trực tiếp trên máy.</p>
-                  <div class="iso-formats-strip">
-                    <span>.MP3</span><span>.WAV</span><span>.FLAC</span>
-                  </div>
-                </div>
-
-                <!-- Danh sách các thẻ bài hát 2.5D -->
-                <ul class="iso-card-stack" id="songList"></ul>
-
-              </div>
-
-              <!-- Playlist Footer -->
-              <div class="playlist-bottom-bar">
-                <span class="offline-ready-indicator">
-                  <span class="green-dot"></span> 100% Offline Local Engine
-                </span>
-                <span class="shortcut-tip" title="Space: Play/Pause | N/P: Next/Prev | S: Shuffle | L: Loop | M: Mute">⌨ Phím tắt</span>
-              </div>
-
             </div>
-          </section>
+            
+            <!-- Cần gạt nhánh cây (Twig Tonearm) -->
+            <div class="twig-tonearm" id="twigTonearm">
+              <div class="twig-base-acorn"></div>
+              <div class="twig-arm"></div>
+              <div class="twig-leaf-stylus"></div>
+            </div>
+          </div>
+
+          <!-- Nút chuyển chế độ sóng âm thiên nhiên -->
+          <button id="visualizerModeBtn" class="leaf-toggle-btn" title="Đổi hiệu ứng sóng: Mầm Cây / Sóng Gió">
+            <span id="visModeLabel">🌱 Mầm Cây</span>
+          </button>
+        </div>
+
+        <!-- Màn hình cuộn giấy da (Parchment Scroll) hiển thị bài hát -->
+        <div class="parchment-scroll">
+          <div class="scroll-wood-pin top"></div>
+          <div class="scroll-content">
+            <div class="scroll-status-line">
+              <span class="leaf-indicator" id="leafIndicator">🍃</span>
+              <span class="status-msg" id="playStatusText">SẴN SÀNG</span>
+              <span class="format-tag" id="trackFormat">GHIBLI</span>
+            </div>
+            <div class="track-title-container">
+              <h2 class="parchment-title" id="trackTitle">Chưa có bài hát nào</h2>
+            </div>
+            <div class="parchment-artist" id="trackArtist">Hãy mở thư mục nhạc để hòa mình vào thiên nhiên</div>
+          </div>
+          <div class="scroll-wood-pin bottom"></div>
+        </div>
+
+        <!-- 
+          ====================================================================
+          THANH TIẾN TRÌNH: SỢI DÂY LEO VÀ CỤC CHẠY CON BỌ RÙA (LADYBUG THUMB)
+          ====================================================================
+        -->
+        <div class="vine-progress-wrapper">
+          <div class="vine-progress-track" id="progressContainer" title="Nhấp hoặc kéo để tua nhạc">
+            <div class="vine-progress-fill" id="progressBar">
+              <!-- Chùm lá nở dọc theo thanh tiến trình -->
+              <span class="tiny-vine-bud b1"></span>
+              <span class="tiny-vine-bud b2"></span>
+              <span class="tiny-vine-bud b3"></span>
+            </div>
+
+            <!-- Cục chạy (Thumb) là Chú Bọ Rùa (Ladybug) đáng yêu -->
+            <div class="ladybug-thumb" id="progressThumb" title="Bọ rùa tua nhạc">
+              <div class="ladybug-shell">
+                <div class="ladybug-head"></div>
+                <div class="ladybug-dot d1"></div>
+                <div class="ladybug-dot d2"></div>
+                <div class="ladybug-dot d3"></div>
+                <div class="ladybug-dot d4"></div>
+              </div>
+            </div>
+
+            <!-- Bong bóng hiện giờ khi rê chuột -->
+            <div class="leaf-time-bubble" id="progressHoverTime">00:00</div>
+          </div>
+
+          <div class="time-readout">
+            <span id="currentTime">00:00</span>
+            <div class="breeze-indicator">
+              <span class="sprout s1"></span>
+              <span class="sprout s2"></span>
+              <span class="sprout s3"></span>
+            </div>
+            <span id="totalDuration">00:00</span>
+          </div>
+        </div>
+
+        <!-- 
+          ====================================================================
+          CÁC PHÍM ĐIỀU KHIỂN BẰNG GỖ MỘC & INLINE SVG THIÊN NHIÊN
+          Nút Play là chiếc lá hướng sang phải; Nút Pause là 2 nhánh cây song song
+          ====================================================================
+        -->
+        <div class="nature-controls-panel">
+          <!-- Nút Shuffle: Dây leo xáo trộn -->
+          <button id="shuffleBtn" class="nature-key-btn" title="Phát ngẫu nhiên (Shuffle) [S]">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 18h2.5c1.5 0 2.8-.7 3.7-2l5.6-8c.9-1.3 2.2-2 3.7-2H21"></path>
+              <path d="m18 3 3 3-3 3"></path>
+              <path d="M3 6h2.5c1.5 0 2.8.7 3.7 2"></path>
+              <path d="M21 18h-2.5c-1.5 0-2.8-.7-3.7-2l-.6-.8"></path>
+              <path d="m18 15 3 3-3 3"></path>
+            </svg>
+            <span class="wood-active-dot"></span>
+          </button>
+
+          <!-- Nút Prev: Búp mầm quay trái -->
+          <button id="prevBtn" class="nature-key-btn" title="Bài trước [P]">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M6 5a1 1 0 0 0-1 1v12a1 1 0 0 0 2 0V6a1 1 0 0 0-1-1Zm12.4 1.2a1 1 0 0 0-1.5-.86l-9 5.5a1 1 0 0 0 0 1.72l9 5.5A1 1 0 0 0 19 17.2V6.8a1 1 0 0 0-.6-.6Z"></path>
+            </svg>
+          </button>
+
+          <!-- 
+            NÚT PLAY / PAUSE TRUNG TÂM (LÁ CÂY HƯỚNG PHẢI & 2 NHÁNH CÂY SONG SONG)
+          -->
+          <button id="playPauseBtn" class="nature-key-btn hero-leaf-btn" title="Phát / Tạm dừng [Space]">
+            <!-- PLAY: Chiếc lá hướng sang phải -->
+            <svg id="playIcon" viewBox="0 0 24 24" width="30" height="30" fill="currentColor">
+              <!-- Dáng chiếc lá uốn cong hướng sang phải tựa như nút Play -->
+              <path d="M6 3c5 0 13 6 13 9s-8 9-13 9c0-6 4-9 4-9s-4-3-4-9Z"></path>
+              <path d="M6 12c5 0 9 0 13 0" stroke="#2d6a4f" stroke-width="1.8" stroke-linecap="round"></path>
+            </svg>
+            
+            <!-- PAUSE: Hai nhánh cây song song mọc lá -->
+            <svg id="pauseIcon" class="hidden" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round">
+              <line x1="7" y1="5" x2="7" y2="19"></line>
+              <line x1="17" y1="5" x2="17" y2="19"></line>
+            </svg>
+          </button>
+
+          <!-- Nút Next: Búp mầm quay phải -->
+          <button id="nextBtn" class="nature-key-btn" title="Bài tiếp theo [N]">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M18 5a1 1 0 0 1 1 1v12a1 1 0 0 1-2 0V6a1 1 0 0 1 1-1ZM5.6 6.2A1 1 0 0 1 7.1 5.34l9 5.5a1 1 0 0 1 0 1.72l-9 5.5A1 1 0 0 1 5 17.2V6.8a1 1 0 0 1 .6-.6Z"></path>
+            </svg>
+          </button>
+
+          <!-- Nút Loop: Vòng hoa 3 trạng thái -->
+          <button id="loopBtn" class="nature-key-btn" title="Chế độ lặp: Tắt / Toàn bộ / 1 Bài [L]">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m17 2 4 4-4 4"></path>
+              <path d="M3 11v-1a4 4 0 0 1 4-4h14"></path>
+              <path d="m7 22-4-4 4-4"></path>
+              <path d="M21 13v1a4 4 0 0 1-4 4H3"></path>
+            </svg>
+            <span class="loop-one-sprout" id="loopBadge">1</span>
+            <span class="wood-active-dot"></span>
+          </button>
+        </div>
+
+        <!-- Thanh điều chỉnh âm lượng gỗ & Chuông gió -->
+        <div class="wood-volume-row">
+          <button id="muteBtn" class="leaf-icon-btn" title="Bật / Tắt âm thanh [M]">
+            <!-- Loa hình vỏ ốc / chuông gió mộc mạc -->
+            <svg id="volumeHighIcon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+            <svg id="volumeMutedIcon" class="hidden" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <line x1="23" y1="9" x2="17" y2="15"></line>
+              <line x1="17" y1="9" x2="23" y2="15"></line>
+            </svg>
+          </button>
+          
+          <div class="wood-slider-shell">
+            <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.8" class="nature-slider">
+          </div>
+          <span id="volumePercent" class="volume-text">80%</span>
+        </div>
+
+      </section>
+
+      <!-- ====================================================================
+           PHẦN 2: BẢNG DANH SÁCH BÀI HÁT GIẤY DA (PARCHMENT PLAYLIST)
+           ==================================================================== -->
+      <section class="nature-card playlist-cottage">
+        
+        <!-- Đầu bảng danh sách: Tiêu đề & Ô tìm kiếm mộc mạc -->
+        <div class="playlist-wood-top">
+          <div class="pl-header-title">
+            <span class="moss-badge">DANH SÁCH PHÁT</span>
+            <span class="acorn-counter" id="playlistCount">0 Bài Hát</span>
+          </div>
+
+          <!-- Ô tìm kiếm với hoa văn dây lá -->
+          <div class="twig-search-box">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Tìm bài hát trong khu rừng...">
+            <button id="clearSearchBtn" class="clear-wood-btn hidden" title="Xóa tìm kiếm">&times;</button>
+          </div>
+        </div>
+
+        <!-- Thư mục nguồn đang phát -->
+        <div class="nature-folder-pill">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+          </svg>
+          <span id="folderNameBadge">Chưa chọn thư mục nào</span>
+        </div>
+
+        <!-- Vùng cuộn danh sách thẻ bài hát giấy da -->
+        <div class="parchment-scroll-area" id="playlistContainer">
+          
+          <!-- Trạng thái trống (Empty State Totoro Vibe) -->
+          <div class="empty-nature-state" id="emptyState">
+            <div class="acorn-basket-art">
+              <!-- Chiếc ô lá cây & hạt dẻ Totoro -->
+              <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="#2d6a4f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3a9 9 0 0 1 9 9v1H3v-1a9 9 0 0 1 9-9Z" fill="#a7c957"></path>
+                <path d="M12 13v6a2 2 0 0 1-4 0"></path>
+                <path d="M12 3V1"></path>
+              </svg>
+            </div>
+            <h3>Giai Điệu Khu Rừng Đang Ngủ Yên</h3>
+            <p>Nhấp <strong>"Mở Thư Mục Nhạc"</strong> hoặc kéo thả thư mục vào đây để thức tỉnh những giai điệu Ghibli êm dịu.</p>
+            <div class="format-leaf-pills">
+              <span>🍃 MP3</span><span>🌱 WAV</span><span>🌾 FLAC</span>
+            </div>
+          </div>
+
+          <!-- Danh sách các bài hát dạng thẻ lá giấy mộc -->
+          <ul class="nature-song-list" id="songList"></ul>
 
         </div>
-      </div>
-    </div>
+
+        <!-- Chân bảng danh sách -->
+        <div class="playlist-footer-banner">
+          <span class="eco-status">
+            <span class="sprout-icon">🌱</span> 100% Offline Local Engine
+          </span>
+          <span class="nature-shortcut-hint" title="Space: Phát/Dừng | N/P: Bài tiếp/trước | S: Shuffle | L: Loop | M: Tắt tiếng">
+            ⌨ Phím tắt
+          </span>
+        </div>
+
+      </section>
+
+    </main>
 
   </div>
 
-  <!-- Audio Core Element -->
+  <!-- Thẻ Audio cốt lõi -->
   <audio id="audioElement" preload="metadata"></audio>
 
-  <!-- Lofi Notification Toast -->
-  <div id="toast" class="iso-toast hidden"></div>
+  <!-- Thông báo Toast kiểu gỗ thông Ghibli -->
+  <div id="toast" class="ghibli-toast hidden"></div>
 
   <!-- Scripts -->
   <script src="app.js"></script>

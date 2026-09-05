@@ -1,29 +1,30 @@
 /**
  * ============================================================================
- * MUSIC HOME • ISOMETRIC LO-FI SOUND STATION (2.5D ART)
- * 100% Offline Engine • Vanilla ES6 • Pure Web Standards
+ * MUSIC HOME • STUDIO GHIBLI & MY NEIGHBOR TOTORO SOUND STATION
+ * 100% Offline Engine • Pure Vanilla ES6 • Zero External Dependencies
  * ============================================================================
  * 
- * SKILLS APPLIED IN THIS MODULE:
- * - [SKILL: /ponytail] : Tối giản hóa logic, YAGNI, dùng Native Web Audio & HTML5 Audio, không thư viện thừa.
- * - [SKILL: /apple-design] : Phản hồi tức thì trên pointerdown, Direct Manipulation (kéo tua 1:1), ngắt chuyển động an toàn.
- * - [SKILL: /animate & /improve-animations] : Điều khiển hoạt ảnh xoay đĩa than Isometric, cần gạt Tonearm cơ học, sóng Visualizer Lofi.
- * - [SKILL: /impeccable] : Xử lý tương tác tinh tế, định dạng số liệu chính xác, dọn dẹp RAM triệt để (Zero Memory Leak).
+ * HỆ THỐNG SKILLS ĐƯỢC TÍCH HỢP TRONG MODULE NÀY:
+ * - [SKILL: /animate] : Kích hoạt hiệu ứng đom đóm phát sáng bay lên khi phát nhạc, đĩa thân cây quay.
+ * - [SKILL: /improve-animations] : Điều khiển chuyển động cần gạt nhánh cây (Twig Tonearm), búp mầm đung đưa.
+ * - [SKILL: /animation-vocabulary] : Cơ chế nảy nhún (Susuwatari Bounce) và Direct Manipulation cho chú Bọ Rùa (Ladybug Thumb).
+ * - [SKILL: /impeccable & /redesign-existing-projects] : Xử lý dữ liệu mộc mạc, bố cục tự nhiên, dọn dẹp RAM triệt để.
+ * - [SKILL: /ponytail & /ponytail-help] : Logic lõi gọn gàng, tối giản (YAGNI), bảo đảm hoạt động 100% không bug trên file://.
  */
 
 (() => {
   'use strict';
 
-  // --- HẰNG SỐ ĐỊNH DẠNG HỖ TRỢ (100% OFFLINE) ---
+  // --- HẰNG SỐ ĐỊNH DẠNG ÂM THANH HỖ TRỢ (100% OFFLINE) ---
   const SUPPORTED_AUDIO_EXT = ['.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac', '.opus', '.weba'];
 
   // --------------------------------------------------------------------------
-  // [SKILL: /ponytail] STATE MANAGEMENT: Quản lý trạng thái bài hát gọn gàng, rõ ràng
+  // [SKILL: /ponytail] STATE MANAGEMENT: Quản lý trạng thái bài hát gọn gàng
   // --------------------------------------------------------------------------
   const state = {
-    playlist: [],           // Danh sách gốc [{ id, file, name, title, artist, format, size, url }]
-    filteredIndices: [],    // Index các bài đang hiển thị khi tìm kiếm
-    currentIndex: -1,       // Index bài đang phát trong playlist
+    playlist: [],           // Danh sách bài hát [{ id, file, name, title, artist, format, size, url }]
+    filteredIndices: [],    // Index các bài đang hiển thị theo tìm kiếm
+    currentIndex: -1,       // Index bài đang phát
     isPlaying: false,
     volume: 0.8,
     previousVolume: 0.8,
@@ -32,9 +33,8 @@
     isShuffle: false,
     shuffleOrder: [],       // Mảng hoán vị Fisher-Yates
     shufflePosition: 0,
-    visualizerMode: 'bars', // 'bars' | 'wave'
-    isFlatView: false,      // Chuyển đổi góc nhìn 2.5D Isometric / Phẳng 2D
-    isScrubbing: false      // Cờ kéo tua thanh tiến trình
+    visualizerMode: 'bars', // 'bars' (Mầm cây) | 'wave' (Sóng gió)
+    isScrubbing: false      // Cờ rê kéo chú bọ rùa
   };
 
   // --- DOM ELEMENTS CACHE ---
@@ -43,25 +43,21 @@
     folderInput: document.getElementById('folderInput'),
     fileInput: document.getElementById('fileInput'),
     
-    // Isometric Scene & Controls
-    isoScene: document.getElementById('isoScene'),
-    viewToggleBtn: document.getElementById('viewToggleBtn'),
-    viewToggleText: document.getElementById('viewToggleText'),
-    
-    // Turntable & Vinyl
-    vinylDisc: document.getElementById('vinylDisc'),
-    tonearm: document.getElementById('tonearm'),
+    // Đĩa thân cây & Cần gạt nhánh cây
+    trunkRecord: document.getElementById('trunkRecord'),
+    twigTonearm: document.getElementById('twigTonearm'),
     visualizerCanvas: document.getElementById('visualizerCanvas'),
     visualizerModeBtn: document.getElementById('visualizerModeBtn'),
     visModeLabel: document.getElementById('visModeLabel'),
 
-    // Retro LCD Display
+    // Cuộn giấy da (Parchment Scroll)
     trackTitle: document.getElementById('trackTitle'),
     trackArtist: document.getElementById('trackArtist'),
     trackFormat: document.getElementById('trackFormat'),
     playStatusText: document.getElementById('playStatusText'),
+    leafIndicator: document.getElementById('leafIndicator'),
 
-    // Progress Bar
+    // Thanh tiến trình dây leo & Chú bọ rùa (Ladybug)
     progressContainer: document.getElementById('progressContainer'),
     progressBar: document.getElementById('progressBar'),
     progressThumb: document.getElementById('progressThumb'),
@@ -69,7 +65,7 @@
     currentTime: document.getElementById('currentTime'),
     totalDuration: document.getElementById('totalDuration'),
 
-    // Mechanical Tactile Buttons
+    // Các phím bấm tự nhiên (Nature Controls)
     playPauseBtn: document.getElementById('playPauseBtn'),
     playIcon: document.getElementById('playIcon'),
     pauseIcon: document.getElementById('pauseIcon'),
@@ -79,14 +75,14 @@
     loopBtn: document.getElementById('loopBtn'),
     loopBadge: document.getElementById('loopBadge'),
 
-    // Volume
+    // Âm lượng
     muteBtn: document.getElementById('muteBtn'),
     volumeHighIcon: document.getElementById('volumeHighIcon'),
     volumeMutedIcon: document.getElementById('volumeMutedIcon'),
     volumeSlider: document.getElementById('volumeSlider'),
     volumePercent: document.getElementById('volumePercent'),
 
-    // Playlist
+    // Bảng danh sách bài hát
     playlistCount: document.getElementById('playlistCount'),
     searchInput: document.getElementById('searchInput'),
     clearSearchBtn: document.getElementById('clearSearchBtn'),
@@ -95,12 +91,12 @@
     emptyState: document.getElementById('emptyState'),
     songList: document.getElementById('songList'),
 
-    // Toast
+    // Thông báo Toast Ghibli
     toast: document.getElementById('toast')
   };
 
   // --------------------------------------------------------------------------
-  // [SKILL: /animate & /impeccable] WEB AUDIO API & ISOMETRIC CANVAS VISUALIZER
+  // [SKILL: /animate & /impeccable] SÓNG ÂM THIÊN NHIÊN (CANVAS VISUALIZER)
   // --------------------------------------------------------------------------
   let audioCtx = null;
   let analyser = null;
@@ -126,7 +122,7 @@
 
       dataArray = new Uint8Array(analyser.frequencyBinCount);
     } catch (err) {
-      console.warn('Môi trường file:// kích hoạt bộ mô phỏng sóng Lofi tự động:', err);
+      console.warn('Môi trường file:// kích hoạt Visualizer mô phỏng sóng mầm cây:', err);
     }
   }
 
@@ -145,7 +141,7 @@
     if (canvasCtx) canvasCtx.scale(dpr, dpr);
   }
 
-  let lofiPhase = 0;
+  let naturePhase = 0;
   function renderVisualizer() {
     animId = requestAnimationFrame(renderVisualizer);
     if (!canvasCtx) return;
@@ -167,31 +163,31 @@
     }
 
     if (state.visualizerMode === 'bars') {
-      // --- Chế độ 1: Cột tần số Lofi Pastel ---
-      const barCount = 28;
-      const barWidth = (width / barCount) * 0.55;
+      // --- Chế độ 1: Búp mầm cây mọc vươn lên (Nature Sprout Bars) ---
+      const barCount = 26;
+      const barWidth = (width / barCount) * 0.52;
       const barSpacing = width / barCount;
 
       for (let i = 0; i < barCount; i++) {
         let barH = 0;
         if (hasRealData && dataArray) {
-          const sample = Math.floor((i / barCount) * (dataArray.length * 0.7));
-          barH = ((dataArray[sample] || 0) / 255) * (height * 0.65);
+          const sample = Math.floor((i / barCount) * (dataArray.length * 0.72));
+          barH = ((dataArray[sample] || 0) / 255) * (height * 0.6);
         } else if (state.isPlaying) {
-          const wave = Math.sin(lofiPhase + i * 0.35) * 0.5 + 0.5;
-          barH = (wave * 0.45 + 0.1) * height;
+          const wave = Math.sin(naturePhase + i * 0.35) * 0.5 + 0.5;
+          barH = (wave * 0.4 + 0.1) * height;
         } else {
-          barH = 4 + Math.sin(lofiPhase * 0.4 + i * 0.25) * 3;
+          barH = 4 + Math.sin(naturePhase * 0.4 + i * 0.2) * 3;
         }
 
         const x = i * barSpacing + (barSpacing - barWidth) / 2;
-        const y = height - barH - 8;
+        const y = height - barH - 6;
 
-        // Gradient pastel ấm áp phong cách Lofi Room
+        // Gradient màu mầm lá xanh Totoro
         const grad = canvasCtx.createLinearGradient(0, height, 0, y);
-        grad.addColorStop(0, 'rgba(42, 157, 143, 0.2)');
-        grad.addColorStop(0.6, 'rgba(255, 209, 102, 0.7)');
-        grad.addColorStop(1, 'rgba(255, 107, 107, 0.9)');
+        grad.addColorStop(0, 'rgba(45, 106, 79, 0.25)');
+        grad.addColorStop(0.5, 'rgba(82, 183, 136, 0.7)');
+        grad.addColorStop(1, 'rgba(116, 198, 157, 0.95)');
 
         canvasCtx.fillStyle = grad;
         canvasCtx.beginPath();
@@ -199,23 +195,23 @@
         canvasCtx.fill();
       }
     } else {
-      // --- Chế độ 2: Sóng mềm Lofi Oscilloscope ---
+      // --- Chế độ 2: Làn sóng gió đồng cỏ (Meadow Breeze Wave) ---
       canvasCtx.beginPath();
-      canvasCtx.lineWidth = 3;
-      canvasCtx.strokeStyle = 'rgba(255, 107, 107, 0.85)';
+      canvasCtx.lineWidth = 3.5;
+      canvasCtx.strokeStyle = 'rgba(45, 106, 79, 0.85)';
 
-      const sliceW = width / 32;
+      const sliceW = width / 30;
       let x = 0;
 
-      for (let i = 0; i <= 32; i++) {
+      for (let i = 0; i <= 30; i++) {
         let v = 0.5;
         if (hasRealData && dataArray) {
-          const sample = Math.floor((i / 32) * dataArray.length);
+          const sample = Math.floor((i / 30) * dataArray.length);
           v = (dataArray[sample] || 128) / 255.0;
         } else if (state.isPlaying) {
-          v = 0.5 + Math.sin(lofiPhase * 1.5 + i * 0.3) * 0.2;
+          v = 0.5 + Math.sin(naturePhase * 1.6 + i * 0.25) * 0.22;
         } else {
-          v = 0.5 + Math.sin(lofiPhase * 0.5 + i * 0.15) * 0.05;
+          v = 0.5 + Math.sin(naturePhase * 0.5 + i * 0.15) * 0.05;
         }
 
         const y = v * height;
@@ -226,11 +222,11 @@
       canvasCtx.stroke();
     }
 
-    lofiPhase += state.isPlaying ? 0.07 : 0.015;
+    naturePhase += state.isPlaying ? 0.07 : 0.015;
   }
 
   // --------------------------------------------------------------------------
-  // [SKILL: /ponytail] XỬ LÝ NHẬP TẬP TIN & THƯ MỤC CỤC BỘ (100% OFFLINE)
+  // [SKILL: /ponytail] XỬ LÝ NHẬP THƯ MỤC CỤC BỘ (100% OFFLINE)
   // --------------------------------------------------------------------------
   function handleFiles(fileList) {
     if (!fileList || fileList.length === 0) return;
@@ -246,19 +242,19 @@
 
       if (isAudio) {
         if (!detectedFolder && file.webkitRelativePath) {
-          const segments = file.webkitRelativePath.split('/');
-          if (segments.length > 1) detectedFolder = segments[0];
+          const parts = file.webkitRelativePath.split('/');
+          if (parts.length > 1) detectedFolder = parts[0];
         }
 
         newTracks.push({
-          id: 'trk_' + Date.now() + '_' + i,
+          id: 'ghibli_' + Date.now() + '_' + i,
           file: file,
           name: file.name,
-          title: cleanFileName(file.name),
-          artist: detectedFolder || 'Tập tin máy',
+          title: cleanTitle(file.name),
+          artist: detectedFolder || 'Giai điệu địa phương',
           format: getExtension(file.name).toUpperCase() || 'AUDIO',
           size: formatBytes(file.size),
-          url: null // Tạo blob URL khi phát để tiết kiệm RAM
+          url: null // Tạo URL khi phát
         });
       }
     }
@@ -268,10 +264,10 @@
       return;
     }
 
-    // Sắp xếp tự nhiên theo tên (Track 01, Track 02...)
+    // Sắp xếp tự nhiên theo tên bài
     newTracks.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
-    // [SKILL: /impeccable] Dọn dẹp URL cũ giải phóng bộ nhớ
+    // [SKILL: /impeccable] Dọn dẹp URL cũ tránh rò rỉ RAM
     state.playlist.forEach(t => {
       if (t.url) URL.revokeObjectURL(t.url);
     });
@@ -279,17 +275,17 @@
     state.playlist = newTracks;
     state.filteredIndices = state.playlist.map((_, i) => i);
 
-    dom.folderNameBadge.textContent = detectedFolder ? `Thư mục: ${detectedFolder}` : `Đã nạp: ${newTracks.length} files`;
+    dom.folderNameBadge.textContent = detectedFolder ? `Thư mục: ${detectedFolder}` : `Khu vườn nhạc: ${newTracks.length} bài`;
 
     if (state.isShuffle) buildShuffleOrder(0);
 
     renderPlaylist();
     updatePlaylistCount();
     loadTrack(0, true);
-    showToast(`Đã mở ${newTracks.length} bài hát thành công!`);
+    showToast(`Đã thức tỉnh ${newTracks.length} giai điệu Ghibli!`);
   }
 
-  function cleanFileName(fileName) {
+  function cleanTitle(fileName) {
     const dot = fileName.lastIndexOf('.');
     let name = dot !== -1 ? fileName.substring(0, dot) : fileName;
     name = name.replace(/^\d+[\s.-]+/, '');
@@ -310,14 +306,14 @@
   }
 
   // --------------------------------------------------------------------------
-  // [SKILL: /animate & /apple-design] ĐIỀU KHIỂN PHÁT NHẠC VẬT LÝ
+  // [SKILL: /animate & /improve-animations] ĐIỀU KHIỂN PHÁT NHẠC
   // --------------------------------------------------------------------------
   function loadTrack(index, autoPlay = false) {
     if (index < 0 || index >= state.playlist.length) return;
 
     const track = state.playlist[index];
 
-    // Thu hồi URL bài trước
+    // Giải phóng bộ nhớ bài trước
     if (state.currentIndex >= 0 && state.currentIndex !== index) {
       const prev = state.playlist[state.currentIndex];
       if (prev && prev.url) {
@@ -335,7 +331,7 @@
     dom.audio.src = track.url;
     dom.audio.load();
 
-    // Cập nhật màn hình LCD
+    // Cập nhật cuộn giấy da
     dom.trackTitle.textContent = track.title;
     dom.trackTitle.title = track.name;
     dom.trackArtist.textContent = `${track.artist} • ${track.size}`;
@@ -356,7 +352,7 @@
       state.isPlaying = true;
       updatePlaybackUI();
     }).catch(err => {
-      console.warn('Autoplay cần tương tác chuột đầu tiên:', err);
+      console.warn('Autoplay cần tương tác người dùng đầu tiên:', err);
       state.isPlaying = false;
       updatePlaybackUI();
     });
@@ -385,17 +381,21 @@
     if (state.isPlaying) {
       dom.playIcon.classList.add('hidden');
       dom.pauseIcon.classList.remove('hidden');
-      dom.vinylDisc.classList.add('playing');
-      dom.tonearm.classList.add('active'); // Cần gạt hạ xuống đĩa
-      dom.playStatusText.textContent = 'PLAYING';
-      dom.playStatusText.style.color = 'var(--accent-mint)';
+      dom.trunkRecord.classList.add('playing');
+      dom.twigTonearm.classList.add('active'); // Cần gạt nhánh cây hạ xuống
+      document.body.classList.add('music-playing'); // [SKILL: /animate] Bật đom đóm bay lên
+      dom.playStatusText.textContent = 'ĐANG PHÁT';
+      dom.playStatusText.style.color = 'var(--leaf-bright)';
+      dom.leafIndicator.textContent = '🍃';
     } else {
       dom.playIcon.classList.remove('hidden');
       dom.pauseIcon.classList.add('hidden');
-      dom.vinylDisc.classList.remove('playing');
-      dom.tonearm.classList.remove('active'); // Cần gạt nhấc về vị trí nghỉ
-      dom.playStatusText.textContent = 'PAUSED';
-      dom.playStatusText.style.color = 'var(--accent-sun)';
+      dom.trunkRecord.classList.remove('playing');
+      dom.twigTonearm.classList.remove('active'); // Cần gạt nhánh cây nhấc lên
+      document.body.classList.remove('music-playing'); // Tắt đom đóm
+      dom.playStatusText.textContent = 'TẠM DỪNG';
+      dom.playStatusText.style.color = '#7f5539';
+      dom.leafIndicator.textContent = '🌱';
     }
   }
 
@@ -416,7 +416,7 @@
           state.shufflePosition = 0;
         } else {
           pauseAudio();
-          showToast('Đã phát hết danh sách ngẫu nhiên!');
+          showToast('Đã nghe hết danh sách ngẫu nhiên!');
           return;
         }
       }
@@ -458,7 +458,7 @@
   }
 
   // --------------------------------------------------------------------------
-  // [SKILL: /ponytail] THUẬT TOÁN SHUFFLE & LOOP MODES GỌN GÀNG
+  // [SKILL: /ponytail] SHUFFLE & LOOP MODES
   // --------------------------------------------------------------------------
   function buildShuffleOrder(anchorIndex = state.currentIndex) {
     const total = state.playlist.length;
@@ -466,7 +466,7 @@
     for (let i = 0; i < total; i++) {
       if (i !== anchorIndex) indices.push(i);
     }
-    // Fisher-Yates O(n)
+    // Thuật toán Fisher-Yates chuẩn
     for (let i = indices.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [indices[i], indices[j]] = [indices[j], indices[i]];
@@ -483,7 +483,7 @@
     if (state.isShuffle) {
       buildShuffleOrder(state.currentIndex);
       dom.shuffleBtn.classList.add('active');
-      showToast('Phát ngẫu nhiên: BẬT');
+      showToast('Phát ngẫu nhiên: BẬT 🍃');
     } else {
       dom.shuffleBtn.classList.remove('active');
       showToast('Phát ngẫu nhiên: TẮT');
@@ -494,7 +494,7 @@
     if (state.loopMode === 'all') {
       state.loopMode = 'one';
       dom.loopBtn.classList.add('active', 'loop-one');
-      showToast('Lặp lại: 1 BÀI HIỆN TẠI');
+      showToast('Lặp lại: 1 BÀI HIỆN TẠI 🌿');
     } else if (state.loopMode === 'one') {
       state.loopMode = 'off';
       dom.loopBtn.classList.remove('active', 'loop-one');
@@ -503,12 +503,12 @@
       state.loopMode = 'all';
       dom.loopBtn.classList.add('active');
       dom.loopBtn.classList.remove('loop-one');
-      showToast('Lặp lại: TOÀN BỘ DANH SÁCH');
+      showToast('Lặp lại: TOÀN BỘ KHU VƯỜN 🌾');
     }
   }
 
   // --------------------------------------------------------------------------
-  // [SKILL: /apple-design] DIRECT MANIPULATION: THANH TIẾN TRÌNH & VOLUME
+  // [SKILL: /animation-vocabulary] THANH DÂY LEO & CHÚ BỌ RÙA (DIRECT MANIPULATION)
   // --------------------------------------------------------------------------
   function updateProgress(curr, dur) {
     const pct = dur > 0 ? (curr / dur) * 100 : 0;
@@ -563,7 +563,7 @@
   }
 
   // --------------------------------------------------------------------------
-  // DANH SÁCH THẺ BÀI HÁT XẾP TẦNG 2.5D (PLAYLIST CARDS)
+  // DANH SÁCH BÀI HÁT THẺ LÁ GIẤY MỘC (PARCHMENT CARDS)
   // --------------------------------------------------------------------------
   function renderPlaylist() {
     if (state.playlist.length === 0) {
@@ -578,21 +578,20 @@
     state.filteredIndices.forEach((playlistIdx, displayIdx) => {
       const track = state.playlist[playlistIdx];
       const li = document.createElement('li');
-      li.className = 'iso-card-item' + (playlistIdx === state.currentIndex ? ' active' : '');
+      li.className = 'nature-song-card' + (playlistIdx === state.currentIndex ? ' active' : '');
       li.dataset.index = playlistIdx;
 
       li.innerHTML = `
-        <div class="card-left">
-          <div class="card-num-box">${displayIdx + 1}</div>
-          <div class="card-text">
+        <div class="card-left-group">
+          <div class="leaf-num-stamp">${displayIdx + 1}</div>
+          <div class="card-song-details">
             <span class="card-title" title="${track.name}">${track.title}</span>
-            <div class="card-meta-line">${track.size} • ${track.format}</div>
+            <div class="card-subtext">${track.size} • ${track.format}</div>
           </div>
         </div>
-        <span class="card-right-badge">${track.format}</span>
+        <span class="card-leaf-badge">${track.format}</span>
       `;
 
-      // [SKILL: /apple-design] Phản hồi trực tiếp khi nhấp
       li.addEventListener('click', () => {
         loadTrack(playlistIdx, true);
       });
@@ -605,7 +604,7 @@
   }
 
   function updateActiveCard() {
-    const items = dom.songList.querySelectorAll('.iso-card-item');
+    const items = dom.songList.querySelectorAll('.nature-song-card');
     items.forEach(item => {
       const idx = parseInt(item.dataset.index, 10);
       if (idx === state.currentIndex) {
@@ -637,7 +636,7 @@
   }
 
   // --------------------------------------------------------------------------
-  // TOAST THÔNG BÁO
+  // TOAST THÔNG BÁO GHIBLI
   // --------------------------------------------------------------------------
   let toastTimer = null;
   function showToast(msg) {
@@ -646,33 +645,14 @@
     dom.toast.classList.remove('hidden');
     toastTimer = setTimeout(() => {
       dom.toast.classList.add('hidden');
-    }, 2200);
+    }, 2400);
   }
 
   // --------------------------------------------------------------------------
-  // CHUYỂN ĐỔI GÓC NHÌN 2.5D ISOMETRIC / PHẲNG 2D
-  // --------------------------------------------------------------------------
-  function toggleIsometricView() {
-    state.isFlatView = !state.isFlatView;
-    if (state.isFlatView) {
-      dom.isoScene.classList.add('flat-view');
-      dom.viewToggleText.textContent = 'Góc nhìn: 2D';
-      showToast('Đã chuyển sang góc nhìn phẳng 2D');
-    } else {
-      dom.isoScene.classList.remove('flat-view');
-      dom.viewToggleText.textContent = 'Góc nhìn: 2.5D';
-      showToast('Đã chuyển sang góc nhìn Isometric 2.5D');
-    }
-  }
-
-  // --------------------------------------------------------------------------
-  // SỰ KIỆN TƯƠNG TÁC (EVENT LISTENERS)
+  // TƯƠNG TÁC SỰ KIỆN (EVENT LISTENERS)
   // --------------------------------------------------------------------------
   function setupEvents() {
-    // 1. Chuyển đổi góc nhìn
-    dom.viewToggleBtn.addEventListener('click', toggleIsometricView);
-
-    // 2. Nhập file & thư mục
+    // 1. Nhập thư mục và file nhạc
     dom.folderInput.addEventListener('change', (e) => {
       handleFiles(e.target.files);
       e.target.value = '';
@@ -682,7 +662,7 @@
       e.target.value = '';
     });
 
-    // Drag and Drop
+    // Kéo thả thư mục (Drag & Drop)
     ['dragenter', 'dragover'].forEach(name => {
       window.addEventListener(name, (e) => {
         e.preventDefault();
@@ -705,7 +685,7 @@
       }
     });
 
-    // 3. Sự kiện thẻ Audio
+    // 2. Sự kiện thẻ Audio
     dom.audio.addEventListener('timeupdate', () => {
       if (!state.isScrubbing && dom.audio.duration) {
         updateProgress(dom.audio.currentTime, dom.audio.duration);
@@ -722,14 +702,14 @@
       pauseAudio();
     });
 
-    // 4. Các nút cơ học Playback
+    // 3. Phím điều khiển phát nhạc
     dom.playPauseBtn.addEventListener('click', togglePlayPause);
     dom.nextBtn.addEventListener('click', () => nextTrack(false));
     dom.prevBtn.addEventListener('click', prevTrack);
     dom.shuffleBtn.addEventListener('click', toggleShuffle);
     dom.loopBtn.addEventListener('click', cycleLoopMode);
 
-    // 5. Thanh tiến trình (Pointer Events)
+    // 4. Thanh tiến trình dây leo (Pointer Events)
     dom.progressContainer.addEventListener('pointerdown', (e) => {
       state.isScrubbing = true;
       dom.progressContainer.setPointerCapture(e.pointerId);
@@ -740,7 +720,7 @@
       if (state.isScrubbing) {
         seekByPointer(e);
       }
-      // Tooltip preview thời gian
+      // Bong bóng xem trước thời gian
       const rect = dom.progressContainer.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const ratio = Math.max(0, Math.min(1, x / rect.width));
@@ -760,29 +740,29 @@
       if (!state.isScrubbing) dom.progressHoverTime.style.opacity = '0';
     });
 
-    // 6. Chỉnh âm lượng & Mute
+    // 5. Thanh âm lượng & Mute
     dom.volumeSlider.addEventListener('input', (e) => setVolume(e.target.value));
     dom.muteBtn.addEventListener('click', toggleMute);
 
-    // 7. Tìm kiếm
+    // 6. Tìm kiếm bài hát
     dom.searchInput.addEventListener('input', (e) => filterCards(e.target.value));
     dom.clearSearchBtn.addEventListener('click', () => {
       dom.searchInput.value = '';
       filterCards('');
     });
 
-    // 8. Đổi chế độ Visualizer
+    // 7. Chuyển chế độ Visualizer mầm cây / sóng gió
     dom.visualizerModeBtn.addEventListener('click', () => {
       if (state.visualizerMode === 'bars') {
         state.visualizerMode = 'wave';
-        dom.visModeLabel.textContent = '〰️ Sóng Mềm';
+        dom.visModeLabel.textContent = '〰️ Sóng Gió';
       } else {
         state.visualizerMode = 'bars';
-        dom.visModeLabel.textContent = '📊 Cột Lofi';
+        dom.visModeLabel.textContent = '🌱 Mầm Cây';
       }
     });
 
-    // 9. Phím tắt toàn cục (Global Keyboard Shortcuts)
+    // 8. Phím tắt toàn cục
     window.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT') return;
 
@@ -826,10 +806,10 @@
     });
   }
 
-  // --- KHỞI ĐỘNG ỨNG DỤNG ---
+  // --- KHỞI ĐỘNG ---
   function init() {
     setVolume(0.8);
-    dom.loopBtn.classList.add('active'); // Mặc định lặp toàn bộ danh sách
+    dom.loopBtn.classList.add('active'); // Mặc định lặp toàn bộ
     initCanvas();
     setupEvents();
   }
