@@ -1,6 +1,6 @@
 /* ==========================================================================
    MUSIC HOME • STUDIO GHIBLI & MY NEIGHBOR TOTORO SOUND STATION
-   100% Offline • Pure CSS Art, Cloud Physics, Susuwatari Bounce & Organic Vines
+   100% Offline Local Playback + WebTorrent P2P Browser Streaming & File Access
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
@@ -38,6 +38,7 @@
   --ladybug-dark: #9b2226;
   --sun-gold: #ffd166;
   --flower-pink: #ff758f;
+  --torrent-sky: #0284c7;
 
   /* Font chữ bo tròn dễ thương, thân thiện (100% Offline) */
   --font-ghibli: "Nunito", "Quicksand", "Comfortaa", "Comic Sans MS", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, cursive, sans-serif;
@@ -69,10 +70,7 @@ body.ghibli-world {
   user-select: none;
 }
 
-/* --------------------------------------------------------------------------
-   [TÙY CHỌN] LỚP HÌNH NỀN TOTORO CỤC BỘ (.ghibli-bg)
-   Nếu bạn đặt file ảnh `bg.jpg` cùng thư mục, ảnh nền sẽ tự động hiển thị mượt mà
-   -------------------------------------------------------------------------- */
+/* Lớp hình nền Totoro tùy chọn */
 .ghibli-bg-layer {
   position: fixed;
   inset: 0;
@@ -84,7 +82,6 @@ body.ghibli-world {
 }
 
 .ghibli-bg {
-  /* Tự động tải bg.jpg nếu người dùng có sẵn file */
   background-image: url('./bg.jpg');
 }
 
@@ -118,7 +115,6 @@ body.ghibli-world {
   border-radius: 50%;
 }
 
-/* Mây 1: To xốp trôi tầng cao */
 .cloud-1 {
   width: 240px;
   height: 70px;
@@ -139,7 +135,6 @@ body.ghibli-world {
   left: 110px;
 }
 
-/* Mây 2: Trôi tầng giữa */
 .cloud-2 {
   width: 180px;
   height: 55px;
@@ -162,7 +157,6 @@ body.ghibli-world {
   left: 85px;
 }
 
-/* Mây 3: Trôi chậm xa xa */
 .cloud-3 {
   width: 280px;
   height: 80px;
@@ -185,7 +179,6 @@ body.ghibli-world {
   left: 130px;
 }
 
-/* Mây 4: Nhỏ nhẹ */
 .cloud-4 {
   width: 140px;
   height: 45px;
@@ -206,9 +199,7 @@ body.ghibli-world {
   100% { transform: translateX(calc(100vw + 350px)); }
 }
 
-/* --------------------------------------------------------------------------
-   ĐỒI CỎ XANH NHẤP NHÔ PHÍA CHÂN TRỜI (GHIBLI ROLLING HILLS)
-   -------------------------------------------------------------------------- */
+/* Đồi cỏ xanh nhấp nhô */
 .hills-backdrop {
   position: fixed;
   bottom: 0;
@@ -250,7 +241,7 @@ body.ghibli-world {
 }
 
 /* --------------------------------------------------------------------------
-   [SKILL: /animate] ĐOM ĐÓM & BÀO TỬ ÁNH SÁNG BAY LÊN TỪ ĐĨA NHẠC
+   [SKILL: /animate] ĐOM ĐÓM BAY LÊN TỪ ĐĨA NHẠC
    -------------------------------------------------------------------------- */
 .fireflies-container {
   position: fixed;
@@ -318,7 +309,7 @@ body.music-playing .fireflies-container {
   padding: 20px 24px 40px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
 /* --------------------------------------------------------------------------
@@ -338,7 +329,6 @@ body.music-playing .fireflies-container {
   position: relative;
 }
 
-/* Ốc gỗ trang trí 4 góc */
 .wooden-header::before, .wooden-header::after {
   content: "";
   position: absolute;
@@ -357,7 +347,6 @@ body.music-playing .fireflies-container {
   gap: 16px;
 }
 
-/* Susuwatari (Bụi bồ hóng nhí) nháy mắt đáng yêu */
 .soot-sprite {
   width: 44px;
   height: 44px;
@@ -437,7 +426,7 @@ body.music-playing .fireflies-container {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 10px 18px;
   border-radius: 20px;
   font-family: var(--font-ghibli);
   font-size: 0.9rem;
@@ -486,6 +475,369 @@ body.music-playing .fireflies-container {
   box-shadow: 0 1px 0 var(--wood-warm);
 }
 
+/* Nút mở bảng WebTorrent */
+.btn-torrent-toggle {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0369a1;
+  box-shadow: 
+    0 4px 0 #075985,
+    0 8px 14px rgba(2, 132, 199, 0.35);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+}
+
+.btn-torrent-toggle:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 7px 0 #075985, 0 12px 20px rgba(2, 132, 199, 0.45);
+}
+
+.btn-torrent-toggle:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #075985;
+}
+
+/* --------------------------------------------------------------------------
+   [SKILL: /impeccable & /animate] BẢNG WEBTORRENT GHIBLI COTTAGE PANEL
+   -------------------------------------------------------------------------- */
+.torrent-cottage-panel {
+  background: var(--parchment-bg);
+  border: 3px solid var(--wood-warm);
+  border-radius: 28px;
+  box-shadow: 
+    0 8px 0 var(--wood-dark),
+    0 16px 32px var(--parchment-shadow);
+  padding: 20px 24px;
+  transition: all 0.3s var(--spring-soft);
+}
+
+.torrent-panel-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.torrent-search-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.torrent-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.acorn-tag {
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  background: var(--grass-front);
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 12px;
+  box-shadow: 0 2px 0 #0d281e;
+}
+
+.torrent-tagline {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #7f5539;
+}
+
+.sample-magnets-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sample-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #8c5d2f;
+}
+
+.sample-btn {
+  background: #faedcd;
+  border: 1px solid var(--bark-border);
+  color: #4a2810;
+  font-family: var(--font-ghibli);
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 0 var(--wood-warm);
+  transition: all 0.12s;
+}
+
+.sample-btn:hover {
+  background: #fefae0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0 var(--wood-warm);
+}
+
+.sample-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0;
+}
+
+/* Thanh nhập Magnet / Search Bar */
+.torrent-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.torrent-input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 2px solid var(--wood-warm);
+  border-radius: 20px;
+  padding: 8px 16px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.torrent-input-wrapper input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-ghibli);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #3b220d;
+  margin-left: 10px;
+}
+
+.torrent-input-wrapper input::placeholder {
+  color: #a08060;
+}
+
+.btn-torrent-action {
+  background: var(--grass-mid);
+  color: #ffffff;
+  border-color: var(--grass-front);
+  box-shadow: 
+    0 4px 0 var(--moss-dark),
+    0 8px 14px rgba(45, 106, 79, 0.3);
+  padding: 10px 22px;
+  white-space: nowrap;
+}
+
+.btn-torrent-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--moss-dark);
+}
+
+.btn-torrent-action:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--moss-dark);
+}
+
+/* --------------------------------------------------------------------------
+   [SKILL: /animate & /animation-vocabulary] 
+   SUSUWATARI WORK CREW LOADING ANIMATION & TIẾN TRÌNH TORRENT
+   -------------------------------------------------------------------------- */
+.torrent-status-card {
+  background: #ffffff;
+  border: 2px dashed #95d5b2;
+  border-radius: 22px;
+  padding: 16px 20px;
+  box-shadow: inset 0 0 12px rgba(82, 183, 136, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Hoạt ảnh Susuwatari chuyền lá */
+.susuwatari-work-crew {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 6px 0;
+  position: relative;
+}
+
+.worker-sprite {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #1c1917;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+  animation: workerBounce 1.2s ease-in-out infinite alternate;
+}
+
+.sprite-left { animation-delay: 0s; }
+.sprite-right { animation-delay: 0.6s; }
+
+.worker-eyes {
+  width: 9px;
+  height: 9px;
+  background: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.worker-eyes .pupil {
+  width: 4px;
+  height: 4px;
+  background: #000;
+  border-radius: 50%;
+}
+
+.flying-leaf-leaf {
+  font-size: 1.4rem;
+  animation: leafPass 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes workerBounce {
+  0% { transform: translateY(0) scale(1, 1); }
+  100% { transform: translateY(-5px) scale(0.95, 1.05); }
+}
+
+@keyframes leafPass {
+  0% { transform: translateX(-16px) rotate(-20deg); }
+  100% { transform: translateX(16px) rotate(20deg); }
+}
+
+.worker-speech {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: var(--moss-dark);
+  margin-left: 10px;
+}
+
+.torrent-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.torrent-name {
+  font-family: var(--font-hand);
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #3b220d;
+  margin-bottom: 4px;
+}
+
+.torrent-stats-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #7f5539;
+  flex-wrap: wrap;
+}
+
+.stat-pill strong {
+  color: var(--grass-front);
+}
+
+.stat-separator {
+  color: #d4a373;
+}
+
+.torrent-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-save-disk {
+  background: #52b788;
+  color: #ffffff;
+  border-color: #2d6a4f;
+  box-shadow: 0 4px 0 #1b4332;
+  font-size: 0.84rem;
+  padding: 8px 14px;
+}
+
+.btn-save-disk:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #1b4332;
+}
+
+.btn-save-disk:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #1b4332;
+}
+
+.btn-play-torrent {
+  background: #ffd166;
+  color: #4a2810;
+  border-color: #d4a31e;
+  box-shadow: 0 4px 0 #b38600;
+  font-size: 0.84rem;
+  padding: 8px 14px;
+}
+
+.btn-cancel-torrent {
+  background: #fdfbf7;
+  color: #8c2f39;
+  border-color: #e63946;
+  box-shadow: 0 3px 0 #9b2226;
+  font-size: 0.8rem;
+  padding: 8px 12px;
+}
+
+/* Thanh tiến trình Torrent dây leo & mây trôi */
+.torrent-progress-bar-container {
+  position: relative;
+  width: 100%;
+  height: 16px;
+  background: #d8f3dc;
+  border: 2px solid #74c69d;
+  border-radius: 12px;
+  overflow: visible;
+}
+
+.torrent-progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #52b788, #0284c7);
+  border-radius: 10px;
+  transition: width 0.25s linear;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.cloud-shuttle {
+  font-size: 1rem;
+  transform: translate(6px, -1px);
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+.torrent-percent-badge {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: var(--moss-dark);
+}
+
 /* --------------------------------------------------------------------------
    BỐ CỤC CHÍNH (GHIBLI MAIN GRID: PLAYER & PLAYLIST)
    -------------------------------------------------------------------------- */
@@ -510,9 +862,7 @@ body.music-playing .fireflies-container {
   position: relative;
 }
 
-/* --------------------------------------------------------------------------
-   [SKILL: /improve-animations] CÀNH LÁ DÂY LEO ĐUNG ĐƯA THEO GIÓ
-   -------------------------------------------------------------------------- */
+/* Cành lá dây leo đung đưa theo gió */
 .swaying-vine-branch {
   position: absolute;
   top: -12px;
@@ -553,9 +903,7 @@ body.music-playing .fireflies-container {
   100% { transform: rotate(-4deg); }
 }
 
-/* --------------------------------------------------------------------------
-   ĐĨA THAN VÂN GỖ CÂY & VISUALIZER SÓNG GIÓ (TURNTABLE DECK)
-   -------------------------------------------------------------------------- */
+/* Đĩa than vân gỗ cây & Visualizer sóng gió */
 .wood-turntable-deck {
   position: relative;
   width: 100%;
@@ -580,7 +928,6 @@ body.music-playing .fireflies-container {
   opacity: 0.85;
 }
 
-/* Đĩa than vân gỗ (Tree Trunk Record) */
 .trunk-disc-wrapper {
   position: relative;
   width: 180px;
@@ -595,7 +942,6 @@ body.music-playing .fireflies-container {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  /* Các vòng vân gỗ tròn đồng tâm mộc mạc */
   background: 
     repeating-radial-gradient(circle at center, #c99355 0px, #b07d42 2px, #d4a373 4px, #9e6d34 6px, #bc8a52 8px),
     #b07d42;
@@ -631,7 +977,6 @@ body.music-playing .fireflies-container {
 .r2 { width: 68%; height: 68%; }
 .r3 { width: 50%; height: 50%; }
 
-/* Nhãn tâm đĩa: Mầm cây Totoro */
 .record-sprout-center {
   width: 66px;
   height: 66px;
@@ -654,7 +999,6 @@ body.music-playing .fireflies-container {
   border: 2px solid #fff;
 }
 
-/* Cần gạt nhánh cây (Twig Tonearm) */
 .twig-tonearm {
   position: absolute;
   top: 10px;
@@ -707,7 +1051,6 @@ body.music-playing .fireflies-container {
   box-shadow: 1px 2px 4px rgba(0,0,0,0.25);
 }
 
-/* Nút đổi chế độ sóng âm chiếc lá */
 .leaf-toggle-btn {
   position: absolute;
   bottom: 10px;
@@ -734,9 +1077,7 @@ body.music-playing .fireflies-container {
   box-shadow: 0 1px 0 var(--wood-warm);
 }
 
-/* --------------------------------------------------------------------------
-   MÀN HÌNH CUỘN GIẤY DA (PARCHMENT SCROLL)
-   -------------------------------------------------------------------------- */
+/* Màn hình cuộn giấy da */
 .parchment-scroll {
   background: #ffffff;
   border: 2px dashed #d4a373;
@@ -799,9 +1140,7 @@ body.music-playing .fireflies-container {
   text-overflow: ellipsis;
 }
 
-/* --------------------------------------------------------------------------
-   THANH TIẾN TRÌNH: SỢI DÂY LEO & CON BỌ RÙA (LADYBUG THUMB)
-   -------------------------------------------------------------------------- */
+/* Thanh tiến trình sợi dây leo & Chú bọ rùa */
 .vine-progress-wrapper {
   display: flex;
   flex-direction: column;
@@ -812,7 +1151,6 @@ body.music-playing .fireflies-container {
   position: relative;
   width: 100%;
   height: 14px;
-  /* Sợi dây leo màu xanh rêu */
   background: #d8f3dc;
   border-radius: 10px;
   border: 2px solid #95d5b2;
@@ -831,7 +1169,6 @@ body.music-playing .fireflies-container {
   pointer-events: none;
 }
 
-/* Chú Bọ Rùa (Ladybug) trượt trên sợi dây leo */
 .ladybug-thumb {
   position: absolute;
   top: 50%;
@@ -880,7 +1217,6 @@ body.music-playing .fireflies-container {
 .ladybug-dot.d3 { bottom: 4px; left: 4px; }
 .ladybug-dot.d4 { bottom: 4px; right: 4px; }
 
-/* Bong bóng chiếc lá hiện thời gian */
 .leaf-time-bubble {
   position: absolute;
   bottom: 22px;
@@ -925,9 +1261,7 @@ body.music-playing .fireflies-container {
   to { height: 16px; }
 }
 
-/* --------------------------------------------------------------------------
-   CÁC PHÍM ĐIỀU KHIỂN BẰNG GỖ MỘC & INLINE SVG THIÊN NHIÊN
-   -------------------------------------------------------------------------- */
+/* Các phím điều khiển gỗ & lá */
 .nature-controls-panel {
   display: flex;
   align-items: center;
@@ -994,7 +1328,6 @@ body.music-playing .fireflies-container {
   display: block;
 }
 
-/* Nút Play / Pause hình chiếc lá to nổi bật */
 .hero-leaf-btn {
   width: 68px;
   height: 68px;
@@ -1018,7 +1351,6 @@ body.music-playing .fireflies-container {
   box-shadow: 0 2px 0 #1b4332;
 }
 
-/* Thanh chỉnh âm lượng gỗ mộc */
 .wood-volume-row {
   display: flex;
   align-items: center;
@@ -1168,7 +1500,6 @@ body.music-playing .fireflies-container {
   border: 1px dashed var(--wood-dark);
 }
 
-/* Khu vực cuộn danh sách */
 .parchment-scroll-area {
   height: 420px;
   overflow-y: auto;
@@ -1241,6 +1572,8 @@ body.music-playing .fireflies-container {
 .format-leaf-pills {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 .format-leaf-pills span {
   font-size: 0.72rem;
@@ -1251,10 +1584,7 @@ body.music-playing .fireflies-container {
   border-radius: 8px;
 }
 
-/* --------------------------------------------------------------------------
-   [SKILL: /animation-vocabulary & /animate] SUSUWATARI BOUNCE HOVER
-   Khi hover, thẻ bài hát nhún nhảy tưng tưng như cục bụi bồ hóng nhí
-   -------------------------------------------------------------------------- */
+/* [SKILL: /animation-vocabulary & /animate] SUSUWATARI BOUNCE HOVER */
 .nature-song-list {
   list-style: none;
   display: flex;
@@ -1277,7 +1607,6 @@ body.music-playing .fireflies-container {
   transition: background 0.15s, border-color 0.15s, transform 0.2s var(--spring-bounce);
 }
 
-/* [SKILL: /animation-vocabulary] Susuwatari Bounce: Nảy nhẹ & giãn nở */
 .nature-song-card:hover {
   animation: susuwatariBounce 0.4s var(--spring-bounce);
   background: #fefae0;
@@ -1300,7 +1629,6 @@ body.music-playing .fireflies-container {
   box-shadow: 0 1px 0 var(--wood-warm);
 }
 
-/* Bài hát đang phát nổi bật */
 .nature-song-card.active {
   background: #d8f3dc;
   border-color: var(--grass-front);
@@ -1453,6 +1781,13 @@ body.music-playing .fireflies-container {
   }
   .parchment-scroll-area {
     height: 340px;
+  }
+  .torrent-input-bar {
+    flex-direction: column;
+  }
+  .btn-torrent-action {
+    width: 100%;
+    justify-content: center;
   }
 }
 

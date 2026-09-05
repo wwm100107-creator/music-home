@@ -1,27 +1,26 @@
-# MUSIC HOME • Studio Ghibli & Totoro Vibe
+# MUSIC HOME • Studio Ghibli & Totoro Vibe (WebTorrent Engine)
 
-Trình phát nhạc cục bộ mang âm hưởng thiên nhiên trong trẻo, hoài niệm của **Studio Ghibli** (lấy cảm hứng từ *My Neighbor Totoro*), hoạt động **100% Offline** không cần mạng hay bất kỳ thư viện bên ngoài nào.
+Trình phát nhạc cục bộ & Web-based Torrent Streaming mang âm hưởng thiên nhiên trong trẻo, hoài niệm của **Studio Ghibli** (lấy cảm hứng từ *My Neighbor Totoro*), hoạt động thuần túy trên nền tảng **Web Browser** (KHÔNG cần Electron hay app desktop).
 
-## 🌿 Điểm nhấn nghệ thuật (Art Style)
-1. **Bầu trời xanh thẳm & Mây trôi**: Gradient trời xanh Ghibli với hệ thống mây trắng xốp trôi chầm chậm ngang qua màn hình (`@keyframes cloudDrift`).
-2. **Hỗ trợ ảnh nền Totoro tùy chỉnh**: Chừa sẵn class CSS `.ghibli-bg` (chỉ cần đặt file `bg.jpg` cùng thư mục là ảnh nền sẽ tự động hiển thị).
-3. **Vật liệu mộc mạc**: Khung máy phát bằng gỗ mộc, giấy da (parchment) cổ điển, đường viền mềm mại và ánh nắng vàng ấm áp.
-4. **Hệ thống Icon Inline SVG thiên nhiên**:
-   - Nút **Play**: Chiếc lá uốn cong hướng sang phải (`🍃`).
-   - Nút **Pause**: Hai nhánh cây song song (`🌿`).
-   - Thanh **Progress Bar**: Sợi dây leo xanh rêu, cục chạy là **Chú Bọ Rùa (Ladybug)** đỏ chấm đen trượt êm ái.
-5. **Hệ sinh thái chuyển động mượt mà**:
-   - **Hover bài hát**: Hiệu ứng nảy nhún mềm mại (*Susuwatari Bounce*) như chú bồ hóng nhí đang nhảy.
-   - **Khi phát nhạc**: Đom đóm vàng chanh và bào tử ánh sáng bay bổng từ đĩa nhạc vào bầu trời đêm.
-   - **Cành dây leo**: Đung đưa nhẹ nhàng theo từng làn gió thoảng (*Gentle Breeze*).
-   - **Đĩa thân cây & Cần gạt**: Đĩa gỗ tròn quay êm ái và cần gạt nhánh cây hạ xuống tiếp xúc mặt đĩa.
+## 🍃 Các tính năng mới: WebTorrent P2P & File System Access API
+1. **WebTorrent Browser Core**: Nhúng thư viện `webtorrent.min.js` qua CDN để tải và stream âm thanh P2P trực tiếp trong trình duyệt bằng giao thức WebRTC & WebSocket Trackers.
+2. **Tìm kiếm & Tải Magnet**:
+   - Dán bất kỳ link `magnet:?xt=...` hoặc mã InfoHash.
+   - Các bài mẫu Ghibli / Lofi / CC Audio có sẵn để trải nghiệm stream tức thì với 1 cú nhấp.
+3. **Stream trực tiếp vào Player**: Tự động stream dữ liệu đang tải vào thẻ HTML5 Audio và đưa bài hát vào danh sách phát (Playlist) chung.
+4. **Lưu vĩnh viễn xuống ổ cứng (File System Access API)**: Sử dụng hàm `window.showSaveFilePicker()` để người dùng có thể lưu file `.mp3`, `.wav`, `.flac` vừa tải xuống thư mục trên máy tính với độ an toàn cao.
+5. **Ghibli Susuwatari Loading Animation**: Bầy bụi bồ hóng nhí (Susuwatari) nhảy nhót chuyền tay nhau những chiếc lá và đám mây trôi trên thanh tiến trình trong lúc tải torrent.
 
 ## 🚀 Cách mở và sử dụng
-1. Mở trực tiếp file `index.html` bằng bất kỳ trình duyệt nào (Chrome, Edge, Firefox, Brave, Safari).
-2. Bấm **"Mở Thư Mục Nhạc"** để chọn thư mục nhạc trên máy tính (`.mp3`, `.wav`, `.flac`).
-3. Hoặc kéo thả thư mục/file nhạc trực tiếp vào giao diện.
+1. Mở file `index.html` trực tiếp trên trình duyệt (Chrome, Edge, Brave, Firefox).
+2. **Nghe nhạc cục bộ (Offline)**: Bấm **"Mở Thư Mục"** để chọn nhạc có sẵn trên máy tính.
+3. **Tải & Stream Torrent (Online)**:
+   - Bấm nút xanh **"WebTorrent"** trên thanh tiêu đề.
+   - Dán link Magnet hoặc bấm một trong các nút bài mẫu (ví dụ: *Totoro Lofi Theme*).
+   - Nhấn **"🍃 Tải & Stream"**.
+   - Khi hoàn tất hoặc muốn lưu lại, bấm nút **"💾 Lưu Vào Máy"** để lưu vĩnh viễn xuống ổ cứng.
 
-## ⌨ Phím tắt (Keyboard Shortcuts)
+## ⌨ Phím tắt điều khiển
 - `Space`: Phát / Tạm dừng
 - `N` / `P`: Bài tiếp theo / Bài trước đó
 - `←` / `→`: Tua lùi 5s / Tua tới 5s
