@@ -210,29 +210,31 @@ body.ghibli-app-body {
 
 /* 
   MỘT ELEMENT DUY NHẤT ĐÓNG VAI TRÒ LÀ "TOGGLE SWITCH" THANH TRƯỢT TẤM GỖ
-  Sử dụng wood_2.png / wood_2.jpg với tinh linh Kodama trên góc phải
+  Sử dụng wood_2.png với tinh linh Kodama trên góc phải
 */
 .wood-slider-switch {
   position: absolute;
-  top: 0;
+  top: -14px;
   left: 0;
   width: 100%;
-  height: 48px;
+  height: 64px;
   pointer-events: none;
   z-index: 1;
   background-image: url('wood_2.png');
   background-size: 100% 100%;
   background-repeat: no-repeat;
-  background-position: center;
+  background-position: center bottom;
   background-color: transparent;
   border-radius: 0;
   border: none !important;
   outline: none !important;
-  box-shadow: none !important; /* Loại bỏ hiệu ứng viền hộp và đổ bóng pill nhân tạo */
+  box-shadow: none !important;
+  filter: drop-shadow(0 4px 10px rgba(35, 20, 12, 0.4));
+  transform: translateY(168px); /* Vị trí mặc định chuẩn Playlists */
+  opacity: 1; /* Luôn hiển thị rõ nét ngay từ frame đầu tiên */
   /* [SKILL: /animate] Đường cong chuyển động trượt êm ái tự nhiên */
-  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), height 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
-  will-change: transform, height;
-  opacity: 0; /* Khởi tạo ẩn nhẹ trước khi JS tính toán offsetTop chính xác */
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.25s ease;
+  will-change: transform;
 }
 
 /* Các Item trong menu (Home, Search, Your Library, Playlists, Create Playlist) */

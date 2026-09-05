@@ -1055,27 +1055,25 @@
   function moveWoodSliderToItem(targetItem, animate = true) {
     if (!targetItem || !dom.woodSliderSwitch) return;
 
-    // 1. Tính toán vị trí tương đối offsetTop và chiều cao clientHeight
+    // 1. Tính toán vị trí tương đối offsetTop
     const offsetTop = targetItem.offsetTop;
-    const clientHeight = targetItem.clientHeight;
 
     // 2. Thiết lập đường cong chuyển động theo yêu cầu:
     // transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)
     if (!animate) {
       dom.woodSliderSwitch.style.transition = 'none';
     } else {
-      dom.woodSliderSwitch.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), height 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease';
+      dom.woodSliderSwitch.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease';
     }
 
-    // 3. Apply giá trị vị trí translateY và chiều cao vào thanh gỗ trượt
+    // 3. Apply giá trị vị trí translateY vào thanh gỗ trượt
     dom.woodSliderSwitch.style.transform = `translateY(${offsetTop}px)`;
-    dom.woodSliderSwitch.style.height = `${clientHeight}px`;
     dom.woodSliderSwitch.style.opacity = '1';
 
     if (!animate) {
       // Force reflow để phục hồi lại transition mượt cho các lần click kế tiếp
       void dom.woodSliderSwitch.offsetHeight;
-      dom.woodSliderSwitch.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), height 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease';
+      dom.woodSliderSwitch.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease';
     }
 
     // 4. [SKILL: /impeccable & /animate] Cập nhật class 'active':
@@ -1879,23 +1877,19 @@
       });
     }
 
-    // 7. Click Playlist Cards (Grid 6 Cards từ GIAODIEN.png)
-    dom.playlistCards.forEach((card, index) => {
-      card.addEventListener('click', () => {
-        const cardTrackName = card.dataset.track;
-        const matchingIndex = state.playlist.findIndex(t => 
-          t.title.toLowerCase().includes(cardTrackName.toLowerCase()) || 
-          cardTrackName.toLowerCase().includes(t.title.toLowerCase())
-        );
-
-        if (matchingIndex !== -1) {
-          loadTrack(matchingIndex, true);
-        } else if (index < state.playlist.length) {
+    // 7. Click Playlist Cards (Sử dụng Event Delegation an toàn trên playlistsGrid)
+    if (dom.playlistsGrid) {
+      dom.playlistsGrid.addEventListener('click', (e) => {
+        const card = e.target.closest('.playlist-card');
+        if (!card) return;
+        const index = parseInt(card.dataset.index, 10);
+        if (!isNaN(index) && index >= 0 && index < state.playlist.length) {
           loadTrack(index, true);
+          const track = state.playlist[index];
+          if (track) showToast(`Đang phát: ${track.title || track.name} 🍃✨`);
         }
-        showToast(`Đang phát: ${cardTrackName} 🍃✨`);
       });
-    });
+    }
 
     // 8. Left Sidebar Segmented Control: Sliding Toggle Switch
     if (dom.sidebarNavItems) {
@@ -2134,11 +2128,19 @@
     // [SKILL: /animate & /impeccable] Khởi tạo thanh trượt tấm gỗ ở mục Active ban đầu (Playlists)
     const initialActive = document.querySelector('.sidebar-nav-item.active') || document.getElementById('tabPlaylists');
     if (initialActive) {
+      moveWoodSliderToItem(initialActive, false);
       setTimeout(() => {
         moveWoodSliderToItem(initialActive, false);
-      }, 60);
+      }, 50);
+      setTimeout(() => {
+        moveWoodSliderToItem(initialActive, false);
+      }, 250);
     }
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
