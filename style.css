@@ -177,107 +177,154 @@ body.ghibli-app-body {
 }
 
 /* Main Navigation Menu */
-.sidebar-nav {
+/* ==========================================================================
+   [SKILL: /animate & /impeccable]
+   SEGMENTED CONTROL: HỆ THỐNG THANH TRƯỢT TẤM GỖ (WOODEN SLIDING SWITCH)
+   - Một element duy nhất .wood-slider-switch trượt mượt mà giữa các mục
+   - Transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)
+   - Active state phóng to scale(1.06) lọt thỏm cân đối bên trong tấm gỗ
+   ========================================================================== */
+.sidebar-segmented-nav {
+  position: relative;
+  width: 100%;
+}
+
+.sidebar-nav-list {
+  position: relative;
+  list-style: none;
+  padding: 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
 }
 
-.nav-item {
+/* 
+  MỘT ELEMENT DUY NHẤT ĐÓNG VAI TRÒ LÀ "TOGGLE SWITCH" THANH TRƯỢT TẤM GỖ
+  Sử dụng wood_2.png / wood_2.jpg với tinh linh Kodama trên góc phải
+*/
+.wood-slider-switch {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 48px;
+  pointer-events: none;
+  z-index: 1;
+  background-image: url('wood_2.png'), url('wood_2.jpg'), url('wood.png'), url('wood.jpg');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  border-radius: 10px;
+  box-shadow: 
+    0 4px 12px rgba(43, 24, 16, 0.4),
+    0 0 15px rgba(254, 250, 224, 0.15);
+  /* [SKILL: /animate] Đường cong chuyển động trượt êm ái tự nhiên */
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), height 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
+  will-change: transform, height;
+  opacity: 0; /* Khởi tạo ẩn nhẹ trước khi JS tính toán offsetTop chính xác */
+}
+
+/* Các Item trong menu (Home, Search, Your Library, Playlists, Create Playlist) */
+.sidebar-nav-item {
+  position: relative;
+  z-index: 2;
+  list-style: none;
+  margin: 0;
+  border-radius: 10px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  user-select: none;
+}
+
+.nav-item-link {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0 16px;
+  text-decoration: none;
+  border-radius: 10px;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* 
+  Container bọc Icon + Chữ để áp dụng scale(1.06) mượt mà
+  ĐIỀU KIỆN RÀNG BUỘC (/impeccable): Tuyệt đối không vượt quá ranh giới tấm gỗ!
+  - Chiều cao item = 48px.
+  - Icon = 26px, Text = 16px. Khi scale(1.06) -> cao ~27.5px.
+  - Luôn còn dư padding ~10px trên và ~10px dưới, nằm lọt thỏm cân đối ngay giữa tấm gỗ.
+*/
+.nav-item-content {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 7px 12px;
-  border-radius: 12px;
-  text-decoration: none;
-  color: var(--ghibli-yellow-light);
-  cursor: pointer;
-  transition: transform 0.18s var(--ease-smooth), background 0.18s;
-  position: relative;
-}
-
-.nav-item:hover:not(.active) {
-  transform: translateX(5px);
-  background: rgba(255, 255, 255, 0.18);
+  width: 100%;
+  transform-origin: left center;
+  /* [SKILL: /animate] Đồng bộ thời gian scale với thời gian thanh gỗ trượt tới */
+  transition: transform 0.38s cubic-bezier(0.25, 1, 0.5, 1), filter 0.25s ease;
 }
 
 .nav-icon {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   object-fit: contain;
   flex-shrink: 0;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
+  transition: transform 0.38s cubic-bezier(0.25, 1, 0.5, 1), filter 0.25s ease;
 }
 
 .nav-text {
   font-family: var(--font-ghibli-nav);
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   font-weight: 700;
-  color: var(--ghibli-yellow-light);
-  -webkit-text-stroke: 0.9px var(--ghibli-brown-dark);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  color: #fff8dc;
+  -webkit-text-stroke: 0.85px var(--ghibli-brown-dark);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
   white-space: nowrap;
+  letter-spacing: 0.01em;
+  transition: color 0.3s, font-weight 0.3s, -webkit-text-stroke 0.3s, text-shadow 0.3s;
 }
 
 .spirit-mini-note {
   font-size: 0.95rem;
   margin-left: auto;
   opacity: 0.9;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 /* 
-  [SKILL: /impeccable] MỤC "PLAYLISTS" (ACTIVE) VỚI TẤM GỖ WOOD.JPG / WOOD.PNG
-  Có chú tinh linh Kodama ngồi trên góc phải tấm gỗ
+  [SKILL: /animate & /impeccable] TRẠNG THÁI ACTIVE:
+  Khi tấm gỗ trượt đến item nào, item đó nổi bật, scale(1.06) và chuyển chữ sáng ấm
 */
-.nav-item.active.wood-active-tab {
-  background-image: url('wood.jpg');
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-position: center;
-  height: 48px;
-  padding: 0 14px;
-  border-radius: 10px;
-  margin: 2px 0;
-  box-shadow: 
-    0 4px 10px rgba(43, 24, 16, 0.35),
-    0 0 15px rgba(254, 250, 224, 0.2);
-  transform: translateX(0);
+.sidebar-nav-item.active .nav-item-content {
+  transform: scale(1.06) translateX(3px);
 }
 
-.nav-item.active.wood-active-tab:hover {
-  transform: translateY(-1px) scale(1.01);
+.sidebar-nav-item.active .nav-icon {
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45)) brightness(1.1);
 }
 
-.wood-nav-text {
-  color: #fff9d2 !important;
+.sidebar-nav-item.active .nav-text {
+  color: #ffffff !important;
   font-weight: 800 !important;
-  font-size: 1.08rem !important;
-  -webkit-text-stroke: 1.1px #23120b !important;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6) !important;
+  -webkit-text-stroke: 1.15px #200f07 !important;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.75) !important;
 }
 
-.wood-glow-spirit {
-  position: absolute;
-  right: 12px;
-  top: -8px;
-  width: 14px;
-  height: 14px;
-  background: radial-gradient(circle, #ffffff 30%, rgba(200, 255, 220, 0) 80%);
-  border-radius: 50%;
-  box-shadow: 0 0 10px #c7f9cc;
-  animation: spiritPulse 2s infinite ease-in-out;
-}
-
-@keyframes spiritPulse {
-  0%, 100% { transform: scale(0.9); opacity: 0.6; }
-  50% { transform: scale(1.3); opacity: 1; }
+/* Hover nhẹ trên các mục chưa active */
+.sidebar-nav-item:not(.active):hover .nav-item-content {
+  transform: translateX(4px);
+  filter: brightness(1.1);
 }
 
 .sidebar-divider {
   height: 1.5px;
   background: rgba(50, 80, 50, 0.25);
-  margin: 6px 4px 4px;
+  margin: 8px 4px 6px;
   border-radius: 1px;
 }
 

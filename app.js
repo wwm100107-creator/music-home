@@ -183,6 +183,11 @@
     userAuthBadgeText: document.getElementById('userAuthBadgeText'),
     profileAvatarBtn: document.getElementById('profileAvatarBtn'),
 
+    // Left Sidebar Segmented Control & Sliding Toggle Switch
+    woodSliderSwitch: document.getElementById('woodSliderSwitch'),
+    sidebarNavList: document.getElementById('sidebarNavList'),
+    sidebarNavItems: document.querySelectorAll('.sidebar-nav-item'),
+
     // WebTorrent Panel Elements
     torrentPanel: document.getElementById('torrentPanel'),
     torrentForm: document.getElementById('torrentForm'),
@@ -1269,6 +1274,56 @@
   }
 
   // ==========================================================================
+  // [SKILL: /animate & /improve-animations]
+  // SEGMENTED CONTROL: HỆ THỐNG THANH TRƯỢT TẤM GỖ (WOODEN SLIDING SWITCH)
+  // ==========================================================================
+
+  /**
+   * Tính toán vị trí offsetTop và clientHeight của thẻ <li> được click,
+   * sau đó áp dụng vào CSS transform: translateY() và height của thanh gỗ duy nhất.
+   * 
+   * @param {HTMLElement} targetItem Thẻ <li> được người dùng chọn
+   * @param {boolean} animate Có áp dụng hiệu ứng chuyển động trượt 0.4s hay không
+   */
+  function moveWoodSliderToItem(targetItem, animate = true) {
+    if (!targetItem || !dom.woodSliderSwitch) return;
+
+    // 1. Tính toán vị trí tương đối offsetTop và chiều cao clientHeight
+    const offsetTop = targetItem.offsetTop;
+    const clientHeight = targetItem.clientHeight;
+
+    // 2. Thiết lập đường cong chuyển động theo yêu cầu:
+    // transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)
+    if (!animate) {
+      dom.woodSliderSwitch.style.transition = 'none';
+    } else {
+      dom.woodSliderSwitch.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), height 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease';
+    }
+
+    // 3. Apply giá trị vị trí translateY và chiều cao vào thanh gỗ trượt
+    dom.woodSliderSwitch.style.transform = `translateY(${offsetTop}px)`;
+    dom.woodSliderSwitch.style.height = `${clientHeight}px`;
+    dom.woodSliderSwitch.style.opacity = '1';
+
+    if (!animate) {
+      // Force reflow để phục hồi lại transition mượt cho các lần click kế tiếp
+      void dom.woodSliderSwitch.offsetHeight;
+      dom.woodSliderSwitch.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), height 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease';
+    }
+
+    // 4. [SKILL: /impeccable & /animate] Cập nhật class 'active':
+    // Kích hoạt scale(1.06) cho Icon và Text, đồng bộ thời gian với thanh trượt và nằm lọt thỏm cân đối
+    const items = document.querySelectorAll('.sidebar-nav-item');
+    items.forEach(item => {
+      if (item === targetItem) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
+    });
+  }
+
+  // ==========================================================================
   // [SKILL: /ponytail] SMART SEARCH BAR: INPUT DETECTION (KEYWORD vs URL)
   // ==========================================================================
   const YOUTUBE_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|shorts\/|v\/|embed\/|playlist\?|live\/)|youtu\.be\/)[\w-]{11}/i;
@@ -2066,9 +2121,49 @@
       });
     });
 
-    // 8. Left Sidebar Sub-Playlists Click
+    // 8. Left Sidebar Segmented Control: Sliding Toggle Switch
+    if (dom.sidebarNavItems) {
+      dom.sidebarNavItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+          // Kích hoạt trượt thanh gỗ mượt mà đến item được click
+          moveWoodSliderToItem(item, true);
+
+          const tab = item.dataset.tab;
+          if (tab === 'home') {
+            const main = document.getElementById('mainContent');
+            if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
+          } else if (tab === 'search') {
+            if (dom.searchInput) {
+              dom.searchInput.focus();
+              dom.searchInput.select();
+            }
+          } else if (tab === 'library') {
+            if (dom.folderInput) dom.folderInput.click();
+          } else if (tab === 'playlists') {
+            const plSection = document.querySelector('.playlists-view-section');
+            if (plSection) plSection.scrollIntoView({ behavior: 'smooth' });
+          } else if (tab === 'create') {
+            showToast('Tính năng tạo danh sách phát cá nhân Ghibli 🌱');
+          }
+        });
+      });
+    }
+
+    // Tự động căn chỉnh lại vị trí thanh gỗ khi thay đổi kích thước cửa sổ
+    window.addEventListener('resize', () => {
+      const currentActive = document.querySelector('.sidebar-nav-item.active');
+      if (currentActive) {
+        moveWoodSliderToItem(currentActive, false);
+      }
+    });
+
+    // 8b. Left Sidebar Sub-Playlists Click
     document.querySelectorAll('.sub-playlist-item').forEach(item => {
       item.addEventListener('click', () => {
+        // Giữ vị trí thanh gỗ ở mục Playlists
+        const playlistsTab = document.getElementById('tabPlaylists');
+        if (playlistsTab) moveWoodSliderToItem(playlistsTab, true);
+
         const pl = item.dataset.playlist;
         const matchingIndex = state.playlist.findIndex(t => 
           (t.album && t.album.toLowerCase().includes(pl.replace('-', ' '))) ||
@@ -2303,6 +2398,14 @@
 
     // Nạp bài Howl's Joy (Merry-Go-Round of Life) mặc định chuẩn GIAODIEN.png
     loadTrack(2, false);
+
+    // [SKILL: /animate & /impeccable] Khởi tạo thanh trượt tấm gỗ ở mục Active ban đầu (Playlists)
+    const initialActive = document.querySelector('.sidebar-nav-item.active') || document.getElementById('tabPlaylists');
+    if (initialActive) {
+      setTimeout(() => {
+        moveWoodSliderToItem(initialActive, false);
+      }, 60);
+    }
   }
 
   document.addEventListener('DOMContentLoaded', init);

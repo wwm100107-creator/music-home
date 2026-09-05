@@ -68,42 +68,73 @@
         <span class="brand-text">Home Music</span>
       </div>
 
-      <!-- Main Navigation Menu -->
-      <nav class="sidebar-nav">
-        <a href="#home" class="nav-item" id="navHome" title="Trang chủ">
-          <img src="icon-home.png" alt="Home" class="nav-icon">
-          <span class="nav-text">Home</span>
-        </a>
+      <!-- 
+        ======================================================================
+        [SKILL: /animate & /impeccable]
+        SEGMENTED CONTROL: HỆ THỐNG THANH TRƯỢT TẤM GỖ (WOODEN SLIDING SWITCH)
+        - Danh sách <ul> chứa các item <li> có position: relative, z-index: 2
+        - MỘT element duy nhất #woodSliderSwitch có position: absolute, z-index: 1
+          sử dụng wood_2.png / wood_2.jpg với chú Kodama tinh linh
+        ======================================================================
+      -->
+      <nav class="sidebar-segmented-nav" id="sidebarSegmentedNav">
+        <ul class="sidebar-nav-list" id="sidebarNavList">
+          
+          <!-- MỘT ELEMENT DUY NHẤT ĐÓNG VAI TRÒ LÀ THANH TRƯỢT GỖ (SLIDING TOGGLE SWITCH) -->
+          <div class="wood-slider-switch" id="woodSliderSwitch" aria-hidden="true"></div>
 
-        <a href="#search" class="nav-item" id="navSearch" title="Tìm kiếm & Tải nhạc WebTorrent">
-          <img src="icon-search.png" alt="Search" class="nav-icon">
-          <span class="nav-text">Search</span>
-        </a>
+          <!-- 1. Home -->
+          <li class="sidebar-nav-item" data-tab="home" id="tabHome">
+            <a href="#home" class="nav-item-link" title="Trang chủ">
+              <div class="nav-item-content">
+                <img src="icon-home.png" alt="Home" class="nav-icon">
+                <span class="nav-text">Home</span>
+              </div>
+            </a>
+          </li>
 
-        <!-- Nút mở thư mục nhạc cục bộ từ máy tính -->
-        <label for="folderInput" class="nav-item cursor-pointer" id="navLibrary" title="Mở thư mục nhạc trên máy tính [Local Audio]">
-          <img src="icon-library.png" alt="Your Library" class="nav-icon">
-          <span class="nav-text">Your Library</span>
-          <span class="spirit-mini-note" title="Kodama âm nhạc">🍃</span>
-        </label>
-        <input type="file" id="folderInput" webkitdirectory directory multiple accept="audio/*" style="display: none;">
-        <input type="file" id="fileInput" multiple accept="audio/*" style="display: none;">
+          <!-- 2. Search -->
+          <li class="sidebar-nav-item" data-tab="search" id="tabSearch">
+            <a href="#search" class="nav-item-link" title="Tìm kiếm & Tải nhạc">
+              <div class="nav-item-content">
+                <img src="icon-search.png" alt="Search" class="nav-icon">
+                <span class="nav-text">Search</span>
+              </div>
+            </a>
+          </li>
 
-        <!-- 
-          MỤC PLAYLISTS ACTIVE: SỬ DỤNG HÌNH ẢNH TẤM GỖ WOOD.JPG
-          Có chú Kodama đáng yêu ngồi trên góc phải tấm gỗ
-        -->
-        <a href="#playlists" class="nav-item active wood-active-tab" id="navPlaylists" title="Danh sách phát">
-          <img src="icon-playlists.png" alt="Playlists" class="nav-icon wood-nav-icon">
-          <span class="nav-text wood-nav-text">Playlists</span>
-          <!-- Các đốm sáng Susuwatari lơ lửng quanh tấm gỗ -->
-          <span class="wood-glow-spirit" aria-hidden="true"></span>
-        </a>
+          <!-- 3. Your Library (Mở thư mục nhạc cục bộ từ máy tính) -->
+          <li class="sidebar-nav-item" data-tab="library" id="tabLibrary">
+            <label for="folderInput" class="nav-item-link cursor-pointer" title="Mở thư mục nhạc trên máy tính [Local Audio]">
+              <div class="nav-item-content">
+                <img src="icon-library.png" alt="Your Library" class="nav-icon">
+                <span class="nav-text">Your Library</span>
+                <span class="spirit-mini-note" title="Kodama âm nhạc">🍃</span>
+              </div>
+            </label>
+          </li>
 
-        <a href="#create" class="nav-item" id="navCreate" title="Tạo danh sách phát mới">
-          <img src="icon-create.png" alt="Create Playlist" class="nav-icon">
-          <span class="nav-text">Create Playlist</span>
-        </a>
+          <!-- 4. Playlists (Active mặc định chuẩn GIAODIEN.png) -->
+          <li class="sidebar-nav-item active" data-tab="playlists" id="tabPlaylists">
+            <a href="#playlists" class="nav-item-link" title="Danh sách phát">
+              <div class="nav-item-content">
+                <img src="icon-playlists.png" alt="Playlists" class="nav-icon">
+                <span class="nav-text">Playlists</span>
+              </div>
+            </a>
+          </li>
+
+          <!-- 5. Create Playlist -->
+          <li class="sidebar-nav-item" data-tab="create" id="tabCreate">
+            <a href="#create" class="nav-item-link" title="Tạo danh sách phát mới">
+              <div class="nav-item-content">
+                <img src="icon-create.png" alt="Create Playlist" class="nav-icon">
+                <span class="nav-text">Create Playlist</span>
+              </div>
+            </a>
+          </li>
+
+        </ul>
       </nav>
 
       <!-- Đường ngăn cách mộc mạc -->
