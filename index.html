@@ -1,0 +1,266 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Antigravity • Web Music Player</title>
+  <meta name="description" content="Trình phát nhạc cục bộ Antigravity với giao diện không gian tương lai, đọc folder trực tiếp và hiệu ứng Audio Visualizer.">
+  <link rel="stylesheet" href="style.css">
+  <!-- Google Fonts: Syne & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Ambient Space Light / Aurora Glow -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+  <div class="ambient-glow glow-3"></div>
+
+  <!-- App Wrapper -->
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+            <path d="M2 12h20"></path>
+          </svg>
+          <div class="glow-dot"></div>
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-title">ANTIGRAVITY</h1>
+          <span class="brand-subtitle">Cosmic Sound Engine</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="header-actions">
+        <!-- Nút chọn thư mục chứa nhạc (webkitdirectory) -->
+        <label for="folderInput" class="btn btn-primary" title="Tải toàn bộ thư mục bài hát từ máy tính">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+            <path d="M12 10v6"></path>
+            <path d="m9 13 3-3 3 3"></path>
+          </svg>
+          <span>Mở Thư Mục Nhạc</span>
+        </label>
+        <input type="file" id="folderInput" webkitdirectory directory multiple accept="audio/*" style="display: none;">
+
+        <!-- Nút chọn file lẻ dự phòng -->
+        <label for="fileInput" class="btn btn-secondary" title="Chọn một hoặc nhiều file nhạc">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18V5l12-2v13"></path>
+            <circle cx="6" cy="18" r="3"></circle>
+            <circle cx="18" cy="16" r="3"></circle>
+          </svg>
+          <span class="desktop-only">Chọn Files</span>
+        </label>
+        <input type="file" id="fileInput" multiple accept="audio/*" style="display: none;">
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="main-layout">
+      <!-- LEFT SECTION: PLAYER DECK (Đĩa than, Visualizer & Controls) -->
+      <section class="player-panel glass-panel">
+        <!-- Visualizer & Vinyl Deck Container -->
+        <div class="vinyl-stage">
+          <!-- Audio Visualizer Canvas -->
+          <canvas id="visualizerCanvas" class="visualizer-canvas"></canvas>
+
+          <!-- Floating Vinyl Disc -->
+          <div class="vinyl-wrapper" id="vinylWrapper">
+            <div class="vinyl-disc" id="vinylDisc">
+              <div class="vinyl-groove groove-1"></div>
+              <div class="vinyl-groove groove-2"></div>
+              <div class="vinyl-groove groove-3"></div>
+              <div class="vinyl-center">
+                <div class="vinyl-label" id="vinylLabel">
+                  <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 18V5l12-2v13"></path>
+                    <circle cx="6" cy="18" r="3"></circle>
+                    <circle cx="18" cy="16" r="3"></circle>
+                  </svg>
+                </div>
+                <div class="vinyl-spindle"></div>
+              </div>
+            </div>
+            <!-- Glow effect beneath vinyl -->
+            <div class="vinyl-halo"></div>
+          </div>
+
+          <!-- Visualizer Toggle Mode Button -->
+          <button id="visualizerModeBtn" class="mode-badge" title="Đổi chế độ sóng âm: Cột tần số / Sóng mềm">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 10v4"></path>
+              <path d="M6 7v10"></path>
+              <path d="M10 4v16"></path>
+              <path d="M14 8v8"></path>
+              <path d="M18 6v12"></path>
+              <path d="M22 11v2"></path>
+            </svg>
+            <span id="visualizerModeText">Sóng Cột</span>
+          </button>
+        </div>
+
+        <!-- Track Information -->
+        <div class="track-info">
+          <div class="track-title-wrap">
+            <h2 class="track-title" id="trackTitle">Chưa có bài hát nào</h2>
+          </div>
+          <div class="track-meta">
+            <span class="track-artist" id="trackArtist">Hãy chọn thư mục để bắt đầu</span>
+            <span class="meta-separator">•</span>
+            <span class="track-badge" id="trackFormat">AUDIO</span>
+          </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-section">
+          <div class="progress-bar-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+            <div class="progress-thumb" id="progressThumb"></div>
+            <div class="progress-hover-time" id="progressHoverTime">00:00</div>
+          </div>
+          <div class="time-display">
+            <span id="currentTime">00:00</span>
+            <span id="totalDuration">00:00</span>
+          </div>
+        </div>
+
+        <!-- Main Player Controls -->
+        <div class="controls-row">
+          <!-- Nút Shuffle (Ngẫu nhiên) -->
+          <button id="shuffleBtn" class="ctrl-btn" title="Phát ngẫu nhiên (Shuffle) [Phím S]">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"></path>
+              <path d="m18 2 4 4-4 4"></path>
+              <path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"></path>
+              <path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"></path>
+              <path d="m18 14 4 4-4 4"></path>
+            </svg>
+            <span class="btn-dot"></span>
+          </button>
+
+          <!-- Nút Prev (Bài trước) -->
+          <button id="prevBtn" class="ctrl-btn" title="Bài trước [Phím P]">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="19 20 9 12 19 4 19 20"></polygon>
+              <line x1="5" y1="19" x2="5" y2="5"></line>
+            </svg>
+          </button>
+
+          <!-- Nút Play / Pause Trung Tâm -->
+          <button id="playPauseBtn" class="ctrl-btn play-btn" title="Phát / Tạm dừng [Phím Space]">
+            <svg id="playIcon" viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <svg id="pauseIcon" class="hidden" viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+              <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+              <rect x="14" y="4" width="4" height="16" rx="1"></rect>
+            </svg>
+          </button>
+
+          <!-- Nút Next (Bài tiếp) -->
+          <button id="nextBtn" class="ctrl-btn" title="Bài tiếp theo [Phím N]">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 4 15 12 5 20 5 4"></polygon>
+              <line x1="19" y1="5" x2="19" y2="19"></line>
+            </svg>
+          </button>
+
+          <!-- Nút Loop (Lặp lại 3 chế độ) -->
+          <button id="loopBtn" class="ctrl-btn" title="Chế độ lặp: Tắt / Lặp tất cả / Lặp 1 bài [Phím L]">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m17 2 4 4-4 4"></path>
+              <path d="M3 11v-1a4 4 0 0 1 4-4h14"></path>
+              <path d="m7 22-4-4 4-4"></path>
+              <path d="M21 13v1a4 4 0 0 1-4 4H3"></path>
+            </svg>
+            <span class="loop-badge" id="loopBadge">1</span>
+            <span class="btn-dot"></span>
+          </button>
+        </div>
+
+        <!-- Volume Control Row -->
+        <div class="volume-container">
+          <button id="muteBtn" class="icon-btn" title="Bật/Tắt tiếng [Phím M]">
+            <svg id="volumeHighIcon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+            <svg id="volumeMutedIcon" class="hidden" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <line x1="23" y1="9" x2="17" y2="15"></line>
+              <line x1="17" y1="9" x2="23" y2="15"></line>
+            </svg>
+          </button>
+          <div class="volume-slider-wrapper">
+            <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.8" class="volume-slider">
+          </div>
+          <span id="volumePercent" class="volume-value">80%</span>
+        </div>
+      </section>
+
+      <!-- RIGHT SECTION: PLAYLIST PANEL (Danh sách phát & Tìm kiếm) -->
+      <section class="playlist-panel glass-panel">
+        <!-- Playlist Header & Search -->
+        <div class="playlist-header">
+          <div class="playlist-title-box">
+            <h3 class="panel-heading">Danh Sách Phát</h3>
+            <span class="playlist-count" id="playlistCount">0 bài hát</span>
+          </div>
+
+          <!-- Tìm kiếm bài hát -->
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Tìm kiếm bài hát...">
+            <button id="clearSearchBtn" class="clear-search-btn hidden" title="Xóa tìm kiếm">&times;</button>
+          </div>
+        </div>
+
+        <!-- Playlist Content List -->
+        <div class="playlist-scroll-area" id="playlistContainer">
+          <!-- Empty State (Khi chưa chọn folder) -->
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+                <circle cx="12" cy="13" r="3"></circle>
+              </svg>
+            </div>
+            <h4>Chưa có bài hát nào được nạp</h4>
+            <p>Nhấp <strong>"Mở Thư Mục Nhạc"</strong> ở góc trên hoặc kéo thả thư mục/file nhạc vào đây để phát trực tiếp.</p>
+            <span class="supported-formats">Hỗ trợ: .mp3, .wav, .flac, .ogg, .m4a, .aac</span>
+          </div>
+
+          <!-- Active Songs List -->
+          <ul class="song-list" id="songList"></ul>
+        </div>
+
+        <!-- Playlist Footer Stats -->
+        <div class="playlist-footer">
+          <span id="folderNameBadge">Thư mục: Chưa chọn</span>
+          <span class="shortcuts-hint" title="Phím tắt: Space (Phát/Dừng), N/P (Next/Prev), M (Mute), S (Shuffle), L (Loop)">⌨ Phím tắt</span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- HTML5 Audio Core -->
+  <audio id="audioElement" preload="metadata"></audio>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>
