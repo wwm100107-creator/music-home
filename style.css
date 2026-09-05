@@ -212,10 +212,11 @@ body.ghibli-app-body {
   height: 48px;
   pointer-events: none;
   z-index: 1;
-  background-image: url('wood_2.png'), url('wood_2.jpg'), url('wood.png'), url('wood.jpg');
+  background-image: url('wood_2.png');
   background-size: 100% 100%;
   background-repeat: no-repeat;
   background-position: center;
+  background-color: transparent;
   border-radius: 10px;
   box-shadow: 
     0 4px 12px rgba(43, 24, 16, 0.4),
