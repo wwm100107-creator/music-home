@@ -1,47 +1,46 @@
-# MUSIC HOME • Studio Ghibli & Totoro Vibe (WebTorrent & Cloud Sync Engine)
+# MUSIC HOME • Studio Ghibli & Totoro Vibe (Cobalt Audio & Cloud Sync Engine)
 
-Trình phát nhạc mang âm hưởng thiên nhiên trong trẻo, hoài niệm của **Studio Ghibli** (lấy cảm hứng từ *My Neighbor Totoro*), hoạt động thuần túy trên nền tảng **Web Browser** (KHÔNG cần Electron hay app desktop), hỗ trợ WebTorrent P2P Streaming và Cloud Sync đa thiết bị.
+Trình phát nhạc mang âm hưởng thiên nhiên trong trẻo, hoài niệm của **Studio Ghibli** (lấy cảm hứng từ *My Neighbor Totoro*), hoạt động thuần túy trên nền tảng **Web Browser** (KHÔNG cần Electron hay app desktop), tích hợp **Cobalt API Ultra-fast Audio Streamer & Downloader**, Segmented Control Sidebar tấm gỗ và Cloud Sync đa thiết bị.
 
 ---
 
-## 🍃 Các tính năng mới nhất
+## 🍃 Các tính năng cốt lõi
 
-### 1. ☁️ Cloud Sync & Tài Khoản (Supabase BaaS / Instant Local Simulator)
-- **Ghibli Handwritten Letter Modal**: Modal đăng nhập / đăng ký thiết kế như một lá thư tay bằng giấy da cổ phong rơi từ trên trời xuống nhẹ nhàng chao nghiêng (`leafModalDrop`).
-- **Đồng bộ Playlist & WebTorrent**:
-  - Lưu trữ và đồng bộ toàn bộ Metadata danh sách bài hát (Tiêu đề, Nghệ sĩ, Định dạng, Dung lượng, Magnet Link).
-  - Khi đăng nhập trên thiết bị mới, ứng dụng tự động kéo danh sách về và **tự động kết nối WebTorrent stream/tải lại ngầm** các bài hát có Magnet Link để phát được ngay.
-  - Biểu tượng trạng thái kết nối Cloud (`🟢` Đã đồng bộ, `🔄` Đang đồng bộ, `☁️` Sẵn sàng).
-- **Hỗ trợ 2 chế độ Backend**:
-  - **Supabase Real Cloud**: Nhập Supabase Project URL & Anon Key (thông qua CDN `@supabase/supabase-js@2`, không cần backend Node.js) để lưu trữ trên Cloud thật.
-  - **Instant Local Simulator**: Tự động hoạt động ngay tức thì (Zero-config) trên trình duyệt bằng LocalStorage multi-tab broadcast.
+### 1. 🕊️ Smart Search Bar & Cobalt API Ultra-fast Audio Streamer & Downloader
+- **Smart Input Detection**: Tự động phân loại đầu vào:
+  - Nếu nhập chữ thường (Keyword): Tự động tìm kiếm & lọc bài hát ngay trong danh sách phát hiện tại, bấm Enter để phát ngay.
+  - Nếu dán đường dẫn URL (YouTube, TikTok, SoundCloud, Twitter/X...): Tự động chuyển icon sang bồ câu bưu chính 🕊️ và kích hoạt tải siêu tốc.
+- **Cobalt API Integration**:
+  - Gửi `POST` đến `https://api.cobalt.tools/api/json` với payload `{ url, isAudioOnly: true }`.
+  - Nạp Direct Stream URL vào `<audio src="...">` để phát ngay tức thì mà không cần chờ tải xong toàn bộ.
+- **Lưu File Cục Bộ (File System Access API)**:
+  - Sử dụng `showSaveFilePicker` ngầm nhắc người dùng lưu tệp MP3 vĩnh viễn vào ổ cứng máy tính.
+- **Loading Animation Ghibli**:
+  - Trong lúc trích xuất dữ liệu, hiển thị CSS Animation độc đáo: **Bầy bồ hóng than Susuwatari gắng sức kéo một nốt nhạc vàng óng khổng lồ (🎵 Tug-of-war Note Drag)**.
+  - Bắt lỗi `try/catch` an toàn, có âm thanh dự phòng giữ mạch cảm xúc không bị ngắt quãng.
 
-### 2. 🌰 Chế độ Loop 4 trạng thái & Tích chọn Hạt Dẻ (Acorn Custom Loop)
-State Machine nâng cấp với 4 chế độ lặp luân phiên:
-1. **Lặp toàn bộ khu vườn (Loop All)**: Hết danh sách sẽ tự động quay lại bài đầu tiên.
-2. **Lặp 1 bài hiện tại (Loop One - `1`)**: Phát đi phát lại duy nhất 1 bài hát.
-3. **Lặp các bài đã chọn (Custom Loop - `🌰`)**:
-   - Tự động xuất hiện ô checkbox chiếc lá (`🍃`) trên từng thẻ bài hát.
-   - Khi tích chọn: Chiếc lá hóa thành Hạt Dẻ (`🌰`) với hiệu ứng nảy nhẹ vui mắt (`acornPop`) và viền gỗ phát sáng ấm áp.
-   - Trình phát nhạc **chỉ lặp qua lại giữa các bài hát đã tích hạt dẻ** này.
-4. **Tắt lặp (Loop Off)**: Phát đến cuối danh sách rồi dừng lại.
+### 2. 🪵 Segmented Control Sidebar (Tấm Gỗ Trượt Duy Nhất)
+- Menu trái là danh sách các tab với một thanh trượt tấm gỗ duy nhất (`#woodSliderSwitch`) sử dụng ảnh `wood_2.png`.
+- Chuyển động vật lý mượt mà: `transform: translateY()` với đường cong `transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)`.
+- Ràng buộc Active State: Khi dừng ở mục nào, Icon và Chữ mục đó nổi lên và phóng to nhẹ (`scale(1.08)`), nằm lọt thỏm cân đối bên trong tấm gỗ và **tuyệt đối không bao giờ tràn ra ngoài ranh giới**.
 
-### 3. 📡 WebTorrent P2P Browser Streaming & File System Access API
-- Nhúng thư viện `webtorrent.min.js` thuần WebRTC trên trình duyệt.
-- Dán link `magnet:?xt=...` hoặc chọn các bản nhạc mẫu Ghibli / Lofi để nghe trực tuyến P2P.
-- Hoạt ảnh bầy Susuwatari chuyền lá và mây trôi sinh động theo tốc độ tải.
-- Hỗ trợ lưu file vĩnh viễn xuống ổ cứng bằng `File System Access API` (`showSaveFilePicker`).
+### 3. 🔥 Thanh Phát Nhạc Dây Leo & Chú Lửa Calcifer (f.jpg)
+- Thanh tiến trình lượn sóng SVG xanh ngọc dịu mát như nhánh dây leo trong rừng già.
+- Cục chạy (Thumb) sử dụng ảnh `f.jpg` kết hợp `mix-blend-mode: multiply` để khử hoàn toàn nền trắng, kèm animation phập phồng ấm áp (`calciferBreathe`).
+
+### 4. ☁️ Cloud Sync & Tài Khoản (Supabase BaaS / Local Storage Multi-Tab)
+- **Ghibli Handwritten Letter Modal**: Modal đăng nhập / đăng ký thiết kế như một lá thư tay bằng giấy da rơi chao nghiêng.
+- Lưu trữ và đồng bộ danh sách bài hát qua Supabase Cloud hoặc Local Storage.
+
+### 5. 🌰 Chế độ Loop 4 trạng thái & Tích chọn Hạt Dẻ (Acorn Custom Loop)
+- Loop All -> Loop One -> Custom Loop (Hạt Dẻ 🌰) -> Loop Off.
 
 ---
 
 ## 🚀 Cách mở và sử dụng
 1. Mở file `index.html` trực tiếp trên trình duyệt (Chrome, Edge, Brave, Firefox).
-2. **Đăng nhập / Đồng bộ Cloud**:
-   - Nhấp vào nút **"☁️ Đăng Nhập"** trên thanh tiêu đề để mở lá thư tay Ghibli.
-   - Đăng ký tài khoản hoặc cấu hình Supabase riêng trong tab **"Cấu Hình Cloud"**.
-   - Bấm **"🔄 Đồng bộ Cloud"** bất kỳ lúc nào để sao lưu danh sách bài hát lên mây.
-3. **Nghe nhạc cục bộ**: Bấm **"Mở Thư Mục"** để chọn thư mục nhạc trên máy tính.
-4. **Tải & Stream WebTorrent**: Bấm nút **"WebTorrent"**, dán Magnet URL hoặc chọn mẫu có sẵn.
+2. **Dán link nhạc**: Dán liên kết YouTube, TikTok hoặc SoundCloud vào ô tìm kiếm trên đầu trang để thưởng thức ngay.
+3. **Mở thư mục nhạc trên máy**: Bấm nút **"Your Library"** trên Sidebar để chọn thư mục nhạc MP3 offline.
 5. **Chọn bài lặp Hạt Dẻ**: Bấm phím `L` hoặc nút Loop cho đến khi hiện biểu tượng hạt dẻ `🌰`, sau đó tích vào các bài hát bạn muốn lặp.
 
 ---

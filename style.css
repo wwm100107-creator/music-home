@@ -298,15 +298,16 @@ body.ghibli-app-body {
 }
 
 /* 
-  [SKILL: /animate & /impeccable] TRẠNG THÁI ACTIVE:
-  Khi tấm gỗ trượt đến item nào, item đó nổi bật, scale(1.06) và chuyển chữ sáng ấm
+  // TODO: [SKILL: /animate & /impeccable] TRẠNG THÁI ACTIVE:
+  Khi tấm gỗ trượt đến item nào, item đó nổi bật, scale(1.08) và chuyển chữ sáng ấm.
+  RÀNG BUỘC: Tuyệt đối không tràn khỏi ranh giới tấm gỗ (chiều cao item 48px, nội dung ~28px -> dư ~10px padding trên/dưới an toàn tuyệt đối).
 */
 .sidebar-nav-item.active .nav-item-content {
-  transform: scale(1.06) translateX(3px);
+  transform: scale(1.08) translateX(2px);
 }
 
 .sidebar-nav-item.active .nav-icon {
-  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45)) brightness(1.1);
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45)) brightness(1.12);
 }
 
 .sidebar-nav-item.active .nav-text {
@@ -692,7 +693,56 @@ body.ghibli-app-body {
   100% { transform: scaleX(1); opacity: 0.85; }
 }
 
-/* Chiếc lá xanh khổng lồ nặng nhọc */
+/* 
+  // TODO: [SKILL: /animate & /animation-vocabulary]
+  Nốt nhạc khổng lồ vàng óng bị bầy Susuwatari kéo (Tug-of-war Note Drag)
+*/
+.heavy-musical-note {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform-origin: left bottom;
+  animation: heavyNoteDrag 1.15s infinite cubic-bezier(0.45, 0, 0.55, 1);
+  filter: drop-shadow(0 4px 12px rgba(255, 183, 3, 0.5));
+}
+
+.note-giant-glyph {
+  font-size: 2.3rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+  animation: noteWobble 1.15s infinite ease-in-out;
+}
+
+.note-label {
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: #fff8dc;
+  background: rgba(43, 24, 16, 0.85);
+  border: 1px solid rgba(255, 230, 150, 0.5);
+  padding: 1px 7px;
+  border-radius: 8px;
+  margin-top: -3px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+@keyframes heavyNoteDrag {
+  0% { transform: rotate(-4deg) translateX(0) scale(1); }
+  35% { transform: rotate(14deg) translateX(-10px) scale(0.96); }
+  65% { transform: rotate(10deg) translateX(-7px) scale(0.98); }
+  100% { transform: rotate(-4deg) translateX(0) scale(1); }
+}
+
+@keyframes noteWobble {
+  0%, 100% { transform: rotate(0deg); }
+  35% { transform: rotate(-8deg); }
+  65% { transform: rotate(6deg); }
+}
+
+/* Chiếc lá xanh dự phòng */
 .heavy-green-leaf {
   width: 82px;
   height: 48px;
@@ -797,11 +847,6 @@ body.ghibli-app-body {
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.22);
 }
 
-.btn-torrent-pill {
-  background: #d8f3dc;
-  color: #1b4332;
-  border-color: #74c69d;
-}
 
 .btn-cloud-pill {
   background: #faedcd;
@@ -1166,16 +1211,16 @@ body.ghibli-app-body {
 }
 
 .calcifer-flame {
-  width: 38px;
-  height: 52px;
-  background-image: url('f.png');
+  width: 40px;
+  height: 54px;
+  background-image: url('f.jpg');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center bottom;
-  /* [SKILL: /impeccable] Khử nền trắng nếu dùng f.jpg */
+  /* // TODO: [SKILL: /impeccable] Khử hoàn toàn nền trắng của ảnh f.jpg */
   mix-blend-mode: multiply;
   transform-origin: bottom center;
-  filter: drop-shadow(0 0 8px rgba(255, 140, 0, 0.8));
+  filter: drop-shadow(0 0 10px rgba(255, 120, 20, 0.85)) drop-shadow(0 0 4px rgba(255, 200, 0, 0.6));
   transition: transform 0.15s ease-out;
 }
 
@@ -1328,234 +1373,8 @@ body.music-playing .calcifer-flame {
 }
 
 /* --------------------------------------------------------------------------
-   5. BẢNG WEBTORRENT P2P & NGĂN KÉO DANH SÁCH BÀI HÁT
+   5. NGĂN KÉO DANH SÁCH BÀI HÁT (PLAYLIST DRAWER)
    -------------------------------------------------------------------------- */
-.torrent-cottage-panel {
-  position: absolute;
-  top: 70px;
-  left: 32px;
-  right: 36px;
-  background: #fffdf5;
-  border: 3px solid #6f4518;
-  border-radius: 20px;
-  padding: 20px 24px;
-  box-shadow: 0 14px 35px rgba(45, 25, 10, 0.35);
-  z-index: 50;
-  animation: modalPopIn 0.3s var(--ease-out-spring);
-}
-
-.torrent-search-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.acorn-tag {
-  font-size: 0.8rem;
-  font-weight: 800;
-  background: #d8f3dc;
-  color: #1b4332;
-  padding: 4px 10px;
-  border-radius: 10px;
-}
-
-.torrent-tagline {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #7f5539;
-  margin-left: 8px;
-}
-
-.sample-magnets-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.sample-label {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #6f4518;
-}
-
-.sample-btn {
-  background: #faedcd;
-  border: 1px solid #d4a373;
-  color: #6f4518;
-  font-family: var(--font-ghibli-nav);
-  font-size: 0.78rem;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background 0.12s;
-}
-
-.sample-btn:hover {
-  background: #e9d8a6;
-}
-
-.torrent-input-bar {
-  display: flex;
-  gap: 10px;
-}
-
-.torrent-input-wrapper {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  background: #ffffff;
-  border: 2px solid #b58957;
-  border-radius: 16px;
-  padding: 8px 14px;
-  gap: 8px;
-}
-
-.torrent-input-wrapper input {
-  flex: 1;
-  border: none;
-  outline: none;
-  font-family: var(--font-ghibli-nav);
-  font-size: 0.92rem;
-  color: var(--ghibli-brown-dark);
-}
-
-.clear-wood-btn {
-  background: transparent;
-  border: none;
-  font-size: 1.2rem;
-  color: #a08060;
-  cursor: pointer;
-}
-
-.ghibli-action-btn {
-  background: #7fc95e;
-  border: 2px solid #2d6a4f;
-  color: #ffffff;
-  font-family: var(--font-ghibli-nav);
-  font-size: 0.92rem;
-  font-weight: 800;
-  padding: 8px 18px;
-  border-radius: 16px;
-  cursor: pointer;
-  box-shadow: 0 4px 0 #1b4332;
-  transition: transform 0.12s, box-shadow 0.12s;
-}
-
-.ghibli-action-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 0 #1b4332;
-}
-
-.ghibli-action-btn:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 #1b4332;
-}
-
-.torrent-status-card {
-  margin-top: 14px;
-  background: #fdfaf0;
-  border: 2px dashed #b58957;
-  border-radius: 14px;
-  padding: 12px 16px;
-}
-
-.susuwatari-work-crew {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.worker-sprite {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #2b1810;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: workerHop 0.4s infinite alternate;
-}
-
-@keyframes workerHop {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(-4px); }
-}
-
-.worker-eyes {
-  width: 8px;
-  height: 8px;
-  background: #ffffff;
-  border-radius: 50%;
-  position: relative;
-}
-
-.pupil {
-  width: 4px;
-  height: 4px;
-  background: #000000;
-  border-radius: 50%;
-  position: absolute;
-  top: 2px;
-  left: 2px;
-}
-
-.worker-speech {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #4a2c11;
-}
-
-.torrent-meta-row {
-  display: flex;
-  justify-content: space-between;
-  margin: 6px 0;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #7f5539;
-}
-
-.torrent-bar-shell {
-  height: 10px;
-  background: #e9d8a6;
-  border-radius: 6px;
-  overflow: hidden;
-  position: relative;
-  margin: 6px 0;
-}
-
-.torrent-bar-fill {
-  height: 100%;
-  background: #7fc95e;
-  border-radius: 6px;
-  transition: width 0.2s;
-}
-
-.torrent-percent-text {
-  position: absolute;
-  right: 6px;
-  top: -16px;
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: #2d6a4f;
-}
-
-.torrent-actions-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.btn-save-disk {
-  background: #e76f51;
-  border-color: #9d0208;
-  box-shadow: 0 4px 0 #6a040f;
-}
 
 /* Ngăn kéo Playlist Drawer (Chứa các checkbox hạt dẻ Custom Loop) */
 .playlist-drawer-cottage {

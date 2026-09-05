@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Home Music • Studio Ghibli & Totoro Vibe</title>
-  <meta name="description" content="Trình phát nhạc Studio Ghibli pixel-perfect theo thiết kế GIAODIEN.png, tích hợp WebTorrent P2P, Supabase Cloud Sync và Calcifer Wavy Progress Bar.">
+  <meta name="description" content="Trình phát nhạc Studio Ghibli pixel-perfect theo thiết kế GIAODIEN.png, tích hợp Cobalt API Audio Downloader, Supabase Cloud Sync và Calcifer Wavy Progress Bar.">
 
   <!-- Google Fonts: Whimsical Rounded Typography cho chuẩn phong cách Anime Ghibli -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,9 +12,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@600;700;800;900&family=Fredoka:wght@500;600;700;800&family=Sniglet:wght@800&family=Quicksand:wght@600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="style.css">
-
-  <!-- WebTorrent Browser Core Library (WebRTC P2P) -->
-  <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
 
   <!-- 
     [SKILL: /ponytail] SUPABASE CLOUD SYNC & AUTH SDK (CDN)
@@ -200,12 +197,6 @@
         </div>
 
         <div class="top-actions-cluster">
-          <!-- Nút bật bảng WebTorrent P2P -->
-          <button id="torrentToggleBtn" class="top-action-pill btn-torrent-pill" title="Mở bảng WebTorrent P2P">
-            <span class="acorn-emoji">📡</span>
-            <span>WebTorrent</span>
-          </button>
-
           <!-- Nút Lá Thư Ghibli: Đăng nhập & Đồng bộ Cloud Supabase -->
           <button id="authModalTriggerBtn" class="top-action-pill btn-cloud-pill" title="Đăng nhập & Đồng bộ Playlist lên Cloud">
             <span class="cloud-icon" id="syncStatusIcon">☁️</span>
@@ -221,15 +212,15 @@
 
       <!-- 
         ======================================================================
-        [SKILL: /animate & /animation-vocabulary]
-        HIỆU ỨNG SUSUWATARI KÉO CHIẾC LÁ NẶNG NHỌC (HEAVY LEAF DRAG LOADING)
-        Xuất hiện mượt mà khi isLoading === true trong lúc xử lý & tải MP3
+        // TODO: [SKILL: /animate & /animation-vocabulary]
+        HIỆU ỨNG CỤC THAN SUSUWATARI KÉO NỐT NHẠC (SUSUWATARI PULLING MUSIC NOTE)
+        Xuất hiện mượt mà khi isLoading === true trong lúc Cobalt API trích xuất âm thanh
         ======================================================================
       -->
       <div class="susuwatari-leaf-loader hidden" id="leafLoader" aria-live="polite">
         <div class="leaf-loader-box">
           <div class="leaf-pull-stage">
-            <!-- Đội hình Susuwatari gắng sức kéo dây leo (Tug-of-war effort) -->
+            <!-- Đội hình Susuwatari gắng sức kéo nốt nhạc (Tug-of-war heave & pull) -->
             <div class="soot-sprite soot-1" title="Susuwatari 1">
               <div class="soot-eyes"><span class="soot-pupil"></span><span class="soot-pupil"></span></div>
               <span class="sweat-drop s1">💦</span>
@@ -242,19 +233,19 @@
               <div class="soot-eyes"><span class="soot-pupil"></span><span class="soot-pupil"></span></div>
             </div>
 
-            <!-- Dây thừng dây leo căng cứng rung bần bật -->
+            <!-- Dây thừng leo căng cứng rung bần bật -->
             <div class="strained-vine-rope"></div>
 
-            <!-- Chiếc lá to nặng nhọc chứa âm thanh MP3 đang được kéo về -->
-            <div class="heavy-green-leaf">
-              <span class="leaf-rib"></span>
-              <span class="leaf-music-badge">🎵 MP3</span>
+            <!-- Nốt nhạc vàng óng khổng lồ đang bị bầy Susuwatari gắng sức kéo về -->
+            <div class="heavy-musical-note" id="heavyMusicalNote">
+              <span class="note-giant-glyph">🎵</span>
+              <span class="note-label">COBALT AUDIO</span>
             </div>
           </div>
 
           <div class="leaf-loader-text">
-            <div class="leaf-loader-title" id="loaderStatusTitle">Bầy Susuwatari đang kéo chiếc lá âm thanh...</div>
-            <div class="leaf-loader-sub" id="loaderStatusSub">Đang trích xuất MP3 từ liên kết & chuẩn bị lưu trữ vào máy</div>
+            <div class="leaf-loader-title" id="loaderStatusTitle">Bầy Susuwatari đang kéo nốt nhạc từ Cobalt...</div>
+            <div class="leaf-loader-sub" id="loaderStatusSub">Đang kết nối bồ câu bưu chính & trích xuất MP3 về máy tính</div>
           </div>
         </div>
       </div>
@@ -335,75 +326,7 @@
         </div>
       </section>
 
-      <!-- 
-        BẢNG WEBTORRENT GHIBLI P2P SEARCH & STREAM
-        [SKILL: /ponytail] Logic tìm kiếm & stream trực tiếp qua WebRTC
-      -->
-      <section class="torrent-cottage-panel hidden" id="torrentPanel">
-        <div class="torrent-panel-inner">
-          <div class="torrent-search-header">
-            <div class="torrent-title-group">
-              <span class="acorn-tag">🌱 WEBTORRENT P2P</span>
-              <span class="torrent-tagline">Tải & Stream Nhạc Trực Tuyến Xuống Máy Bằng Trình Duyệt</span>
-            </div>
-            <div class="sample-magnets-row">
-              <span class="sample-label">Thử mẫu:</span>
-              <button class="sample-btn" data-query="totoro-lofi">🍃 Totoro Lofi Theme</button>
-              <button class="sample-btn" data-query="ghibli-relax">🌾 Ghibli Nature Sounds</button>
-              <button class="sample-btn" data-query="sintel-track">🌰 Sintel Free Audio</button>
-            </div>
-          </div>
 
-          <form id="torrentForm" class="torrent-input-bar">
-            <div class="torrent-input-wrapper">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-              </svg>
-              <input type="text" id="torrentInput" placeholder="Dán Magnet URL (magnet:?xt=...) hoặc nhập tên bài hát cần tải...">
-              <button type="button" id="clearTorrentInput" class="clear-wood-btn hidden" title="Xóa">&times;</button>
-            </div>
-            <button type="submit" id="torrentSubmitBtn" class="ghibli-action-btn btn-torrent-action">
-              <span>🍃 Tải & Stream</span>
-            </button>
-          </form>
-
-          <!-- Bảng tiến trình tải WebTorrent Susuwatari -->
-          <div class="torrent-status-card hidden" id="torrentStatusCard">
-            <div class="susuwatari-work-crew" id="susuwatariCrew">
-              <div class="worker-sprite sprite-left"><div class="worker-eyes"><span class="pupil"></span></div></div>
-              <div class="flying-leaf-leaf">🍃</div>
-              <div class="worker-sprite sprite-right"><div class="worker-eyes"><span class="pupil"></span></div></div>
-              <span class="worker-speech" id="workerSpeech">Đang kết nối các hạt giống peers trong khu rừng...</span>
-            </div>
-
-            <div class="torrent-meta-row">
-              <span class="torrent-meta-name" id="torrentFileName">Giai điệu Ghibli</span>
-              <div class="torrent-stats">
-                <span>Peers: <strong id="torrentPeers">0</strong></span>
-                <span>Tốc độ: <strong id="torrentSpeed">0 KB/s</strong></span>
-                <span>Đã tải: <strong id="torrentDownloaded">0 MB</strong> / <strong id="torrentTotalSize">0 MB</strong></span>
-              </div>
-            </div>
-
-            <div class="torrent-bar-shell">
-              <div class="torrent-bar-fill" id="torrentProgressFill" style="width: 0%;"></div>
-              <span class="torrent-percent-text" id="torrentPercent">0%</span>
-            </div>
-
-            <div class="torrent-actions-row">
-              <button id="saveToDiskBtn" class="ghibli-action-btn btn-save-disk hidden" title="Lưu vĩnh viễn vào ổ cứng bằng File System Access API">
-                💾 Lưu Vào Máy
-              </button>
-              <button id="playTorrentNowBtn" class="ghibli-action-btn btn-stream-now hidden">
-                ▶ Phát Ngay
-              </button>
-              <button id="cancelTorrentBtn" class="ghibli-btn-subtle">
-                Dừng Tải
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <!-- 
         DANH SÁCH BÀI HÁT CHI TIẾT (PLAYLIST QUEUE DRAWER)
@@ -610,7 +533,7 @@
       <div class="letter-header">
         <div class="wax-seal-icon">💌</div>
         <h3 class="letter-title">Lá Thư Từ Rừng Xanh</h3>
-        <p class="letter-subtitle">Đồng bộ Playlist & Thư viện WebTorrent đa thiết bị</p>
+        <p class="letter-subtitle">Đồng bộ Playlist & Âm nhạc Ghibli đa thiết bị</p>
       </div>
 
       <!-- Tabs: Đăng Nhập / Đăng Ký / Cấu Hình Supabase -->

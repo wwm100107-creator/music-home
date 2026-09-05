@@ -2,19 +2,18 @@
  * ============================================================================
  * MUSIC HOME • STUDIO GHIBLI & MY NEIGHBOR TOTORO SOUND STATION
  * Pixel-Perfect Implementation of GIAODIEN.png
- * Local Folder Player + WebTorrent P2P Streaming + Supabase Cloud Sync
+ * Local Folder Player + Cobalt Audio API Downloader + Supabase Cloud Sync
  * ============================================================================
  * 
  * HỆ THỐNG SKILLS ĐƯỢC TÍCH HỢP TOÀN DIỆN:
  * - [SKILL: /image-to-code-skill] : Tái hiện chuẩn xác 100% bố cục GIAODIEN.png:
  *     1. Background video động toàn màn hình (background.mp4)
- *     2. Left Sidebar kính mờ (rgba xanh ngọc + blur) với thanh gỗ wood.jpg active
+ *     2. Left Sidebar kính mờ (rgba xanh ngọc + blur) với thanh gỗ wood_2.png active
  *     3. Main Content: Grid 6 Playlist Cards bo góc tròn mộc mạc
- *     4. Bottom Player: Đĩa phát gỗ, thanh lượn sóng SVG xanh lá & cục chạy Calcifer (f.jpg/f.png)
- * - [SKILL: /impeccable] : Typography Ghibli, text-stroke, drop-shadow, viền mềm mại, mix-blend-mode
- * - [SKILL: /animate] : Calcifer breathing keyframes, wavy progress surfing, Susuwatari crew, lá thư rơi
- * - [SKILL: /ponytail] : Tối giản hóa logic (YAGNI), tích hợp Web Audio Synthesizer tự sinh giai điệu Ghibli
- *   ngay khi mở web mà không cần server hay tải nặng nề!
+ *     4. Bottom Player: Đĩa phát gỗ, thanh lượn sóng SVG xanh lá & cục chạy Calcifer (f.jpg)
+ * - [SKILL: /impeccable] : Typography Ghibli, text-stroke, drop-shadow, viền mềm mại, mix-blend-mode: multiply
+ * - [SKILL: /animate] : Calcifer breathing keyframes, wavy progress surfing, Susuwatari crew kéo nốt nhạc
+ * - [SKILL: /ponytail & /ponytail-help] : Cobalt API Ultra-fast Audio Streamer & Downloader (YAGNI, minimal code)
  */
 
 (() => {
@@ -22,29 +21,6 @@
 
   // --- HẰNG SỐ ĐỊNH DẠNG ÂM THANH HỖ TRỢ ---
   const SUPPORTED_AUDIO_EXT = ['.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac', '.opus', '.weba'];
-
-  // WebSocket Trackers chuẩn cho WebTorrent trên trình duyệt (WebRTC)
-  const WEBTORRENT_TRACKERS = [
-    'wss://tracker.openwebtorrent.com',
-    'wss://tracker.btorrent.xyz',
-    'wss://tracker.fastcast.nz'
-  ];
-
-  // Danh sách các Magnet mẫu Creative Commons / Public Domain Lofi & Ghibli Vibe
-  const SAMPLE_MAGNETS = {
-    'totoro-lofi': {
-      name: 'My Neighbor Totoro - Wind Forest Lofi (Sample Stream)',
-      magnet: 'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&tr=wss%3A%2F%2Ftracker.fastcast.nz'
-    },
-    'ghibli-relax': {
-      name: 'Ghibli Piano Forest Relaxing Medley',
-      magnet: 'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&tr=wss%3A%2F%2Ftracker.fastcast.nz'
-    },
-    'sintel-track': {
-      name: 'Sintel Open Source Soundtrack',
-      magnet: 'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&tr=wss%3A%2F%2Ftracker.fastcast.nz'
-    }
-  };
 
   // [SKILL: /image-to-code-skill] 6 GIAI ĐIỆU GHIBLI MẪU CHUẨN GIAODIEN.PNG
   const DEFAULT_GHIBLI_TRACKS = [
@@ -57,7 +33,6 @@
       cover: "card-ghibli.jpg",
       format: "FLAC",
       size: "24.5 MB",
-      isTorrent: false,
       synthTheme: 'summer'
     },
     {
@@ -69,7 +44,6 @@
       cover: "card-totoro.jpg",
       format: "MP3",
       size: "8.4 MB",
-      isTorrent: false,
       synthTheme: 'totoro'
     },
     {
@@ -81,7 +55,6 @@
       cover: "album-howl.jpg",
       format: "FLAC",
       size: "32.1 MB",
-      isTorrent: false,
       synthTheme: 'howl'
     },
     {
@@ -93,7 +66,6 @@
       cover: "card-kiki.jpg",
       format: "MP3",
       size: "9.2 MB",
-      isTorrent: false,
       synthTheme: 'kiki'
     },
     {
@@ -105,7 +77,6 @@
       cover: "card-wind.jpg",
       format: "MP3",
       size: "7.8 MB",
-      isTorrent: false,
       synthTheme: 'wind'
     },
     {
@@ -117,13 +88,12 @@
       cover: "card-kiki-town.jpg",
       format: "MP3",
       size: "6.9 MB",
-      isTorrent: false,
       synthTheme: 'lofi'
     }
   ];
 
   // --------------------------------------------------------------------------
-  // [SKILL: /ponytail] STATE MANAGEMENT: Quản lý trạng thái bài hát & WebTorrent
+  // [SKILL: /ponytail] STATE MANAGEMENT: Quản lý trạng thái bài hát
   // --------------------------------------------------------------------------
   const state = {
     playlist: [...DEFAULT_GHIBLI_TRACKS], // Khởi tạo với 6 bài Ghibli chuẩn GIAODIEN.png
@@ -139,11 +109,6 @@
     shuffleOrder: [],
     shufflePosition: 0,
     isScrubbing: false,     // Cờ rê kéo chú lửa Calcifer
-
-    // WebTorrent Client State
-    wtClient: null,
-    activeTorrent: null,
-    currentTorrentFile: null,
 
     // Cloud Sync & Supabase BaaS State
     currentUser: null,
@@ -177,7 +142,6 @@
     leafLoader: document.getElementById('leafLoader'),
     loaderStatusTitle: document.getElementById('loaderStatusTitle'),
     loaderStatusSub: document.getElementById('loaderStatusSub'),
-    torrentToggleBtn: document.getElementById('torrentToggleBtn'),
     authModalTriggerBtn: document.getElementById('authModalTriggerBtn'),
     syncStatusIcon: document.getElementById('syncStatusIcon'),
     userAuthBadgeText: document.getElementById('userAuthBadgeText'),
@@ -187,25 +151,6 @@
     woodSliderSwitch: document.getElementById('woodSliderSwitch'),
     sidebarNavList: document.getElementById('sidebarNavList'),
     sidebarNavItems: document.querySelectorAll('.sidebar-nav-item'),
-
-    // WebTorrent Panel Elements
-    torrentPanel: document.getElementById('torrentPanel'),
-    torrentForm: document.getElementById('torrentForm'),
-    torrentInput: document.getElementById('torrentInput'),
-    clearTorrentInput: document.getElementById('clearTorrentInput'),
-    torrentSubmitBtn: document.getElementById('torrentSubmitBtn'),
-    torrentStatusCard: document.getElementById('torrentStatusCard'),
-    workerSpeech: document.getElementById('workerSpeech'),
-    torrentFileName: document.getElementById('torrentFileName'),
-    torrentPeers: document.getElementById('torrentPeers'),
-    torrentSpeed: document.getElementById('torrentSpeed'),
-    torrentDownloaded: document.getElementById('torrentDownloaded'),
-    torrentTotalSize: document.getElementById('torrentTotalSize'),
-    torrentProgressFill: document.getElementById('torrentProgressFill'),
-    torrentPercent: document.getElementById('torrentPercent'),
-    saveToDiskBtn: document.getElementById('saveToDiskBtn'),
-    playTorrentNowBtn: document.getElementById('playTorrentNowBtn'),
-    cancelTorrentBtn: document.getElementById('cancelTorrentBtn'),
 
     // Main Content Playlist Cards
     playlistCards: document.querySelectorAll('.playlist-card'),
@@ -438,244 +383,7 @@
     return new Blob([out.buffer], { type: 'audio/wav' });
   }
 
-  // --------------------------------------------------------------------------
-  // [SKILL: /ponytail] WEBTORRENT CORE: Khởi tạo lười & Quản lý P2P Download
-  // --------------------------------------------------------------------------
-  function getWebTorrentClient() {
-    if (!state.wtClient) {
-      if (typeof window.WebTorrent === 'undefined') {
-        showToast('Thư viện WebTorrent chưa sẵn sàng!');
-        return null;
-      }
-      state.wtClient = new window.WebTorrent();
-      state.wtClient.on('error', (err) => {
-        console.error('WebTorrent Client Lỗi:', err);
-        showToast('Lỗi WebTorrent: ' + err.message);
-      });
-    }
-    return state.wtClient;
-  }
 
-  function prepareMagnetLink(input) {
-    const trimmed = input.trim();
-    if (trimmed.startsWith('magnet:?')) {
-      let url = trimmed;
-      WEBTORRENT_TRACKERS.forEach(tr => {
-        if (!url.includes(encodeURIComponent(tr)) && !url.includes(tr)) {
-          url += `&tr=${encodeURIComponent(tr)}`;
-        }
-      });
-      return url;
-    }
-    if (/^[0-9a-fA-F]{40}$/.test(trimmed)) {
-      let url = `magnet:?xt=urn:btih:${trimmed}`;
-      WEBTORRENT_TRACKERS.forEach(tr => {
-        url += `&tr=${encodeURIComponent(tr)}`;
-      });
-      return url;
-    }
-    return null;
-  }
-
-  function startTorrentDownload(magnetOrId, customTitle = '') {
-    const client = getWebTorrentClient();
-    if (!client) return;
-
-    if (state.activeTorrent) {
-      try { state.activeTorrent.destroy(); } catch (_) {}
-      state.activeTorrent = null;
-    }
-
-    dom.torrentStatusCard.classList.remove('hidden');
-    dom.workerSpeech.textContent = 'Các chú Susuwatari đang tìm hạt giống Peers trong khu rừng...';
-    dom.torrentFileName.textContent = customTitle || 'Đang kết nối Torrent...';
-    dom.torrentPeers.textContent = '0';
-    dom.torrentSpeed.textContent = '0 KB/s';
-    dom.torrentDownloaded.textContent = '0 MB';
-    dom.torrentTotalSize.textContent = 'Đang tính...';
-    dom.torrentProgressFill.style.width = '0%';
-    dom.torrentPercent.textContent = '0%';
-    dom.saveToDiskBtn.classList.add('hidden');
-    dom.playTorrentNowBtn.classList.add('hidden');
-
-    try {
-      const torrent = client.add(magnetOrId, {
-        announce: WEBTORRENT_TRACKERS
-      }, (t) => {
-        onTorrentReady(t, customTitle);
-      });
-
-      state.activeTorrent = torrent;
-
-      torrent.on('download', () => {
-        updateTorrentProgressUI(torrent);
-      });
-
-      torrent.on('done', () => {
-        dom.workerSpeech.textContent = 'Đã gom xong toàn bộ giai điệu về khu vườn! 🍃';
-        showToast('Tải Torrent hoàn tất 100%! Bấm "Lưu Vào Máy" để lưu trữ.');
-        dom.saveToDiskBtn.classList.remove('hidden');
-      });
-
-      torrent.on('error', (err) => {
-        console.error('Lỗi khi tải torrent:', err);
-        dom.workerSpeech.textContent = 'Không tìm thấy Peers hỗ trợ WebRTC cho bài này.';
-        showToast('Lỗi Torrent: Không có Peers trực tuyến.');
-      });
-
-    } catch (err) {
-      console.error('Không thể bắt đầu WebTorrent:', err);
-      showToast('Lỗi: ' + err.message);
-    }
-  }
-
-  function onTorrentReady(torrent, customTitle) {
-    dom.workerSpeech.textContent = 'Đã tìm thấy hạt giống! Đang chuyển tay nhau tải về...';
-    const audioFile = torrent.files.find(f => SUPPORTED_AUDIO_EXT.some(ext => f.name.toLowerCase().endsWith(ext))) || torrent.files[0];
-    state.currentTorrentFile = audioFile;
-
-    const displayTitle = customTitle || cleanTitle(audioFile.name);
-    dom.torrentFileName.textContent = displayTitle;
-    dom.torrentTotalSize.textContent = formatBytes(torrent.length);
-
-    dom.saveToDiskBtn.classList.remove('hidden');
-    dom.playTorrentNowBtn.classList.remove('hidden');
-
-    addTorrentTrackToPlaylist(audioFile, displayTitle, torrent);
-    streamAudioFile(audioFile, displayTitle);
-  }
-
-  function updateTorrentProgressUI(torrent) {
-    const percent = Math.min(100, Math.round(torrent.progress * 100));
-    dom.torrentProgressFill.style.width = `${percent}%`;
-    dom.torrentPercent.textContent = `${percent}%`;
-    dom.torrentPeers.textContent = torrent.numPeers;
-    dom.torrentSpeed.textContent = `${formatBytes(torrent.downloadSpeed)}/s`;
-    dom.torrentDownloaded.textContent = formatBytes(torrent.downloaded);
-
-    if (torrent.numPeers > 0) {
-      dom.workerSpeech.textContent = `Bầy Susuwatari đang chuyền lá với tốc độ ${formatBytes(torrent.downloadSpeed)}/s...`;
-    }
-  }
-
-  function streamAudioFile(file, title) {
-    try {
-      file.renderTo(dom.audio, { autoplay: true }, (err) => {
-        if (err) {
-          file.getBlobURL((blobErr, url) => {
-            if (!blobErr && url) {
-              dom.audio.src = url;
-              dom.audio.play();
-            }
-          });
-        }
-      });
-    } catch (_) {
-      file.getBlobURL((blobErr, url) => {
-        if (!blobErr && url) {
-          dom.audio.src = url;
-          dom.audio.play();
-        }
-      });
-    }
-
-    state.isPlaying = true;
-    updatePlaybackUI();
-    dom.trackTitle.textContent = title || file.name;
-    dom.trackArtist.textContent = `WebTorrent P2P Stream • ${formatBytes(file.length)}`;
-    dom.trackAlbum.textContent = 'WebTorrent Stream';
-    showToast(`Đang phát trực tiếp: "${title || file.name}" 📡`);
-  }
-
-  function addTorrentTrackToPlaylist(file, title, torrent) {
-    const existing = state.playlist.find(t => t.name === file.name);
-    if (existing) return;
-
-    const newTrack = {
-      id: 'wt_' + Date.now(),
-      file: null,
-      name: file.name,
-      title: title || cleanTitle(file.name),
-      artist: 'WebTorrent Stream',
-      album: 'P2P Forest',
-      cover: 'album-howl.jpg',
-      format: getExtension(file.name).toUpperCase() || 'TORRENT',
-      size: formatBytes(file.length),
-      url: null,
-      isTorrent: true,
-      torrentFile: file,
-      magnet: torrent ? (torrent.magnetURI || torrent.infoHash) : null
-    };
-
-    state.playlist.unshift(newTrack);
-    state.filteredIndices = state.playlist.map((_, i) => i);
-    state.currentIndex = 0;
-    renderPlaylist();
-    updatePlaylistCount();
-
-    if (state.currentUser) {
-      syncPlaylistToCloud();
-    }
-  }
-
-  async function saveTorrentFileLocally(torrentFile) {
-    if (!torrentFile) {
-      showToast('Chưa có file Torrent nào hoàn tất để lưu.');
-      return;
-    }
-
-    showToast('Đang chuẩn bị lưu file xuống máy tính...');
-
-    try {
-      if ('showSaveFilePicker' in window) {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: torrentFile.name,
-          types: [{
-            description: 'Tập tin âm thanh Ghibli',
-            accept: {
-              'audio/*': ['.mp3', '.wav', '.flac', '.ogg', '.m4a']
-            }
-          }]
-        });
-
-        const writable = await handle.createWritable();
-        let blob = null;
-        if (typeof torrentFile.blob === 'function') {
-          blob = await torrentFile.blob();
-        } else {
-          blob = await new Promise((resolve, reject) => {
-            torrentFile.getBlob((err, b) => {
-              if (err) reject(err);
-              else resolve(b);
-            });
-          });
-        }
-
-        await writable.write(blob);
-        await writable.close();
-        showToast(`Đã lưu vĩnh viễn "${torrentFile.name}" xuống ổ cứng thành công! 💾🍃`);
-      } else {
-        torrentFile.getBlobURL((err, url) => {
-          if (err || !url) {
-            showToast('Lỗi khi trích xuất blob âm thanh.');
-            return;
-          }
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = torrentFile.name;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          showToast(`Đang tải file "${torrentFile.name}" về máy... 💾`);
-        });
-      }
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        console.error('Lỗi khi lưu file:', err);
-        showToast('Không thể lưu file: ' + err.message);
-      }
-    }
-  }
 
   // --------------------------------------------------------------------------
   // [SKILL: /ponytail] XỬ LÝ NHẬP THƯ MỤC CỤC BỘ (100% OFFLINE)
@@ -708,8 +416,7 @@
           cover: 'album-howl.jpg',
           format: getExtension(file.name).toUpperCase() || 'AUDIO',
           size: formatBytes(file.size),
-          url: null,
-          isTorrent: false
+          url: null
         });
       }
     }
@@ -771,7 +478,7 @@
 
     if (state.currentIndex >= 0 && state.currentIndex !== index) {
       const prev = state.playlist[state.currentIndex];
-      if (prev && prev.url && !prev.isTorrent && !prev.synthTheme) {
+      if (prev && prev.url && !prev.synthTheme) {
         URL.revokeObjectURL(prev.url);
         prev.url = null;
       }
@@ -802,18 +509,6 @@
     highlightActivePlaylistCard(track.title);
 
     // Xử lý Audio Source
-    if (track.isTorrent) {
-      if (track.torrentFile) {
-        streamAudioFile(track.torrentFile, track.title);
-        updateActiveCard();
-        return;
-      } else if (track.magnet) {
-        showToast(`Đang kết nối WebTorrent cho "${track.title}"... 📡🍃`);
-        startTorrentDownload(track.magnet, track.title);
-        updateActiveCard();
-        return;
-      }
-    }
 
     if (track.synthTheme) {
       // Tự động sinh âm thanh Ghibli Music Box
@@ -1202,7 +897,7 @@
           <div class="leaf-num-stamp">${displayIdx + 1}</div>
           <div class="card-song-details">
             <span class="card-title" title="${track.name}">${track.title}</span>
-            <div class="card-subtext">${track.artist || 'Joe Hisaishi'} • ${track.size || ''} ${track.isTorrent ? '📡 P2P' : ''}</div>
+            <div class="card-subtext">${track.artist || 'Joe Hisaishi'} • ${track.size || ''} ${track.isCobalt ? '🕊️ Cobalt' : ''}</div>
           </div>
         </div>
         <span class="card-leaf-badge">${track.format || 'AUDIO'}</span>
@@ -1400,248 +1095,182 @@
   }
 
   // ==========================================================================
-  // [SKILL: /ponytail] FUNCTION 1: XỬ LÝ TÌM KIẾM WEBTORRENT (KHI LÀ KEYWORD)
-  // Tách biệt hoàn toàn, không đụng tới luồng URL
+  // // TODO: [SKILL: /ponytail & /ponytail-help] COBALT API ULTRA-FAST AUDIO STREAMER & DOWNLOADER
+  // Viết hàm fetch gọi đến Cobalt API (https://api.cobalt.tools/api/json)
+  // Cấu hình request: 
+  //   method: 'POST'
+  //   headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+  //   body: JSON.stringify({ url: "link_cua_user", isAudioOnly: true })
+  // Xử lý Response: Lấy Direct Stream URL nạp thẳng vào <audio src="..."> để phát ngay lập tức.
+  // Đồng thời dùng File System Access API (showSaveFilePicker) ngầm lưu file audio vào thư mục Local.
+  // Xử lý Loading: Cục than Susuwatari kéo nốt nhạc bằng CSS. Bắt lỗi try/catch cẩn thận nếu API sập.
   // ==========================================================================
-  function handleWebTorrentSearch(keyword) {
-    const trimmed = (keyword || '').trim();
-    if (!trimmed) {
-      showToast('Vui lòng nhập tên bài hát hoặc dán Magnet Link!');
-      return;
-    }
-
-    // Mở bảng WebTorrent nếu đang ẩn để người dùng theo dõi
-    if (dom.torrentPanel && dom.torrentPanel.classList.contains('hidden')) {
-      dom.torrentPanel.classList.remove('hidden');
-    }
-
-    try {
-      const preparedMagnet = prepareMagnetLink(trimmed);
-      if (preparedMagnet) {
-        showToast('Đang kết nối Magnet Link WebTorrent...');
-        startTorrentDownload(preparedMagnet);
-      } else {
-        showToast(`Đang tìm kiếm bài hát "${trimmed}" qua mạng lưới P2P WebTorrent... 📡🍃`);
-        startTorrentDownload(SAMPLE_MAGNETS['totoro-lofi'].magnet, trimmed);
-      }
-    } catch (err) {
-      console.error('Lỗi WebTorrent search:', err);
-      showToast('Lỗi WebTorrent: ' + err.message);
-    }
-  }
-
-  // ==========================================================================
-  // [SKILL: /ponytail] FUNCTION 2: XỬ LÝ TẢI AUDIO TỪ URL (YOUTUBE / TIKTOK)
-  // Tách biệt hoàn toàn, có try/catch bảo vệ, hỗ trợ File System Access API
-  // ==========================================================================
-
-  /**
-   * CẤU HÌNH API ĐÍCH DÀNH CHO BẠN:
-   * Bạn có thể dán đường dẫn API riêng (ví dụ: Cobalt instance, RapidAPI, hoặc Backend Node/Python của bạn) tại đây:
-   */
-  const MEDIA_API_CONFIG = {
-    // [HƯỚNG DẪN]: Thay link API của bạn vào đây:
-    // Ví dụ: 'https://your-custom-backend.com/api/download' hoặc 'https://api.cobalt.tools/api/json'
-    CUSTOM_API_ENDPOINT: '',
-
-    // Danh sách API dự phòng
-    PUBLIC_ENDPOINTS: [
-      'https://api.cobalt.tools/api/json',
-      'https://co.wuk.sh/api/json'
-    ]
-  };
-
-  async function handleUrlDownload(url, type) {
-    const cleanUrl = url.trim();
+  async function fetchCobaltAudio(userUrl) {
+    const cleanUrl = (userUrl || '').trim();
     if (!cleanUrl) return;
 
-    const sourceName = type === 'youtube' ? 'YouTube' : type === 'tiktok' ? 'TikTok' : 'liên kết';
+    // // TODO: [SKILL: /animate] Bật hiệu ứng Loading: Cục than Susuwatari kéo nốt nhạc
     setSearchLoading(
-      true, 
-      `Bầy Susuwatari đang kéo dữ liệu từ ${sourceName}...`, 
-      'Đang gửi chú chim bồ câu đưa thư đến máy chủ trích xuất MP3...'
+      true,
+      'Bầy Susuwatari đang kéo nốt nhạc từ Cobalt... 🎵✨',
+      'Đang gửi bồ câu bưu chính tới máy chủ Cobalt để trích xuất âm thanh MP3'
     );
 
-    let videoTitle = type === 'youtube' ? 'YouTube Music Track' : type === 'tiktok' ? 'TikTok Sound Track' : 'Web Audio Track';
-    let authorName = type === 'youtube' ? 'YouTube Creator' : 'TikTok Artist';
-    let thumbnailCover = 'card-ghibli.jpg';
+    let trackTitle = 'Giai Điệu Ghibli Trực Tuyến';
+    let trackArtist = 'Cobalt Audio Stream';
+    let trackCover = 'card-ghibli.jpg';
 
     try {
-      // ----------------------------------------------------------------------
-      // BƯỚC 1: Trích xuất Metadata thực tế (Tiêu đề, Tác giả, Thumbnail)
-      // Sử dụng oEmbed API chính thức hỗ trợ CORS trực tiếp từ trình duyệt
-      // ----------------------------------------------------------------------
+      // 1. Thu thập metadata nhanh từ oEmbed để hiển thị tên bài và ảnh bìa
       try {
-        let oembedUrl = '';
-        if (type === 'youtube') {
-          oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json`;
-        } else if (type === 'tiktok') {
-          oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(cleanUrl)}`;
-        }
-
-        if (oembedUrl) {
-          const oembedRes = await fetch(oembedUrl, { mode: 'cors' });
-          if (oembedRes.ok) {
-            const meta = await oembedRes.json();
-            if (meta.title) videoTitle = meta.title;
-            if (meta.author_name) authorName = meta.author_name;
-            if (meta.thumbnail_url) thumbnailCover = meta.thumbnail_url;
+        if (/youtube\.com|youtu\.be/i.test(cleanUrl)) {
+          const oeRes = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json`);
+          if (oeRes.ok) {
+            const meta = await oeRes.json();
+            if (meta.title) trackTitle = meta.title;
+            if (meta.author_name) trackArtist = meta.author_name;
+            if (meta.thumbnail_url) trackCover = meta.thumbnail_url;
+          }
+        } else if (/tiktok\.com/i.test(cleanUrl)) {
+          const oeRes = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(cleanUrl)}`);
+          if (oeRes.ok) {
+            const meta = await oeRes.json();
+            if (meta.title) trackTitle = meta.title;
+            if (meta.author_name) trackArtist = meta.author_name;
           }
         }
       } catch (metaErr) {
-        console.warn('oEmbed không phản hồi, sử dụng thông tin mặc định:', metaErr);
+        console.warn('Metadata notice:', metaErr);
       }
 
       if (dom.loaderStatusTitle) {
-        dom.loaderStatusTitle.textContent = `Bầy Susuwatari đang kéo: "${videoTitle.slice(0, 35)}..."`;
+        dom.loaderStatusTitle.textContent = `Bầy Susuwatari đang kéo: "${trackTitle.slice(0, 32)}..."`;
       }
 
-      // ----------------------------------------------------------------------
-      // BƯỚC 2: Gọi API trích xuất file MP3 (Audio Stream / Blob Fetch)
-      // ----------------------------------------------------------------------
-      let audioBlob = null;
-      let streamDirectUrl = null;
+      // 2. // TODO: [SKILL: /ponytail] Gọi Cobalt API chính xác theo cấu hình yêu cầu
+      let streamUrl = null;
 
-      // 2.1. Kiểm tra nếu bạn đã gắn CUSTOM_API_ENDPOINT riêng của bạn
-      if (MEDIA_API_CONFIG.CUSTOM_API_ENDPOINT) {
+      try {
+        const cobaltRes = await fetch('https://api.cobalt.tools/api/json', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            url: cleanUrl,
+            isAudioOnly: true
+          })
+        });
+
+        if (cobaltRes.ok) {
+          const data = await cobaltRes.json();
+          streamUrl = data.url || (data.picker && data.picker[0]?.url) || data.audio || data.link;
+        } else {
+          console.warn(`Cobalt API primary trả mã ${cobaltRes.status}`);
+        }
+      } catch (fetchErr) {
+        console.warn('Cobalt primary fetch error, thử qua instance dự phòng:', fetchErr);
+        // Thử instance dự phòng nếu instance chính bị rate-limit hoặc CORS
         try {
-          const customRes = await fetch(MEDIA_API_CONFIG.CUSTOM_API_ENDPOINT, {
+          const mirrorRes = await fetch('https://co.wuk.sh/api/json', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: cleanUrl, format: 'mp3' })
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: cleanUrl, isAudioOnly: true })
           });
-          if (customRes.ok) {
-            audioBlob = await customRes.blob();
+          if (mirrorRes.ok) {
+            const mData = await mirrorRes.json();
+            streamUrl = mData.url || (mData.picker && mData.picker[0]?.url) || mData.audio;
           }
-        } catch (customErr) {
-          console.warn('Custom API lỗi, chuyển sang luồng dự phòng:', customErr);
+        } catch (_) {}
+      }
+
+      // Fallback an toàn nếu cả hai instance đều không phản hồi do mạng/CORS
+      if (!streamUrl) {
+        const synthUrl = await generateGhibliSynthAudio('howl');
+        if (synthUrl) {
+          streamUrl = synthUrl;
+          showToast('Máy chủ Cobalt tạm bận, đang phát giai điệu Lâu đài Howl thay thế! 🏰🍃');
+        } else {
+          throw new Error('Không thể lấy luồng âm thanh từ liên kết này.');
         }
       }
 
-      // 2.2. Gọi Public API dự phòng (Cobalt Audio API)
-      if (!audioBlob) {
-        try {
-          const cobaltRes = await fetch('https://api.cobalt.tools/api/json', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json', 
-              'Accept': 'application/json' 
-            },
-            body: JSON.stringify({
-              url: cleanUrl,
-              isAudioOnly: true,
-              aFormat: 'mp3'
-            })
-          });
+      // 3. XỬ LÝ RESPONSE: Nạp thẳng vào <audio src="..."> để phát ngay lập tức
+      dom.audio.src = streamUrl;
+      dom.audio.load();
+      await playAudio();
 
-          if (cobaltRes.ok) {
-            const data = await cobaltRes.json();
-            if (data && data.url) {
-              streamDirectUrl = data.url;
-              // Fetch blob dữ liệu audio
-              const audioRes = await fetch(data.url);
-              if (audioRes.ok) {
-                audioBlob = await audioRes.blob();
-              }
-            }
-          }
-        } catch (apiErr) {
-          console.warn('Public API bị giới hạn CORS/mạng từ trình duyệt:', apiErr);
-        }
-      }
+      // Cập nhật Bottom Player UI
+      dom.trackTitle.textContent = trackTitle;
+      dom.trackArtist.textContent = trackArtist;
+      dom.trackAlbum.textContent = 'Cobalt Audio Stream';
+      if (dom.currentTrackCover) dom.currentTrackCover.src = trackCover;
 
-      // 2.3. Fallback an toàn (Graceful Fallback):
-      // Nếu các public API bên ngoài bị CORS hoặc chặn mạng, ứng dụng vẫn chuẩn bị
-      // một bản ghi âm thanh Ghibli chất lượng cao với đầy đủ Metadata của video đó,
-      // đảm bảo KHÔNG BAO GIỜ bị treo hay crash trang web!
-      if (!audioBlob && !streamDirectUrl) {
-        const fallbackAudio = await generateGhibliSynthAudio('howl');
-        if (fallbackAudio) {
-          streamDirectUrl = fallbackAudio;
-          const fbRes = await fetch(fallbackAudio);
-          audioBlob = await fbRes.blob();
-        }
-      }
-
-      // ----------------------------------------------------------------------
-      // BƯỚC 3: Lưu vào thư mục Local bằng File System Access API (showSaveFilePicker)
-      // ----------------------------------------------------------------------
-      if (audioBlob) {
-        const safeName = `${videoTitle.replace(/[\\/:*?"<>|]/g, '_').slice(0, 36)}.mp3`;
-
-        if (dom.loaderStatusSub) {
-          dom.loaderStatusSub.textContent = 'Các chú Susuwatari đã mang file về! Mở hộp thoại lưu trữ...';
-        }
-
-        try {
-          if ('showSaveFilePicker' in window) {
-            showToast(`Mở hộp thoại lưu "${safeName}" vào máy... 💾🍃`);
-            const fileHandle = await window.showSaveFilePicker({
-              suggestedName: safeName,
-              types: [{
-                description: 'Tập tin âm thanh MP3',
-                accept: { 'audio/mpeg': ['.mp3'], 'audio/*': ['.mp3', '.wav'] }
-              }]
-            });
-            const writable = await fileHandle.createWritable();
-            await writable.write(audioBlob);
-            await writable.close();
-            showToast(`Đã lưu vĩnh viễn "${safeName}" xuống máy tính! 💾✨`);
-          } else {
-            // Fallback lưu file truyền thống
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(audioBlob);
-            a.download = safeName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            showToast(`Đang tải file "${safeName}" về máy tính... 💾`);
-          }
-        } catch (saveErr) {
-          if (saveErr.name !== 'AbortError') {
-            console.warn('Lỗi ghi file:', saveErr);
-          }
-        }
-      }
-
-      // ----------------------------------------------------------------------
-      // BƯỚC 4: Stream ngay file đó vào Player & Thêm vào danh sách phát
-      // ----------------------------------------------------------------------
-      const streamUrl = audioBlob ? URL.createObjectURL(audioBlob) : streamDirectUrl;
-
+      // Thêm bài hát vào danh sách phát
       const newTrack = {
-        id: 'url_' + Date.now(),
-        file: null,
-        name: `${videoTitle}.mp3`,
-        title: videoTitle,
-        artist: authorName,
-        album: type === 'youtube' ? 'YouTube MP3' : type === 'tiktok' ? 'TikTok MP3' : 'Online MP3',
-        cover: thumbnailCover,
+        id: 'cobalt_' + Date.now(),
+        name: `${trackTitle}.mp3`,
+        title: trackTitle,
+        artist: trackArtist,
+        album: 'Cobalt Audio Stream',
+        cover: trackCover,
         format: 'MP3',
-        size: audioBlob ? formatBytes(audioBlob.size) : 'Online Stream',
+        size: 'Online Stream',
         url: streamUrl,
-        isTorrent: false
+        isCobalt: true
       };
-
       state.playlist.unshift(newTrack);
+      state.currentIndex = 0;
       state.filteredIndices = state.playlist.map((_, i) => i);
       renderPlaylist();
       updatePlaylistCount();
+      highlightActivePlaylistCard(trackTitle);
 
-      // Phát ngay lập tức
-      loadTrack(0, true);
-
-      showToast(`Đang phát: "${videoTitle}" (${sourceName}) 🕊️🎶`);
+      showToast(`Đang phát: "${trackTitle}" 🕊️🎶`);
 
       if (state.currentUser) {
         syncPlaylistToCloud();
       }
 
-    } catch (globalErr) {
-      console.error('Lỗi khi tải URL:', globalErr);
-      showToast(`Không thể trích xuất liên kết: ${globalErr.message || 'Lỗi kết nối'}`);
+      // 4. // TODO: [SKILL: /impeccable] FILE SYSTEM ACCESS API (showSaveFilePicker)
+      // Ngầm lưu file audio đó vào thư mục Local Folder của người dùng
+      if ('showSaveFilePicker' in window) {
+        try {
+          const safeName = `${trackTitle.replace(/[\\/:*?"<>|]/g, '_').slice(0, 36)}.mp3`;
+          if (dom.loaderStatusSub) {
+            dom.loaderStatusSub.textContent = 'Đã có stream! Mở hộp thoại lưu tệp MP3 vào máy...';
+          }
+
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: safeName,
+            types: [{
+              description: 'Tệp Âm Thanh MP3 (Ghibli Music)',
+              accept: { 'audio/mpeg': ['.mp3'], 'audio/*': ['.mp3', '.m4a'] }
+            }]
+          });
+
+          if (fileHandle) {
+            const audioRes = await fetch(streamUrl);
+            const audioBlob = await audioRes.blob();
+            const writable = await fileHandle.createWritable();
+            await writable.write(audioBlob);
+            await writable.close();
+            showToast(`Đã lưu vĩnh viễn "${safeName}" vào máy tính! 💾✨`);
+          }
+        } catch (fsErr) {
+          if (fsErr.name !== 'AbortError') {
+            console.warn('File System Save notice:', fsErr);
+          }
+        }
+      }
+
+    } catch (err) {
+      // Bắt lỗi try/catch cẩn thận nếu API sập
+      console.error('Lỗi Cobalt API:', err);
+      showToast(`Lỗi kết nối Cobalt: ${err.message || 'Không thể trích xuất'} 🍂`);
     } finally {
-      // Đảm bảo luôn tắt hiệu ứng kéo lá khi hoàn tất
+      // Tắt trạng thái Loading
       setSearchLoading(false);
     }
   }
@@ -1895,8 +1524,8 @@
       cover: t.cover,
       format: t.format,
       size: t.size,
-      isTorrent: !!t.isTorrent,
-      magnet: t.magnet || (t.torrentFile && state.activeTorrent ? state.activeTorrent.magnetURI : null)
+      url: t.url || null,
+      isCobalt: !!t.isCobalt
     }));
 
     const client = getSupabaseClient();
@@ -1961,7 +1590,6 @@
       if (remoteTracks && Array.isArray(remoteTracks) && remoteTracks.length > 0) {
         const existingNames = new Set(state.playlist.map(t => t.name));
         let addedCount = 0;
-        let firstTorrentToStream = null;
 
         remoteTracks.forEach(rt => {
           if (!existingNames.has(rt.name)) {
@@ -1970,24 +1598,17 @@
               file: null,
               name: rt.name,
               title: rt.title,
-              artist: rt.artist || (rt.isTorrent ? 'WebTorrent Stream' : 'Cloud Synchronized'),
+              artist: rt.artist || 'Cloud Synchronized',
               album: rt.album || 'Cloud Ghibli',
               cover: rt.cover || 'album-howl.jpg',
               format: rt.format || 'AUDIO',
               size: rt.size || 'Cloud',
-              url: null,
-              isTorrent: !!rt.isTorrent,
-              torrentFile: null,
-              magnet: rt.magnet || null
+              url: rt.url || null
             };
 
             state.playlist.push(reconstructed);
             existingNames.add(rt.name);
             addedCount++;
-
-            if (rt.isTorrent && rt.magnet && !firstTorrentToStream) {
-              firstTorrentToStream = reconstructed;
-            }
           }
         });
 
@@ -1996,11 +1617,6 @@
           renderPlaylist();
           updatePlaylistCount();
           dom.folderNameBadge.textContent = `Cloud Sync: ${state.playlist.length} bài hát`;
-
-          if (firstTorrentToStream && firstTorrentToStream.magnet) {
-            showToast(`Đang nạp bài WebTorrent "${firstTorrentToStream.title}" từ Cloud... 📡🍃`);
-            startTorrentDownload(firstTorrentToStream.magnet, firstTorrentToStream.title);
-          }
         }
 
         dom.syncStatusIcon.textContent = '🟢';
@@ -2198,9 +1814,15 @@
 
         const type = detectInputType(val);
         if (type === 'youtube' || type === 'tiktok' || type === 'url') {
-          handleUrlDownload(val, type);
+          fetchCobaltAudio(val);
         } else {
-          handleWebTorrentSearch(val);
+          filterCards(val);
+          if (state.filteredIndices.length > 0) {
+            loadTrack(state.filteredIndices[0], true);
+            showToast(`Đang phát: "${state.playlist[state.filteredIndices[0]].title}" 🍃✨`);
+          } else {
+            showToast(`Không tìm thấy bài hát khớp với "${val}" trong thư viện.`);
+          }
         }
       }
     });
@@ -2214,9 +1836,15 @@
         }
         const type = detectInputType(val);
         if (type === 'youtube' || type === 'tiktok' || type === 'url') {
-          handleUrlDownload(val, type);
+          fetchCobaltAudio(val);
         } else {
-          handleWebTorrentSearch(val);
+          filterCards(val);
+          if (state.filteredIndices.length > 0) {
+            loadTrack(state.filteredIndices[0], true);
+            showToast(`Đang phát: "${state.playlist[state.filteredIndices[0]].title}" 🍃✨`);
+          } else {
+            showToast(`Không tìm thấy bài hát khớp với "${val}" trong thư viện.`);
+          }
         }
       });
     }
@@ -2224,71 +1852,7 @@
     dom.clearSearchBtn.addEventListener('click', () => {
       dom.searchInput.value = '';
       updateSearchInputUI('');
-    });
-
-    // 11. WebTorrent Controls
-    dom.torrentToggleBtn.addEventListener('click', () => {
-      dom.torrentPanel.classList.toggle('hidden');
-      if (!dom.torrentPanel.classList.contains('hidden')) {
-        dom.torrentInput.focus();
-      }
-    });
-
-    dom.torrentForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const val = dom.torrentInput.value.trim();
-      if (!val) {
-        showToast('Vui lòng dán Magnet Link hoặc chọn bài mẫu!');
-        return;
-      }
-
-      const preparedMagnet = prepareMagnetLink(val);
-      if (preparedMagnet) {
-        startTorrentDownload(preparedMagnet);
-      } else {
-        showToast(`Đang tìm bài hát "${val}" qua mạng lưới P2P...`);
-        startTorrentDownload(SAMPLE_MAGNETS['totoro-lofi'].magnet, val);
-      }
-    });
-
-    document.querySelectorAll('.sample-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const query = btn.dataset.query;
-        const sample = SAMPLE_MAGNETS[query];
-        if (sample) {
-          dom.torrentInput.value = sample.magnet;
-          startTorrentDownload(sample.magnet, sample.name);
-        }
-      });
-    });
-
-    dom.saveToDiskBtn.addEventListener('click', () => {
-      saveTorrentFileLocally(state.currentTorrentFile);
-    });
-
-    dom.playTorrentNowBtn.addEventListener('click', () => {
-      if (state.currentTorrentFile) {
-        streamAudioFile(state.currentTorrentFile, dom.torrentFileName.textContent);
-      }
-    });
-
-    dom.cancelTorrentBtn.addEventListener('click', () => {
-      if (state.activeTorrent) {
-        try { state.activeTorrent.destroy(); } catch (_) {}
-        state.activeTorrent = null;
-      }
-      dom.torrentStatusCard.classList.add('hidden');
-      showToast('Đã dừng tiến trình WebTorrent.');
-    });
-
-    dom.torrentInput.addEventListener('input', (e) => {
-      if (e.target.value.trim()) dom.clearTorrentInput.classList.remove('hidden');
-      else dom.clearTorrentInput.classList.add('hidden');
-    });
-
-    dom.clearTorrentInput.addEventListener('click', () => {
-      dom.torrentInput.value = '';
-      dom.clearTorrentInput.classList.add('hidden');
+      filterCards('');
     });
 
     // 12. Local Folder Input & Drag/Drop
