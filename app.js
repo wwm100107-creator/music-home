@@ -489,7 +489,9 @@
     state.currentIndex = index;
 
     // Cập nhật giao diện Now Playing góc trái chuẩn GIAODIEN.png
-    if (dom.currentTrackCover) {
+    if (track.youtubeId) {
+      applyYouTubeThumbnailCover(track.youtubeId);
+    } else if (dom.currentTrackCover) {
       dom.currentTrackCover.src = track.cover || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='24' fill='%23fefae0'>🎵</text></svg>";
       dom.currentTrackCover.alt = track.title;
     }
@@ -1096,6 +1098,71 @@
   const GENERAL_URL_REGEX = /^https?:\/\/[^\s$.?#].[^\s]*$/i;
 
   /**
+   * 1. [SKILL: /ponytail] Bóc tách YouTube Video ID từ mọi định dạng link YouTube
+   * Hỗ trợ chuẩn: youtube.com/watch?v=, youtu.be/, youtube.com/shorts/, youtube.com/embed/, youtube.com/live/
+   * 
+   * @param {string} url Đường dẫn cần bóc tách
+   * @returns {string|null} Video ID 11 ký tự hoặc null
+   */
+  function extractYouTubeID(url) {
+    if (!url || typeof url !== 'string') return null;
+    const match = url.trim().match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/i);
+    return match ? match[1] : null;
+  }
+
+  /**
+   * 2, 3, 4, 5. [SKILL: /animate & /impeccable] TỰ ĐỘNG HIỂN THỊ THUMBNAIL (COVER ART)
+   * - Tạo đường dẫn: https://img.youtube.com/vi/{VIDEO_ID}/maxresdefault.jpg (fallback hqdefault.jpg)
+   * - Thay thế src của thẻ chứa Cover Art (#currentTrackCover)
+   * - Thêm hiệu ứng fade-in mượt mà (khoảng 0.5s) bằng CSS animation
+   * - Cập nhật Text: Điền chữ "YouTube Stream" vào vị trí tên Tác giả/Ca sĩ
+   * 
+   * @param {string} videoId ID 11 ký tự của video YouTube
+   */
+  function applyYouTubeThumbnailCover(videoId) {
+    if (!videoId) return;
+    const maxResUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+    const hqUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+
+    // 5. Cập nhật Text: Điền chữ "YouTube Stream" vào vị trí Tác giả/Ca sĩ
+    if (dom.trackArtist) {
+      dom.trackArtist.textContent = 'YouTube Stream';
+    }
+
+    if (!dom.currentTrackCover) return;
+
+    // Thiết lập fallback onerror nếu maxresdefault không tồn tại (lỗi 404)
+    dom.currentTrackCover.onerror = function() {
+      if (this.src !== hqUrl) {
+        this.src = hqUrl;
+      }
+    };
+
+    // 4. [SKILL: /animate] Kích hoạt fade-in 0.5s mượt mà (cubic-bezier(0.23, 1, 0.32, 1))
+    const displayCoverWithFade = (finalUrl) => {
+      dom.currentTrackCover.classList.remove('cover-fade-in');
+      void dom.currentTrackCover.offsetWidth; // Force reflow để trigger animation
+      dom.currentTrackCover.src = finalUrl;
+      dom.currentTrackCover.alt = 'YouTube Cover Art';
+      dom.currentTrackCover.classList.add('cover-fade-in');
+    };
+
+    // 2. Preload kiểm tra maxresdefault (YouTube thường trả placeholder 120x90 nếu thiếu maxres)
+    const testImg = new Image();
+    testImg.src = maxResUrl;
+    testImg.onload = () => {
+      if (testImg.naturalWidth > 120) {
+        displayCoverWithFade(maxResUrl);
+      } else {
+        displayCoverWithFade(hqUrl);
+      }
+    };
+    testImg.onerror = () => {
+      displayCoverWithFade(hqUrl);
+    };
+  }
+
+  /**
    * [SKILL: /ponytail] Nhận diện loại đầu vào: 'youtube' | 'tiktok' | 'url' | 'keyword' | 'empty'
    */
   function detectInputType(input) {
@@ -1109,7 +1176,8 @@
 
   /**
    * [SKILL: /animate & /impeccable] Cập nhật giao diện thanh tìm kiếm thông minh:
-   * Chuyển đổi mượt mà giữa Icon kính lúp (Keyword) và Icon chim bồ câu đưa thư 🕊️ (URL)
+   * Chuyển đổi mượt mà giữa Icon kính lúp (Keyword) và Icon chim bồ câu đưa thư 🕊️ (URL).
+   * Ngay khi nhận diện URL là YouTube, lập tức hiển thị Thumbnail lên Now Playing với hiệu ứng fade-in.
    */
   function updateSearchInputUI(query) {
     const type = detectInputType(query);
@@ -1123,6 +1191,16 @@
         if (type === 'youtube') {
           dom.searchLinkTag.textContent = 'YouTube MP3 🕊️';
           dom.searchLinkTag.style.background = '#e63946';
+
+          // Ngay khi nhận diện được URL là của YouTube, lập tức áp dụng Thumbnail và Text
+          const yId = extractYouTubeID(query);
+          if (yId && yId !== state.currentYouTubeId) {
+            state.currentYouTubeId = yId;
+            applyYouTubeThumbnailCover(yId);
+            if (dom.trackTitle && (dom.trackTitle.textContent === 'Chưa có bài hát nào' || dom.trackTitle.textContent === '')) {
+              dom.trackTitle.textContent = 'YouTube Audio';
+            }
+          }
         } else if (type === 'tiktok') {
           dom.searchLinkTag.textContent = 'TikTok MP3 🕊️';
           dom.searchLinkTag.style.background = '#111111';
@@ -1187,8 +1265,14 @@
     );
 
     let trackTitle = 'Giai Điệu Ghibli Trực Tuyến';
-    let trackArtist = 'Cobalt Audio Stream';
-    let trackCover = ''; // Thumbnail để trống theo yêu cầu của user
+    let trackArtist = 'YouTube Stream';
+    const ytId = extractYouTubeID(cleanUrl);
+    let trackCover = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : '';
+
+    // Ngay khi nhận diện được URL là của YouTube, lập tức hiển thị Thumbnail lên Now Playing
+    if (ytId) {
+      applyYouTubeThumbnailCover(ytId);
+    }
 
     try {
       // 1. Thu thập metadata nhanh từ oEmbed để hiển thị tên bài và ảnh bìa
@@ -1198,8 +1282,8 @@
           if (oeRes.ok) {
             const meta = await oeRes.json();
             if (meta.title) trackTitle = meta.title;
-            if (meta.author_name) trackArtist = meta.author_name;
-            if (meta.thumbnail_url) trackCover = meta.thumbnail_url;
+            // 5. Cập nhật Text: Điền chữ "YouTube Stream" vào vị trí tên Tác giả/Ca sĩ
+            trackArtist = 'YouTube Stream';
           }
         } else if (/tiktok\.com/i.test(cleanUrl)) {
           const oeRes = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(cleanUrl)}`);
@@ -1273,9 +1357,12 @@
 
       // Cập nhật Bottom Player UI
       dom.trackTitle.textContent = trackTitle;
-      dom.trackArtist.textContent = trackArtist;
-      dom.trackAlbum.textContent = 'Cobalt Audio Stream';
-      if (dom.currentTrackCover) {
+      dom.trackTitle.title = trackTitle;
+      dom.trackArtist.textContent = 'YouTube Stream';
+      dom.trackAlbum.textContent = ytId ? 'YouTube Stream' : 'Cobalt Audio Stream';
+      if (ytId) {
+        applyYouTubeThumbnailCover(ytId);
+      } else if (dom.currentTrackCover) {
         dom.currentTrackCover.src = trackCover || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='24' fill='%23fefae0'>🎵</text></svg>";
       }
 
@@ -1284,13 +1371,14 @@
         id: 'cobalt_' + Date.now(),
         name: `${trackTitle}.mp3`,
         title: trackTitle,
-        artist: trackArtist,
-        album: 'Cobalt Audio Stream',
-        cover: '', // Thumbnail để trống theo yêu cầu của user
+        artist: 'YouTube Stream',
+        album: ytId ? 'YouTube Stream' : 'Cobalt Audio Stream',
+        cover: ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : '',
         format: 'MP3',
-        size: 'Online Stream',
+        size: 'YouTube Audio',
         url: streamUrl,
-        isCobalt: true
+        isCobalt: true,
+        youtubeId: ytId || null
       };
       state.playlist.unshift(newTrack);
       state.currentIndex = 0;
@@ -1876,6 +1964,12 @@
     // 10. SMART SEARCH BAR: Xử lý Input Detection & Bấm Enter
     dom.searchInput.addEventListener('input', (e) => {
       updateSearchInputUI(e.target.value);
+    });
+
+    dom.searchInput.addEventListener('paste', () => {
+      setTimeout(() => {
+        updateSearchInputUI(dom.searchInput.value);
+      }, 0);
     });
 
     dom.searchInput.addEventListener('keydown', (e) => {
