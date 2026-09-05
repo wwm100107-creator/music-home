@@ -1,16 +1,20 @@
 /**
  * ============================================================================
  * MUSIC HOME • STUDIO GHIBLI & MY NEIGHBOR TOTORO SOUND STATION
- * Local Folder Player + WebTorrent P2P Browser Streaming & File System API
+ * Pixel-Perfect Implementation of GIAODIEN.png
+ * Local Folder Player + WebTorrent P2P Streaming + Supabase Cloud Sync
  * ============================================================================
  * 
- * HỆ THỐNG SKILLS ĐƯỢC TÍCH HỢP TRONG MODULE NÀY:
- * - [SKILL: /ponytail & /ponytail-help] : Quản lý WebTorrent Client lười (Lazy Client), chỉ khởi tạo khi cần,
- *   tự động dọn dẹp bộ nhớ torrent, chuyển tiếp stream mượt mà sang thẻ HTML5 Audio và gom về playlist.
- * - [SKILL: /animate & /animation-vocabulary] : Điều khiển hoạt ảnh bầy Susuwatari chuyền lá khi tải,
- *   cần gạt nhánh cây hạ/nhấc, đom đóm thắp sáng khi phát nhạc.
- * - [SKILL: /impeccable & /redesign-existing-projects] : Định dạng dữ liệu dung lượng, tốc độ, peers,
- *   kết hợp File System Access API (showSaveFilePicker) chuẩn xác và mượt mà.
+ * HỆ THỐNG SKILLS ĐƯỢC TÍCH HỢP TOÀN DIỆN:
+ * - [SKILL: /image-to-code-skill] : Tái hiện chuẩn xác 100% bố cục GIAODIEN.png:
+ *     1. Background video động toàn màn hình (background.mp4)
+ *     2. Left Sidebar kính mờ (rgba xanh ngọc + blur) với thanh gỗ wood.jpg active
+ *     3. Main Content: Grid 6 Playlist Cards bo góc tròn mộc mạc
+ *     4. Bottom Player: Đĩa phát gỗ, thanh lượn sóng SVG xanh lá & cục chạy Calcifer (f.jpg/f.png)
+ * - [SKILL: /impeccable] : Typography Ghibli, text-stroke, drop-shadow, viền mềm mại, mix-blend-mode
+ * - [SKILL: /animate] : Calcifer breathing keyframes, wavy progress surfing, Susuwatari crew, lá thư rơi
+ * - [SKILL: /ponytail] : Tối giản hóa logic (YAGNI), tích hợp Web Audio Synthesizer tự sinh giai điệu Ghibli
+ *   ngay khi mở web mà không cần server hay tải nặng nề!
  */
 
 (() => {
@@ -30,7 +34,6 @@
   const SAMPLE_MAGNETS = {
     'totoro-lofi': {
       name: 'My Neighbor Totoro - Wind Forest Lofi (Sample Stream)',
-      // Magnet demo mã nguồn mở qua WebTorrent WebSockets
       magnet: 'magnet:?xt=urn:btih:08ada5a7a6183aae1e09d831df6748d566095a10&dn=Sintel&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&tr=wss%3A%2F%2Ftracker.fastcast.nz'
     },
     'ghibli-relax': {
@@ -43,35 +46,113 @@
     }
   };
 
+  // [SKILL: /image-to-code-skill] 6 GIAI ĐIỆU GHIBLI MẪU CHUẨN GIAODIEN.PNG
+  const DEFAULT_GHIBLI_TRACKS = [
+    {
+      id: 'ghibli_card_1',
+      name: "Spirited Away - One Summer's Day.mp3",
+      title: "One Summer's Day",
+      artist: "Joe Hisaishi",
+      album: "Spirited Away OST",
+      cover: "card-ghibli.jpg",
+      format: "FLAC",
+      size: "24.5 MB",
+      isTorrent: false,
+      synthTheme: 'summer'
+    },
+    {
+      id: 'ghibli_card_2',
+      name: "My Neighbor Totoro - Wind Forest.mp3",
+      title: "Wind Forest",
+      artist: "Joe Hisaishi",
+      album: "My Neighbor Totoro",
+      cover: "card-totoro.jpg",
+      format: "MP3",
+      size: "8.4 MB",
+      isTorrent: false,
+      synthTheme: 'totoro'
+    },
+    {
+      id: 'ghibli_card_3',
+      name: "Howl's Moving Castle - Merry-Go-Round of Life.mp3",
+      title: "Merry-Go-Round of Life",
+      artist: "Joe Hisaishi",
+      album: "Howl's Moving Castle",
+      cover: "album-howl.jpg",
+      format: "FLAC",
+      size: "32.1 MB",
+      isTorrent: false,
+      synthTheme: 'howl'
+    },
+    {
+      id: 'ghibli_card_4',
+      name: "Kiki's Delivery Service - A Town with an Ocean View.mp3",
+      title: "A Town with an Ocean View",
+      artist: "Joe Hisaishi",
+      album: "Kiki's Delivery Service",
+      cover: "card-kiki.jpg",
+      format: "MP3",
+      size: "9.2 MB",
+      isTorrent: false,
+      synthTheme: 'kiki'
+    },
+    {
+      id: 'ghibli_card_5',
+      name: "The Wind Rises - A Journey.mp3",
+      title: "The Wind Rises (A Journey)",
+      artist: "Joe Hisaishi",
+      album: "The Wind Rises",
+      cover: "card-wind.jpg",
+      format: "MP3",
+      size: "7.8 MB",
+      isTorrent: false,
+      synthTheme: 'wind'
+    },
+    {
+      id: 'ghibli_card_6',
+      name: "Forest Beats - Lofi Chill Ghibli.mp3",
+      title: "Kiki's Flying Delivery (Forest Beats)",
+      artist: "Studio Ghibli Chill",
+      album: "Ghibli Lofi Woods",
+      cover: "card-kiki-town.jpg",
+      format: "MP3",
+      size: "6.9 MB",
+      isTorrent: false,
+      synthTheme: 'lofi'
+    }
+  ];
+
   // --------------------------------------------------------------------------
   // [SKILL: /ponytail] STATE MANAGEMENT: Quản lý trạng thái bài hát & WebTorrent
   // --------------------------------------------------------------------------
   const state = {
-    playlist: [],           // Danh sách bài hát [{ id, file, name, title, artist, format, size, url, isTorrent, torrentFile, magnet }]
-    filteredIndices: [],    // Index các bài đang hiển thị theo tìm kiếm
-    currentIndex: -1,       // Index bài đang phát
+    playlist: [...DEFAULT_GHIBLI_TRACKS], // Khởi tạo với 6 bài Ghibli chuẩn GIAODIEN.png
+    filteredIndices: [0, 1, 2, 3, 4, 5],
+    currentIndex: 2,        // Mặc định là bài #3: Merry-Go-Round of Life (Howl's Moving Castle)
     isPlaying: false,
     volume: 0.8,
     previousVolume: 0.8,
     isMuted: false,
     loopMode: 'all',        // 'off' | 'all' | 'one' | 'custom'
-    selectedLoopTrackIds: new Set(), // [SKILL: /ponytail] Set lưu ID các bài hát được tích chọn hạt dẻ (Acorn)
+    selectedLoopTrackIds: new Set(['ghibli_card_3']), // Mặc định chọn bài Howl
     isShuffle: false,
-    shuffleOrder: [],       // Mảng hoán vị Fisher-Yates
+    shuffleOrder: [],
     shufflePosition: 0,
-    visualizerMode: 'bars', // 'bars' (Mầm cây) | 'wave' (Sóng gió)
-    isScrubbing: false,     // Cờ rê kéo chú bọ rùa
-    
+    isScrubbing: false,     // Cờ rê kéo chú lửa Calcifer
+
     // WebTorrent Client State
-    wtClient: null,         // Khởi tạo lười khi user thực sự cần
-    activeTorrent: null,    // Torrent đang tải
-    currentTorrentFile: null,// File audio trong torrent đang tải
+    wtClient: null,
+    activeTorrent: null,
+    currentTorrentFile: null,
 
     // Cloud Sync & Supabase BaaS State
-    currentUser: null,      // User session: { email, id }
-    supabaseClient: null,   // Supabase instance nếu được người dùng cấu hình
-    activeAuthTab: 'login', // 'login' | 'register' | 'config'
-    isSyncing: false        // Cờ báo đang đồng bộ
+    currentUser: null,
+    supabaseClient: null,
+    activeAuthTab: 'login',
+    isSyncing: false,
+
+    // Synth Audio Blob Cache
+    synthBlobUrls: {}
   };
 
   // --- DOM ELEMENTS CACHE ---
@@ -79,9 +160,19 @@
     audio: document.getElementById('audioElement'),
     folderInput: document.getElementById('folderInput'),
     fileInput: document.getElementById('fileInput'),
-    
-    // WebTorrent Panel Elements
+
+    // Top Navigation & History
+    historyBackBtn: document.getElementById('historyBackBtn'),
+    historyForwardBtn: document.getElementById('historyForwardBtn'),
+    searchInput: document.getElementById('searchInput'),
+    clearSearchBtn: document.getElementById('clearSearchBtn'),
     torrentToggleBtn: document.getElementById('torrentToggleBtn'),
+    authModalTriggerBtn: document.getElementById('authModalTriggerBtn'),
+    syncStatusIcon: document.getElementById('syncStatusIcon'),
+    userAuthBadgeText: document.getElementById('userAuthBadgeText'),
+    profileAvatarBtn: document.getElementById('profileAvatarBtn'),
+
+    // WebTorrent Panel Elements
     torrentPanel: document.getElementById('torrentPanel'),
     torrentForm: document.getElementById('torrentForm'),
     torrentInput: document.getElementById('torrentInput'),
@@ -100,29 +191,18 @@
     playTorrentNowBtn: document.getElementById('playTorrentNowBtn'),
     cancelTorrentBtn: document.getElementById('cancelTorrentBtn'),
 
-    // Đĩa thân cây & Cần gạt nhánh cây
-    trunkRecord: document.getElementById('trunkRecord'),
-    twigTonearm: document.getElementById('twigTonearm'),
-    visualizerCanvas: document.getElementById('visualizerCanvas'),
-    visualizerModeBtn: document.getElementById('visualizerModeBtn'),
-    visModeLabel: document.getElementById('visModeLabel'),
+    // Main Content Playlist Cards
+    playlistCards: document.querySelectorAll('.playlist-card'),
 
-    // Cuộn giấy da (Parchment Scroll)
+    // Bottom Player Glass Elements (GIAODIEN.png)
+    currentTrackCover: document.getElementById('currentTrackCover'),
     trackTitle: document.getElementById('trackTitle'),
     trackArtist: document.getElementById('trackArtist'),
+    trackAlbum: document.getElementById('trackAlbum'),
     trackFormat: document.getElementById('trackFormat'),
-    playStatusText: document.getElementById('playStatusText'),
-    leafIndicator: document.getElementById('leafIndicator'),
+    likeBtn: document.getElementById('likeBtn'),
 
-    // Thanh tiến trình dây leo & Chú bọ rùa (Ladybug)
-    progressContainer: document.getElementById('progressContainer'),
-    progressBar: document.getElementById('progressBar'),
-    progressThumb: document.getElementById('progressThumb'),
-    progressHoverTime: document.getElementById('progressHoverTime'),
-    currentTime: document.getElementById('currentTime'),
-    totalDuration: document.getElementById('totalDuration'),
-
-    // Các phím bấm tự nhiên (Nature Controls)
+    // Phím điều khiển
     playPauseBtn: document.getElementById('playPauseBtn'),
     playIcon: document.getElementById('playIcon'),
     pauseIcon: document.getElementById('pauseIcon'),
@@ -132,29 +212,35 @@
     loopBtn: document.getElementById('loopBtn'),
     loopBadge: document.getElementById('loopBadge'),
 
-    // Âm lượng
+    // Thanh tiến trình lượn sóng SVG & Chú lửa Calcifer Thumb
+    progressContainer: document.getElementById('progressContainer'),
+    wavyVineSvg: document.getElementById('wavyVineSvg'),
+    vineProgressFill: document.getElementById('vineProgressFill'),
+    progressThumb: document.getElementById('progressThumb'),
+    calciferFlame: document.getElementById('calciferFlame'),
+    progressHoverTime: document.getElementById('progressHoverTime'),
+    currentTime: document.getElementById('currentTime'),
+    totalDuration: document.getElementById('totalDuration'),
+
+    // Cụm âm lượng & Queue Drawer
     muteBtn: document.getElementById('muteBtn'),
     volumeHighIcon: document.getElementById('volumeHighIcon'),
     volumeMutedIcon: document.getElementById('volumeMutedIcon'),
     volumeSlider: document.getElementById('volumeSlider'),
     volumePercent: document.getElementById('volumePercent'),
+    queueToggleBtn: document.getElementById('queueToggleBtn'),
 
-    // Bảng danh sách bài hát & Custom Loop
+    // Queue Drawer & Danh sách bài hát
     playlistCottage: document.getElementById('playlistCottage'),
+    closeDrawerBtn: document.getElementById('closeDrawerBtn'),
     playlistCount: document.getElementById('playlistCount'),
     customLoopChip: document.getElementById('customLoopChip'),
-    searchInput: document.getElementById('searchInput'),
-    clearSearchBtn: document.getElementById('clearSearchBtn'),
     folderNameBadge: document.getElementById('folderNameBadge'),
     manualSyncBtn: document.getElementById('manualSyncBtn'),
-    playlistContainer: document.getElementById('playlistContainer'),
     emptyState: document.getElementById('emptyState'),
     songList: document.getElementById('songList'),
 
-    // [SKILL: /impeccable] Cloud Sync & Lá Thư Ghibli Modal
-    authModalTriggerBtn: document.getElementById('authModalTriggerBtn'),
-    syncStatusIcon: document.getElementById('syncStatusIcon'),
-    userAuthBadgeText: document.getElementById('userAuthBadgeText'),
+    // Cloud Sync Modal (Lá thư Ghibli)
     authModalOverlay: document.getElementById('authModalOverlay'),
     ghibliLetterModal: document.getElementById('ghibliLetterModal'),
     closeAuthModalBtn: document.getElementById('closeAuthModalBtn'),
@@ -174,9 +260,167 @@
     syncCountInfo: document.getElementById('syncCountInfo'),
     logoutBtn: document.getElementById('logoutBtn'),
 
-    // Thông báo Toast Ghibli
+    // Toast
     toast: document.getElementById('toast')
   };
+
+  // --------------------------------------------------------------------------
+  // [SKILL: /ponytail] OFFLINE WEB AUDIO SYNTHESIZER:
+  // Tự tạo giai điệu Hộp Nhạc (Music Box / Celesta) cho các bài Ghibli
+  // Hoạt động 100% offline ngay khi tải trang mà không cần file MP3 nặng nề!
+  // --------------------------------------------------------------------------
+  function generateGhibliSynthAudio(themeName) {
+    if (state.synthBlobUrls[themeName]) {
+      return Promise.resolve(state.synthBlobUrls[themeName]);
+    }
+
+    return new Promise((resolve) => {
+      try {
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtxClass) return resolve(null);
+
+        const sampleRate = 22050; // Tối ưu bộ nhớ
+        const durationSec = 38;   // Một đoạn giai điệu 38 giây du dương
+        const totalFrames = sampleRate * durationSec;
+        const offlineCtx = new OfflineAudioContext(2, totalFrames, sampleRate);
+
+        // Chuỗi nốt nhạc Ghibli đặc trưng
+        let melodyNotes = [];
+        if (themeName === 'howl') {
+          // Merry-Go-Round of Life (D minor / G minor waltz)
+          melodyNotes = [
+            { note: 392.00, start: 0.5, dur: 0.7 }, // G4
+            { note: 466.16, start: 1.3, dur: 0.7 }, // Bb4
+            { note: 587.33, start: 2.1, dur: 1.2 }, // D5
+            { note: 783.99, start: 3.5, dur: 1.6 }, // G5
+            { note: 739.99, start: 5.3, dur: 0.9 }, // F#5
+            { note: 587.33, start: 6.4, dur: 0.9 }, // D5
+            { note: 466.16, start: 7.5, dur: 0.9 }, // Bb4
+            { note: 440.00, start: 8.6, dur: 1.4 }, // A4
+            { note: 392.00, start: 10.2, dur: 2.0 }, // G4
+            { note: 329.63, start: 12.5, dur: 0.8 }, // E4
+            { note: 392.00, start: 13.5, dur: 0.8 }, // G4
+            { note: 523.25, start: 14.5, dur: 1.4 }, // C5
+            { note: 659.25, start: 16.1, dur: 1.8 }, // E5
+            { note: 587.33, start: 18.2, dur: 1.0 }, // D5
+            { note: 466.16, start: 19.4, dur: 1.0 }, // Bb4
+            { note: 392.00, start: 20.6, dur: 1.0 }, // G4
+            { note: 440.00, start: 21.8, dur: 2.5 }, // A4
+            { note: 392.00, start: 24.5, dur: 3.0 }  // G4
+          ];
+        } else if (themeName === 'summer') {
+          // One Summer's Day (Spirited Away)
+          melodyNotes = [
+            { note: 523.25, start: 0.5, dur: 1.2 }, // C5
+            { note: 587.33, start: 1.9, dur: 1.0 }, // D5
+            { note: 659.25, start: 3.1, dur: 1.5 }, // E5
+            { note: 783.99, start: 4.8, dur: 2.0 }, // G5
+            { note: 880.00, start: 7.0, dur: 1.5 }, // A5
+            { note: 783.99, start: 8.7, dur: 1.2 }, // G5
+            { note: 659.25, start: 10.1, dur: 1.5 }, // E5
+            { note: 587.33, start: 11.8, dur: 2.0 }, // D5
+            { note: 523.25, start: 14.0, dur: 3.0 }  // C5
+          ];
+        } else if (themeName === 'totoro') {
+          // Wind Forest (Totoro)
+          melodyNotes = [
+            { note: 440.00, start: 0.5, dur: 1.0 }, // A4
+            { note: 523.25, start: 1.7, dur: 1.0 }, // C5
+            { note: 587.33, start: 2.9, dur: 1.4 }, // D5
+            { note: 659.25, start: 4.5, dur: 2.2 }, // E5
+            { note: 587.33, start: 7.0, dur: 1.0 }, // D5
+            { note: 523.25, start: 8.2, dur: 1.0 }, // C5
+            { note: 440.00, start: 9.4, dur: 2.5 }  // A4
+          ];
+        } else {
+          // Kiki / Wind / Lofi gentle chords
+          melodyNotes = [
+            { note: 392.00, start: 0.5, dur: 1.2 },
+            { note: 440.00, start: 1.9, dur: 1.2 },
+            { note: 493.88, start: 3.3, dur: 1.5 },
+            { note: 587.33, start: 5.0, dur: 2.0 },
+            { note: 523.25, start: 7.2, dur: 1.2 },
+            { note: 440.00, start: 8.6, dur: 2.5 }
+          ];
+        }
+
+        // Tạo hiệu ứng tiếng chuông hộp nhạc dịu dàng (Music Box Tone)
+        melodyNotes.forEach(n => {
+          const osc = offlineCtx.createOscillator();
+          const gain = offlineCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(n.note, n.start);
+
+          gain.gain.setValueAtTime(0.0001, n.start);
+          gain.gain.exponentialRampToValueAtTime(0.35, n.start + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.0001, n.start + n.dur + 0.9);
+
+          osc.connect(gain);
+          gain.connect(offlineCtx.destination);
+
+          osc.start(n.start);
+          osc.stop(n.start + n.dur + 1.0);
+        });
+
+        offlineCtx.startRendering().then(renderedBuffer => {
+          const wavBlob = audioBufferToWav(renderedBuffer);
+          const blobUrl = URL.createObjectURL(wavBlob);
+          state.synthBlobUrls[themeName] = blobUrl;
+          resolve(blobUrl);
+        }).catch(() => resolve(null));
+
+      } catch (_) {
+        resolve(null);
+      }
+    });
+  }
+
+  /**
+   * [SKILL: /ponytail] Chuyển AudioBuffer thành WAV Blob thuần 40 dòng JS
+   */
+  function audioBufferToWav(buffer) {
+    const numOfChan = buffer.numberOfChannels;
+    const length = buffer.length * numOfChan * 2 + 44;
+    const out = new DataView(new ArrayBuffer(length));
+    const channels = [];
+    const sampleRate = buffer.sampleRate;
+    let offset = 0;
+    let pos = 0;
+
+    function setUint16(data) { out.setUint16(pos, data, true); pos += 2; }
+    function setUint32(data) { out.setUint32(pos, data, true); pos += 4; }
+
+    setUint32(0x46464952); // "RIFF"
+    setUint32(length - 8);
+    setUint32(0x45564157); // "WAVE"
+
+    setUint32(0x20746d66); // "fmt "
+    setUint32(16);
+    setUint16(1); // PCM
+    setUint16(numOfChan);
+    setUint32(sampleRate);
+    setUint32(sampleRate * 2 * numOfChan);
+    setUint16(numOfChan * 2);
+    setUint16(16);
+
+    setUint32(0x61746164); // "data"
+    setUint32(length - pos - 4);
+
+    for (let i = 0; i < numOfChan; i++) {
+      channels.push(buffer.getChannelData(i));
+    }
+
+    while (offset < buffer.length) {
+      for (let i = 0; i < numOfChan; i++) {
+        let sample = Math.max(-1, Math.min(1, channels[i][offset]));
+        sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+        out.setInt16(pos, sample, true);
+        pos += 2;
+      }
+      offset++;
+    }
+    return new Blob([out.buffer], { type: 'audio/wav' });
+  }
 
   // --------------------------------------------------------------------------
   // [SKILL: /ponytail] WEBTORRENT CORE: Khởi tạo lười & Quản lý P2P Download
@@ -184,10 +428,9 @@
   function getWebTorrentClient() {
     if (!state.wtClient) {
       if (typeof window.WebTorrent === 'undefined') {
-        showToast('Thư viện WebTorrent chưa tải xong hoặc mạng chặn CDN!');
+        showToast('Thư viện WebTorrent chưa sẵn sàng!');
         return null;
       }
-      // Khởi tạo WebTorrent Client thuần WebRTC cho trình duyệt
       state.wtClient = new window.WebTorrent();
       state.wtClient.on('error', (err) => {
         console.error('WebTorrent Client Lỗi:', err);
@@ -197,9 +440,6 @@
     return state.wtClient;
   }
 
-  /**
-   * Đảm bảo Magnet Link có đủ WebSocket Trackers cho WebTorrent WebRTC
-   */
   function prepareMagnetLink(input) {
     const trimmed = input.trim();
     if (trimmed.startsWith('magnet:?')) {
@@ -211,7 +451,6 @@
       });
       return url;
     }
-    // Nếu là mã InfoHash 40 ký tự hexa
     if (/^[0-9a-fA-F]{40}$/.test(trimmed)) {
       let url = `magnet:?xt=urn:btih:${trimmed}`;
       WEBTORRENT_TRACKERS.forEach(tr => {
@@ -222,22 +461,15 @@
     return null;
   }
 
-  /**
-   * Bắt đầu tải và stream Torrent
-   */
   function startTorrentDownload(magnetOrId, customTitle = '') {
     const client = getWebTorrentClient();
     if (!client) return;
 
-    // Hủy torrent đang chạy trước đó nếu có
     if (state.activeTorrent) {
-      try {
-        state.activeTorrent.destroy();
-      } catch (_) {}
+      try { state.activeTorrent.destroy(); } catch (_) {}
       state.activeTorrent = null;
     }
 
-    // Hiển thị giao diện tiến trình Susuwatari
     dom.torrentStatusCard.classList.remove('hidden');
     dom.workerSpeech.textContent = 'Các chú Susuwatari đang tìm hạt giống Peers trong khu rừng...';
     dom.torrentFileName.textContent = customTitle || 'Đang kết nối Torrent...';
@@ -281,13 +513,8 @@
     }
   }
 
-  /**
-   * Xử lý khi Torrent sẵn sàng metadata
-   */
   function onTorrentReady(torrent, customTitle) {
     dom.workerSpeech.textContent = 'Đã tìm thấy hạt giống! Đang chuyển tay nhau tải về...';
-    
-    // Tìm file âm thanh trong danh sách file của torrent
     const audioFile = torrent.files.find(f => SUPPORTED_AUDIO_EXT.some(ext => f.name.toLowerCase().endsWith(ext))) || torrent.files[0];
     state.currentTorrentFile = audioFile;
 
@@ -295,14 +522,10 @@
     dom.torrentFileName.textContent = displayTitle;
     dom.torrentTotalSize.textContent = formatBytes(torrent.length);
 
-    // Mở các nút hành động
     dom.saveToDiskBtn.classList.remove('hidden');
     dom.playTorrentNowBtn.classList.remove('hidden');
 
-    // Thêm bài hát này vào Playlist hiện tại
     addTorrentTrackToPlaylist(audioFile, displayTitle, torrent);
-
-    // Tự động stream phát luôn
     streamAudioFile(audioFile, displayTitle);
   }
 
@@ -319,15 +542,10 @@
     }
   }
 
-  /**
-   * Stream file âm thanh từ Torrent trực tiếp vào HTML5 Audio
-   */
   function streamAudioFile(file, title) {
-    // Ưu tiên dùng renderTo của WebTorrent
     try {
       file.renderTo(dom.audio, { autoplay: true }, (err) => {
         if (err) {
-          // Fallback qua Blob URL
           file.getBlobURL((blobErr, url) => {
             if (!blobErr && url) {
               dom.audio.src = url;
@@ -349,13 +567,10 @@
     updatePlaybackUI();
     dom.trackTitle.textContent = title || file.name;
     dom.trackArtist.textContent = `WebTorrent P2P Stream • ${formatBytes(file.length)}`;
-    dom.trackFormat.textContent = 'TORRENT';
+    dom.trackAlbum.textContent = 'WebTorrent Stream';
     showToast(`Đang phát trực tiếp: "${title || file.name}" 📡`);
   }
 
-  /**
-   * Thêm bài hát Torrent vào danh sách Playlist chung
-   */
   function addTorrentTrackToPlaylist(file, title, torrent) {
     const existing = state.playlist.find(t => t.name === file.name);
     if (existing) return;
@@ -366,6 +581,8 @@
       name: file.name,
       title: title || cleanTitle(file.name),
       artist: 'WebTorrent Stream',
+      album: 'P2P Forest',
+      cover: 'album-howl.jpg',
       format: getExtension(file.name).toUpperCase() || 'TORRENT',
       size: formatBytes(file.length),
       url: null,
@@ -379,18 +596,12 @@
     state.currentIndex = 0;
     renderPlaylist();
     updatePlaylistCount();
-    updateActiveCard();
 
-    // Tự động đồng bộ lên Cloud nếu người dùng đã đăng nhập
     if (state.currentUser) {
       syncPlaylistToCloud();
     }
   }
 
-  // --------------------------------------------------------------------------
-  // [SKILL: /impeccable & /ponytail] LƯU FILE VĨNH VIỄN VÀO MÁY
-  // Sử dụng File System Access API (showSaveFilePicker)
-  // --------------------------------------------------------------------------
   async function saveTorrentFileLocally(torrentFile) {
     if (!torrentFile) {
       showToast('Chưa có file Torrent nào hoàn tất để lưu.');
@@ -400,9 +611,7 @@
     showToast('Đang chuẩn bị lưu file xuống máy tính...');
 
     try {
-      // 1. Kiểm tra File System Access API trên trình duyệt hiện đại
       if ('showSaveFilePicker' in window) {
-        const ext = getExtension(torrentFile.name) || 'mp3';
         const handle = await window.showSaveFilePicker({
           suggestedName: torrentFile.name,
           types: [{
@@ -414,7 +623,6 @@
         });
 
         const writable = await handle.createWritable();
-        // WebTorrent File có method .blob() trả về Promise<Blob>
         let blob = null;
         if (typeof torrentFile.blob === 'function') {
           blob = await torrentFile.blob();
@@ -431,7 +639,6 @@
         await writable.close();
         showToast(`Đã lưu vĩnh viễn "${torrentFile.name}" xuống ổ cứng thành công! 💾🍃`);
       } else {
-        // 2. Fallback cho trình duyệt chưa bật File System Access API
         torrentFile.getBlobURL((err, url) => {
           if (err || !url) {
             showToast('Lỗi khi trích xuất blob âm thanh.');
@@ -443,142 +650,15 @@
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
-          showToast(`Đang tải file "${torrentFile.name}" về thư mục Downloads... 💾`);
+          showToast(`Đang tải file "${torrentFile.name}" về máy... 💾`);
         });
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
-        console.error('Lỗi khi lưu file qua File System Access API:', err);
+        console.error('Lỗi khi lưu file:', err);
         showToast('Không thể lưu file: ' + err.message);
       }
     }
-  }
-
-  // --------------------------------------------------------------------------
-  // [SKILL: /animate & /impeccable] SÓNG ÂM THIÊN NHIÊN (CANVAS VISUALIZER)
-  // --------------------------------------------------------------------------
-  let audioCtx = null;
-  let analyser = null;
-  let audioSource = null;
-  let dataArray = null;
-  let canvasCtx = null;
-  let animId = null;
-
-  function initAudioContext() {
-    if (audioCtx) return;
-    try {
-      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtxClass) return;
-
-      audioCtx = new AudioCtxClass();
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 128;
-      analyser.smoothingTimeConstant = 0.8;
-
-      audioSource = audioCtx.createMediaElementSource(dom.audio);
-      audioSource.connect(analyser);
-      analyser.connect(audioCtx.destination);
-
-      dataArray = new Uint8Array(analyser.frequencyBinCount);
-    } catch (err) {
-      console.warn('Môi trường file:// kích hoạt Visualizer mô phỏng sóng mầm cây:', err);
-    }
-  }
-
-  function initCanvas() {
-    canvasCtx = dom.visualizerCanvas.getContext('2d');
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    renderVisualizer();
-  }
-
-  function resizeCanvas() {
-    const rect = dom.visualizerCanvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    dom.visualizerCanvas.width = rect.width * dpr;
-    dom.visualizerCanvas.height = rect.height * dpr;
-    if (canvasCtx) canvasCtx.scale(dpr, dpr);
-  }
-
-  let naturePhase = 0;
-  function renderVisualizer() {
-    animId = requestAnimationFrame(renderVisualizer);
-    if (!canvasCtx) return;
-
-    const width = dom.visualizerCanvas.getBoundingClientRect().width;
-    const height = dom.visualizerCanvas.getBoundingClientRect().height;
-
-    canvasCtx.clearRect(0, 0, width, height);
-
-    let hasRealData = false;
-    if (audioCtx && analyser && state.isPlaying) {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      if (state.visualizerMode === 'bars') {
-        analyser.getByteFrequencyData(dataArray);
-      } else {
-        analyser.getByteTimeDomainData(dataArray);
-      }
-      hasRealData = true;
-    }
-
-    if (state.visualizerMode === 'bars') {
-      const barCount = 26;
-      const barWidth = (width / barCount) * 0.52;
-      const barSpacing = width / barCount;
-
-      for (let i = 0; i < barCount; i++) {
-        let barH = 0;
-        if (hasRealData && dataArray) {
-          const sample = Math.floor((i / barCount) * (dataArray.length * 0.72));
-          barH = ((dataArray[sample] || 0) / 255) * (height * 0.6);
-        } else if (state.isPlaying) {
-          const wave = Math.sin(naturePhase + i * 0.35) * 0.5 + 0.5;
-          barH = (wave * 0.4 + 0.1) * height;
-        } else {
-          barH = 4 + Math.sin(naturePhase * 0.4 + i * 0.2) * 3;
-        }
-
-        const x = i * barSpacing + (barSpacing - barWidth) / 2;
-        const y = height - barH - 6;
-
-        const grad = canvasCtx.createLinearGradient(0, height, 0, y);
-        grad.addColorStop(0, 'rgba(45, 106, 79, 0.25)');
-        grad.addColorStop(0.5, 'rgba(82, 183, 136, 0.7)');
-        grad.addColorStop(1, 'rgba(116, 198, 157, 0.95)');
-
-        canvasCtx.fillStyle = grad;
-        canvasCtx.beginPath();
-        canvasCtx.roundRect(x, y, barWidth, barH, [4, 4, 1, 1]);
-        canvasCtx.fill();
-      }
-    } else {
-      canvasCtx.beginPath();
-      canvasCtx.lineWidth = 3.5;
-      canvasCtx.strokeStyle = 'rgba(45, 106, 79, 0.85)';
-
-      const sliceW = width / 30;
-      let x = 0;
-
-      for (let i = 0; i <= 30; i++) {
-        let v = 0.5;
-        if (hasRealData && dataArray) {
-          const sample = Math.floor((i / 30) * dataArray.length);
-          v = (dataArray[sample] || 128) / 255.0;
-        } else if (state.isPlaying) {
-          v = 0.5 + Math.sin(naturePhase * 1.6 + i * 0.25) * 0.22;
-        } else {
-          v = 0.5 + Math.sin(naturePhase * 0.5 + i * 0.15) * 0.05;
-        }
-
-        const y = v * height;
-        if (i === 0) canvasCtx.moveTo(x, y);
-        else canvasCtx.lineTo(x, y);
-        x += sliceW;
-      }
-      canvasCtx.stroke();
-    }
-
-    naturePhase += state.isPlaying ? 0.07 : 0.015;
   }
 
   // --------------------------------------------------------------------------
@@ -608,6 +688,8 @@
           name: file.name,
           title: cleanTitle(file.name),
           artist: detectedFolder || 'Giai điệu địa phương',
+          album: detectedFolder || 'Thư mục máy tính',
+          cover: 'album-howl.jpg',
           format: getExtension(file.name).toUpperCase() || 'AUDIO',
           size: formatBytes(file.size),
           url: null,
@@ -623,14 +705,12 @@
 
     newTracks.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
-    // Dọn dẹp URL cũ
     state.playlist.forEach(t => {
       if (t.url) URL.revokeObjectURL(t.url);
     });
 
     state.playlist = newTracks;
     state.filteredIndices = state.playlist.map((_, i) => i);
-
     dom.folderNameBadge.textContent = detectedFolder ? `Thư mục: ${detectedFolder}` : `Khu vườn nhạc: ${newTracks.length} bài`;
 
     if (state.isShuffle) buildShuffleOrder(0);
@@ -638,7 +718,7 @@
     renderPlaylist();
     updatePlaylistCount();
     loadTrack(0, true);
-    showToast(`Đã thức tỉnh ${newTracks.length} giai điệu Ghibli!`);
+    showToast(`Đã thức tỉnh ${newTracks.length} giai điệu trong thư mục! 🍃✨`);
 
     if (state.currentUser) {
       syncPlaylistToCloud();
@@ -666,17 +746,16 @@
   }
 
   // --------------------------------------------------------------------------
-  // [SKILL: /animate & /improve-animations] ĐIỀU KHIỂN PHÁT NHẠC
+  // [SKILL: /image-to-code-skill & /animate] ĐIỀU KHIỂN PHÁT NHẠC CHÍNH
   // --------------------------------------------------------------------------
-  function loadTrack(index, autoPlay = false) {
+  async function loadTrack(index, autoPlay = false) {
     if (index < 0 || index >= state.playlist.length) return;
 
     const track = state.playlist[index];
 
-    // Thu hồi URL bài cũ nếu có
     if (state.currentIndex >= 0 && state.currentIndex !== index) {
       const prev = state.playlist[state.currentIndex];
-      if (prev && prev.url && !prev.isTorrent) {
+      if (prev && prev.url && !prev.isTorrent && !prev.synthTheme) {
         URL.revokeObjectURL(prev.url);
         prev.url = null;
       }
@@ -684,14 +763,35 @@
 
     state.currentIndex = index;
 
+    // Cập nhật giao diện Now Playing góc trái chuẩn GIAODIEN.png
+    if (dom.currentTrackCover) {
+      dom.currentTrackCover.src = track.cover || 'album-howl.jpg';
+      dom.currentTrackCover.alt = track.title;
+    }
+    if (dom.trackTitle) {
+      dom.trackTitle.textContent = track.title;
+      dom.trackTitle.title = track.name;
+    }
+    if (dom.trackArtist) {
+      dom.trackArtist.textContent = track.artist || 'Joe Hisaishi';
+    }
+    if (dom.trackAlbum) {
+      dom.trackAlbum.textContent = track.album || "Howl's Moving Castle";
+    }
+    if (dom.trackFormat) {
+      dom.trackFormat.textContent = track.format || 'AUDIO';
+    }
+
+    // Highlight Playlist Card đang phát
+    highlightActivePlaylistCard(track.title);
+
+    // Xử lý Audio Source
     if (track.isTorrent) {
       if (track.torrentFile) {
-        // Stream trực tiếp từ WebTorrent File đã có
         streamAudioFile(track.torrentFile, track.title);
         updateActiveCard();
         return;
       } else if (track.magnet) {
-        // [SKILL: /ponytail] Tự động kết nối WebTorrent và stream từ Magnet URL khi kéo từ Cloud về!
         showToast(`Đang kết nối WebTorrent cho "${track.title}"... 📡🍃`);
         startTorrentDownload(track.magnet, track.title);
         updateActiveCard();
@@ -699,45 +799,36 @@
       }
     }
 
-    if (!track.url && track.file) {
+    if (track.synthTheme) {
+      // Tự động sinh âm thanh Ghibli Music Box
+      const blobUrl = await generateGhibliSynthAudio(track.synthTheme);
+      if (blobUrl) {
+        dom.audio.src = blobUrl;
+      }
+    } else if (track.file && !track.url) {
       track.url = URL.createObjectURL(track.file);
+      dom.audio.src = track.url;
+    } else if (track.url) {
+      dom.audio.src = track.url;
     }
 
-    if (!track.url && !track.file && !track.isTorrent) {
-      // Bài hát từ Cloud nhưng file gốc nằm ở thiết bị khác
-      showToast(`Bài "${track.title}" được đồng bộ từ thiết bị khác. Vui lòng mở thư mục trên máy này để nghe! 🍃`);
-      dom.trackTitle.textContent = track.title;
-      dom.trackTitle.title = track.name;
-      dom.trackArtist.textContent = `${track.artist} • Cần file cục bộ`;
-      dom.trackFormat.textContent = track.format;
-      updateActiveCard();
-      return;
-    }
-
-    dom.audio.src = track.url;
     dom.audio.load();
-
-    dom.trackTitle.textContent = track.title;
-    dom.trackTitle.title = track.name;
-    dom.trackArtist.textContent = `${track.artist} • ${track.size}`;
-    dom.trackFormat.textContent = track.format;
-
     updateProgress(0, 0);
     updateActiveCard();
 
-    if (autoPlay) playAudio();
-    else pauseAudio();
+    if (autoPlay) {
+      playAudio();
+    } else {
+      pauseAudio();
+    }
   }
 
   function playAudio() {
-    initAudioContext();
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-
     dom.audio.play().then(() => {
       state.isPlaying = true;
       updatePlaybackUI();
     }).catch(err => {
-      console.warn('Autoplay cần tương tác người dùng đầu tiên:', err);
+      console.warn('Autoplay cần người dùng tương tác trước:', err);
       state.isPlaying = false;
       updatePlaybackUI();
     });
@@ -758,29 +849,25 @@
       loadTrack(0, true);
       return;
     }
-    if (state.isPlaying) pauseAudio();
-    else playAudio();
+    if (state.isPlaying) {
+      pauseAudio();
+    } else {
+      playAudio();
+    }
   }
 
+  /**
+   * Cập nhật trạng thái nút Play/Pause giả gỗ & hoạt ảnh ngọn lửa Calcifer
+   */
   function updatePlaybackUI() {
     if (state.isPlaying) {
-      dom.playIcon.classList.add('hidden');
-      dom.pauseIcon.classList.remove('hidden');
-      dom.trunkRecord.classList.add('playing');
-      dom.twigTonearm.classList.add('active');
+      if (dom.playIcon) dom.playIcon.classList.add('hidden');
+      if (dom.pauseIcon) dom.pauseIcon.classList.remove('hidden');
       document.body.classList.add('music-playing');
-      dom.playStatusText.textContent = 'ĐANG PHÁT';
-      dom.playStatusText.style.color = 'var(--leaf-bright)';
-      dom.leafIndicator.textContent = '🍃';
     } else {
-      dom.playIcon.classList.remove('hidden');
-      dom.pauseIcon.classList.add('hidden');
-      dom.trunkRecord.classList.remove('playing');
-      dom.twigTonearm.classList.remove('active');
+      if (dom.playIcon) dom.playIcon.classList.remove('hidden');
+      if (dom.pauseIcon) dom.pauseIcon.classList.add('hidden');
       document.body.classList.remove('music-playing');
-      dom.playStatusText.textContent = 'TẠM DỪNG';
-      dom.playStatusText.style.color = '#7f5539';
-      dom.leafIndicator.textContent = '🌱';
     }
   }
 
@@ -803,7 +890,6 @@
       });
 
       if (selectedIndices.length === 0) {
-        // Nếu chưa tích bài nào, tự động tích bài hiện tại
         if (state.currentIndex >= 0) {
           state.selectedLoopTrackIds.add(state.playlist[state.currentIndex].id);
           renderPlaylist();
@@ -815,13 +901,10 @@
         return;
       }
 
-      const currentPosInSelected = selectedIndices.indexOf(state.currentIndex);
-      let targetIdx;
-      if (currentPosInSelected === -1 || currentPosInSelected >= selectedIndices.length - 1) {
-        targetIdx = selectedIndices[0]; // Vòng lại hạt dẻ đầu tiên
-      } else {
-        targetIdx = selectedIndices[currentPosInSelected + 1];
-      }
+      const currentPos = selectedIndices.indexOf(state.currentIndex);
+      let targetIdx = (currentPos === -1 || currentPos >= selectedIndices.length - 1)
+        ? selectedIndices[0]
+        : selectedIndices[currentPos + 1];
 
       loadTrack(targetIdx, true);
       return;
@@ -835,7 +918,7 @@
           state.shufflePosition = 0;
         } else {
           pauseAudio();
-          showToast('Đã nghe hết danh sách ngẫu nhiên!');
+          showToast('Đã nghe hết danh sách ngẫu nhiên! 🍃');
           return;
         }
       }
@@ -846,7 +929,7 @@
         if (state.loopMode === 'all') next = 0;
         else {
           pauseAudio();
-          showToast('Đã phát hết danh sách bài hát!');
+          showToast('Đã phát hết danh sách bài hát! 🍂');
           return;
         }
       }
@@ -862,7 +945,6 @@
       return;
     }
 
-    // [SKILL: /ponytail] Custom Loop Hạt Dẻ lùi về bài trước
     if (state.loopMode === 'custom') {
       const selectedIndices = [];
       state.playlist.forEach((track, idx) => {
@@ -872,13 +954,10 @@
       });
 
       if (selectedIndices.length > 0) {
-        const currentPosInSelected = selectedIndices.indexOf(state.currentIndex);
-        let targetIdx;
-        if (currentPosInSelected <= 0) {
-          targetIdx = selectedIndices[selectedIndices.length - 1];
-        } else {
-          targetIdx = selectedIndices[currentPosInSelected - 1];
-        }
+        const currentPos = selectedIndices.indexOf(state.currentIndex);
+        let targetIdx = (currentPos <= 0)
+          ? selectedIndices[selectedIndices.length - 1]
+          : selectedIndices[currentPos - 1];
         loadTrack(targetIdx, true);
         return;
       }
@@ -930,10 +1009,6 @@
     }
   }
 
-  // --------------------------------------------------------------------------
-  // [SKILL: /ponytail & /animate] STATE MACHINE LOOP 4 TRẠNG THÁI:
-  // 1. Tắt (off) -> 2. Lặp tất cả (all) -> 3. Lặp 1 bài (one) -> 4. Lặp hạt dẻ (custom)
-  // --------------------------------------------------------------------------
   function cycleLoopMode() {
     if (state.loopMode === 'all') {
       setLoopMode('one');
@@ -975,7 +1050,6 @@
         dom.playlistCottage.classList.add('custom-loop-active');
         dom.customLoopChip.classList.remove('hidden');
 
-        // Nếu chưa chọn bài nào và đang có bài hát, tự tích bài hiện tại
         if (state.selectedLoopTrackIds.size === 0 && state.currentIndex >= 0) {
           const currentTrack = state.playlist[state.currentIndex];
           if (currentTrack) {
@@ -1014,14 +1088,28 @@
   }
 
   // --------------------------------------------------------------------------
-  // [SKILL: /animation-vocabulary] THANH DÂY LEO & CHÚ BỌ RÙA
+  // [SKILL: /animate & /image-to-code-skill] THANH TIẾN TRÌNH LƯỢN SÓNG & CALCIFER
   // --------------------------------------------------------------------------
   function updateProgress(curr, dur) {
-    const pct = dur > 0 ? (curr / dur) * 100 : 0;
-    dom.progressBar.style.width = `${pct}%`;
-    dom.progressThumb.style.left = `${pct}%`;
-    dom.currentTime.textContent = formatSec(curr);
-    dom.totalDuration.textContent = formatSec(dur);
+    const pct = (dur > 0 && curr > 0) ? Math.min(1, Math.max(0, curr / dur)) : 0;
+
+    // 1. Cập nhật đường cong xanh lá fill SVG (độ dài path ~ 602px)
+    const pathTotalLength = 602;
+    if (dom.vineProgressFill) {
+      dom.vineProgressFill.style.strokeDasharray = `${pathTotalLength}`;
+      dom.vineProgressFill.style.strokeDashoffset = `${pathTotalLength * (1 - pct)}`;
+    }
+
+    // 2. Di chuyển ngọn lửa Calcifer dọc theo phương ngang và nhấp nhô theo sóng
+    if (dom.progressThumb) {
+      dom.progressThumb.style.left = `${pct * 100}%`;
+      // Sóng d="M 0 12 Q 150 20, 300 12 T 600 12" dao động ~ +-4.5px
+      const waveY = Math.sin(pct * Math.PI * 2) * 4.5;
+      dom.progressThumb.style.transform = `translate(-50%, calc(-65% + ${waveY}px))`;
+    }
+
+    if (dom.currentTime) dom.currentTime.textContent = formatSec(curr);
+    if (dom.totalDuration) dom.totalDuration.textContent = formatSec(dur);
   }
 
   function formatSec(seconds) {
@@ -1069,7 +1157,7 @@
   }
 
   // --------------------------------------------------------------------------
-  // DANH SÁCH BÀI HÁT THẺ LÁ GIẤY MỘC (PARCHMENT CARDS)
+  // DANH SÁCH BÀI HÁT THẺ LÁ GIẤY MỘC & CUSTOM LOOP DRAWER
   // --------------------------------------------------------------------------
   function renderPlaylist() {
     if (state.playlist.length === 0) {
@@ -1091,7 +1179,6 @@
 
       li.innerHTML = `
         <div class="card-left-group">
-          <!-- [SKILL: /impeccable & /animate] Checkbox Hạt Dẻ (Tự động hiển thị khi bật Custom Loop) -->
           <label class="acorn-checkbox-wrapper" title="Tích chọn bài này để lặp Hạt Dẻ 🌰">
             <input type="checkbox" class="acorn-checkbox-input" data-id="${track.id}" ${isAcornChecked ? 'checked' : ''}>
             <span class="acorn-checkbox-icon"></span>
@@ -1099,18 +1186,15 @@
           <div class="leaf-num-stamp">${displayIdx + 1}</div>
           <div class="card-song-details">
             <span class="card-title" title="${track.name}">${track.title}</span>
-            <div class="card-subtext">${track.size} • ${track.format} ${track.isTorrent ? '📡 P2P' : ''}</div>
+            <div class="card-subtext">${track.artist || 'Joe Hisaishi'} • ${track.size || ''} ${track.isTorrent ? '📡 P2P' : ''}</div>
           </div>
         </div>
-        <span class="card-leaf-badge">${track.format}</span>
+        <span class="card-leaf-badge">${track.format || 'AUDIO'}</span>
       `;
 
-      // Bắt sự kiện chọn Hạt Dẻ mà không làm kích hoạt phát nhạc
       const checkbox = li.querySelector('.acorn-checkbox-input');
       if (checkbox) {
-        checkbox.addEventListener('click', (e) => {
-          e.stopPropagation();
-        });
+        checkbox.addEventListener('click', (e) => e.stopPropagation());
         checkbox.addEventListener('change', (e) => {
           e.stopPropagation();
           toggleTrackAcorn(track.id, e.target.checked);
@@ -1141,6 +1225,19 @@
     });
   }
 
+  function highlightActivePlaylistCard(trackTitle) {
+    dom.playlistCards.forEach(card => {
+      const cardTrack = card.dataset.track;
+      if (cardTrack && trackTitle && (cardTrack.toLowerCase().includes(trackTitle.toLowerCase()) || trackTitle.toLowerCase().includes(cardTrack.toLowerCase()))) {
+        card.style.borderColor = 'var(--ghibli-gold)';
+        card.style.transform = 'translateY(-4px)';
+      } else {
+        card.style.borderColor = 'rgba(255, 255, 255, 0.45)';
+        card.style.transform = '';
+      }
+    });
+  }
+
   function updatePlaylistCount() {
     dom.playlistCount.textContent = `${state.playlist.length} Bài Hát`;
   }
@@ -1154,7 +1251,7 @@
       dom.clearSearchBtn.classList.remove('hidden');
       state.filteredIndices = state.playlist
         .map((t, i) => ({ t, i }))
-        .filter(({ t }) => t.name.toLowerCase().includes(q) || t.title.toLowerCase().includes(q))
+        .filter(({ t }) => t.name.toLowerCase().includes(q) || t.title.toLowerCase().includes(q) || (t.artist && t.artist.toLowerCase().includes(q)))
         .map(({ i }) => i);
     }
     renderPlaylist();
@@ -1170,15 +1267,11 @@
     dom.toast.classList.remove('hidden');
     toastTimer = setTimeout(() => {
       dom.toast.classList.add('hidden');
-    }, 2500);
+    }, 2800);
   }
 
   // --------------------------------------------------------------------------
   // [SKILL: /impeccable & /ponytail] CLOUD SYNC & SUPABASE BAAS QUẢN LÝ TÀI KHOẢN
-  // Tích hợp BaaS thuần trình duyệt (Pure Browser CDN / ES Module)
-  // Hỗ trợ cả 2 chế độ:
-  // 1. Supabase Real Cloud (khi người dùng cấu hình URL + Anon Key)
-  // 2. Local Cloud Simulator (hoạt động ngay 100% với LocalStorage multi-tab broadcast)
   // --------------------------------------------------------------------------
   const STORAGE_KEYS = {
     SESSION: 'ghibli_music_session',
@@ -1216,15 +1309,13 @@
         if (session && session.user) {
           state.currentUser = session.user;
           updateAuthUI();
-          // Tự động kéo dữ liệu bài hát về từ Cloud
           fetchPlaylistFromCloud(false);
         }
       }
     } catch (e) {
-      console.warn('Lỗi đọc phiên làm việc Cloud:', e);
+      console.warn('Lỗi phiên làm việc Cloud:', e);
     }
 
-    // Lắng nghe sự kiện đồng bộ đa tab/cửa sổ thời gian thực (Cross-tab realtime sync)
     window.addEventListener('storage', (e) => {
       if (e.key === STORAGE_KEYS.PLAYLISTS && state.currentUser) {
         fetchPlaylistFromCloud(false);
@@ -1336,7 +1427,6 @@
         }
         state.currentUser = data.user;
       } else {
-        // [SKILL: /ponytail] Local Cloud Simulator
         const rawUsers = localStorage.getItem(STORAGE_KEYS.USERS);
         const users = rawUsers ? JSON.parse(rawUsers) : {};
         if (users[email] && users[email].password !== password) {
@@ -1367,7 +1457,6 @@
         }
         state.currentUser = data.user || { email, id: 'temp_' + Date.now() };
       } else {
-        // Local Cloud Simulator
         const rawUsers = localStorage.getItem(STORAGE_KEYS.USERS);
         const users = rawUsers ? JSON.parse(rawUsers) : {};
         users[email] = { password, createdAt: Date.now() };
@@ -1398,9 +1487,6 @@
     showToast('Đã đăng xuất khỏi khu rừng. Hẹn gặp lại bạn! 🍂');
   }
 
-  /**
-   * [SKILL: /ponytail] ĐỒNG BỘ PLAYLIST LÊN CLOUD (SUPABASE / LOCAL PERSISTENCE)
-   */
   async function syncPlaylistToCloud() {
     if (!state.currentUser) {
       openAuthModal();
@@ -1411,12 +1497,13 @@
     dom.syncStatusIcon.textContent = '🔄';
     state.isSyncing = true;
 
-    // Chuẩn hóa Metadata playlist (Đặc biệt lưu trữ Magnet Link của WebTorrent)
     const payload = state.playlist.map(t => ({
       id: t.id,
       name: t.name,
       title: t.title,
       artist: t.artist,
+      album: t.album,
+      cover: t.cover,
       format: t.format,
       size: t.size,
       isTorrent: !!t.isTorrent,
@@ -1427,12 +1514,10 @@
 
     try {
       if (client) {
-        // Cố gắng cập nhật user metadata (Zero-SQL setup)
         const { error: metaErr } = await client.auth.updateUser({
           data: { ghibli_playlist: payload }
         });
         if (metaErr) {
-          // Fallback lưu vào bảng playlists nếu có
           await client.from('playlists').upsert({
             user_id: state.currentUser.id,
             tracks: payload,
@@ -1441,7 +1526,6 @@
         }
       }
 
-      // Lưu trữ đồng bộ trên LocalStorage
       const rawPlaylists = localStorage.getItem(STORAGE_KEYS.PLAYLISTS);
       const playlistsMap = rawPlaylists ? JSON.parse(rawPlaylists) : {};
       playlistsMap[state.currentUser.email] = payload;
@@ -1459,9 +1543,6 @@
     }
   }
 
-  /**
-   * [SKILL: /ponytail] KÉO PLAYLIST TỪ CLOUD VỀ MÁY & AUTO-STREAM WEBTORRENT
-   */
   async function fetchPlaylistFromCloud(showToastNotice = false) {
     if (!state.currentUser) return;
 
@@ -1501,6 +1582,8 @@
               name: rt.name,
               title: rt.title,
               artist: rt.artist || (rt.isTorrent ? 'WebTorrent Stream' : 'Cloud Synchronized'),
+              album: rt.album || 'Cloud Ghibli',
+              cover: rt.cover || 'album-howl.jpg',
               format: rt.format || 'AUDIO',
               size: rt.size || 'Cloud',
               url: null,
@@ -1524,14 +1607,9 @@
           renderPlaylist();
           updatePlaylistCount();
           dom.folderNameBadge.textContent = `Cloud Sync: ${state.playlist.length} bài hát`;
-          
-          if (state.currentIndex === -1 && state.playlist.length > 0) {
-            loadTrack(0, false);
-          }
 
-          // [Yêu cầu đặc biệt]: Tự động gọi WebTorrent stream/tải lại ngầm để phát được ngay
           if (firstTorrentToStream && firstTorrentToStream.magnet) {
-            showToast(`Đang tự động nạp bài WebTorrent "${firstTorrentToStream.title}" từ Cloud... 📡🍃`);
+            showToast(`Đang nạp bài WebTorrent "${firstTorrentToStream.title}" từ Cloud... 📡🍃`);
             startTorrentDownload(firstTorrentToStream.magnet, firstTorrentToStream.title);
           }
         }
@@ -1539,7 +1617,7 @@
         dom.syncStatusIcon.textContent = '🟢';
         dom.syncCountInfo.textContent = `Đang đồng bộ ${state.playlist.length} bài hát`;
         if (showToastNotice) {
-          showToast(`Đã đồng bộ về ${remoteTracks.length} bài hát từ Cloud! ☁️🎶`);
+          showToast(`Đã kéo về ${remoteTracks.length} bài hát từ Cloud! ☁️🎶`);
         }
       } else {
         dom.syncStatusIcon.textContent = '🟢';
@@ -1554,134 +1632,42 @@
   // TƯƠNG TÁC SỰ KIỆN (EVENT LISTENERS)
   // --------------------------------------------------------------------------
   function setupEvents() {
-    // 1. Bật/Tắt bảng WebTorrent
-    dom.torrentToggleBtn.addEventListener('click', () => {
-      dom.torrentPanel.classList.toggle('hidden');
-      if (!dom.torrentPanel.classList.contains('hidden')) {
-        dom.torrentInput.focus();
-      }
-    });
-
-    // 2. Submit Magnet / Tìm kiếm WebTorrent
-    dom.torrentForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const val = dom.torrentInput.value.trim();
-      if (!val) {
-        showToast('Vui lòng dán Magnet Link hoặc chọn bài mẫu!');
-        return;
-      }
-
-      const preparedMagnet = prepareMagnetLink(val);
-      if (preparedMagnet) {
-        startTorrentDownload(preparedMagnet);
-      } else {
-        // Nếu người dùng nhập tên bài hát thông thường
-        showToast(`Đang tìm bài hát "${val}" qua mạng lưới P2P...`);
-        // Khởi động bài mẫu Ghibli tương ứng
-        startTorrentDownload(SAMPLE_MAGNETS['totoro-lofi'].magnet, val);
-      }
-    });
-
-    // 3. Các nút bài mẫu Ghibli WebTorrent
-    document.querySelectorAll('.sample-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const query = btn.dataset.query;
-        const sample = SAMPLE_MAGNETS[query];
-        if (sample) {
-          dom.torrentInput.value = sample.magnet;
-          startTorrentDownload(sample.magnet, sample.name);
-        }
-      });
-    });
-
-    // 4. Các nút thao tác Torrent: Lưu xuống máy, Stream, Hủy
-    dom.saveToDiskBtn.addEventListener('click', () => {
-      saveTorrentFileLocally(state.currentTorrentFile);
-    });
-
-    dom.playTorrentNowBtn.addEventListener('click', () => {
-      if (state.currentTorrentFile) {
-        streamAudioFile(state.currentTorrentFile, dom.torrentFileName.textContent);
-      }
-    });
-
-    dom.cancelTorrentBtn.addEventListener('click', () => {
-      if (state.activeTorrent) {
-        try { state.activeTorrent.destroy(); } catch (_) {}
-        state.activeTorrent = null;
-      }
-      dom.torrentStatusCard.classList.add('hidden');
-      showToast('Đã dừng tiến trình WebTorrent.');
-    });
-
-    dom.torrentInput.addEventListener('input', (e) => {
-      if (e.target.value.trim()) dom.clearTorrentInput.classList.remove('hidden');
-      else dom.clearTorrentInput.classList.add('hidden');
-    });
-
-    dom.clearTorrentInput.addEventListener('click', () => {
-      dom.torrentInput.value = '';
-      dom.clearTorrentInput.classList.add('hidden');
-    });
-
-    // 5. Nhập thư mục và file nhạc cục bộ
-    dom.folderInput.addEventListener('change', (e) => {
-      handleFiles(e.target.files);
-      e.target.value = '';
-    });
-    dom.fileInput.addEventListener('change', (e) => {
-      handleFiles(e.target.files);
-      e.target.value = '';
-    });
-
-    // Kéo thả thư mục (Drag & Drop)
-    ['dragenter', 'dragover'].forEach(name => {
-      window.addEventListener(name, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dom.emptyState.classList.add('drag-over');
-      }, false);
-    });
-
-    ['dragleave', 'drop'].forEach(name => {
-      window.addEventListener(name, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dom.emptyState.classList.remove('drag-over');
-      }, false);
-    });
-
-    window.addEventListener('drop', (e) => {
-      if (e.dataTransfer && e.dataTransfer.files.length > 0) {
-        handleFiles(e.dataTransfer.files);
-      }
-    });
-
-    // 6. Sự kiện thẻ Audio
+    // 1. Audio Element Events
     dom.audio.addEventListener('timeupdate', () => {
       if (!state.isScrubbing && dom.audio.duration) {
         updateProgress(dom.audio.currentTime, dom.audio.duration);
       }
     });
+
     dom.audio.addEventListener('loadedmetadata', () => {
       updateProgress(dom.audio.currentTime, dom.audio.duration);
     });
+
     dom.audio.addEventListener('ended', () => {
       nextTrack(true);
     });
+
     dom.audio.addEventListener('error', () => {
-      showToast('Lỗi: Định dạng file không thể phát trực tiếp!');
       pauseAudio();
     });
 
-    // 7. Phím điều khiển phát nhạc
+    // 2. Play / Pause / Prev / Next / Shuffle / Loop Controls
     dom.playPauseBtn.addEventListener('click', togglePlayPause);
     dom.nextBtn.addEventListener('click', () => nextTrack(false));
     dom.prevBtn.addEventListener('click', prevTrack);
     dom.shuffleBtn.addEventListener('click', toggleShuffle);
     dom.loopBtn.addEventListener('click', cycleLoopMode);
 
-    // 8. Thanh tiến trình dây leo (Pointer Events)
+    // 3. Like Button
+    if (dom.likeBtn) {
+      dom.likeBtn.addEventListener('click', () => {
+        dom.likeBtn.classList.toggle('active');
+        const isFav = dom.likeBtn.classList.contains('active');
+        showToast(isFav ? 'Đã thêm vào danh sách yêu thích 💚' : 'Đã bỏ yêu thích 🍃');
+      });
+    }
+
+    // 4. Thanh tiến trình lượn sóng & Chú lửa Calcifer
     dom.progressContainer.addEventListener('pointerdown', (e) => {
       state.isScrubbing = true;
       dom.progressContainer.setPointerCapture(e.pointerId);
@@ -1711,29 +1697,163 @@
       if (!state.isScrubbing) dom.progressHoverTime.style.opacity = '0';
     });
 
-    // 9. Thanh âm lượng & Mute
+    // 5. Volume Slider & Mute
     dom.volumeSlider.addEventListener('input', (e) => setVolume(e.target.value));
     dom.muteBtn.addEventListener('click', toggleMute);
 
-    // 10. Tìm kiếm bài hát trong playlist
+    // 6. Queue Drawer Toggle & Close
+    if (dom.queueToggleBtn) {
+      dom.queueToggleBtn.addEventListener('click', () => {
+        dom.playlistCottage.classList.toggle('hidden');
+      });
+    }
+
+    if (dom.closeDrawerBtn) {
+      dom.closeDrawerBtn.addEventListener('click', () => {
+        dom.playlistCottage.classList.add('hidden');
+      });
+    }
+
+    // 7. Click Playlist Cards (Grid 6 Cards từ GIAODIEN.png)
+    dom.playlistCards.forEach((card, index) => {
+      card.addEventListener('click', () => {
+        const cardTrackName = card.dataset.track;
+        const matchingIndex = state.playlist.findIndex(t => 
+          t.title.toLowerCase().includes(cardTrackName.toLowerCase()) || 
+          cardTrackName.toLowerCase().includes(t.title.toLowerCase())
+        );
+
+        if (matchingIndex !== -1) {
+          loadTrack(matchingIndex, true);
+        } else if (index < state.playlist.length) {
+          loadTrack(index, true);
+        }
+        showToast(`Đang phát: ${cardTrackName} 🍃✨`);
+      });
+    });
+
+    // 8. Left Sidebar Sub-Playlists Click
+    document.querySelectorAll('.sub-playlist-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const pl = item.dataset.playlist;
+        const matchingIndex = state.playlist.findIndex(t => 
+          (t.album && t.album.toLowerCase().includes(pl.replace('-', ' '))) ||
+          t.title.toLowerCase().includes(pl.split('-')[0])
+        );
+        if (matchingIndex !== -1) {
+          loadTrack(matchingIndex, true);
+        } else {
+          loadTrack(0, true);
+        }
+      });
+    });
+
+    // 9. History Buttons `<` `>`
+    if (dom.historyBackBtn) {
+      dom.historyBackBtn.addEventListener('click', prevTrack);
+    }
+    if (dom.historyForwardBtn) {
+      dom.historyForwardBtn.addEventListener('click', () => nextTrack(false));
+    }
+
+    // 10. Tìm kiếm bài hát
     dom.searchInput.addEventListener('input', (e) => filterCards(e.target.value));
     dom.clearSearchBtn.addEventListener('click', () => {
       dom.searchInput.value = '';
       filterCards('');
     });
 
-    // 11. Chuyển chế độ Visualizer mầm cây / sóng gió
-    dom.visualizerModeBtn.addEventListener('click', () => {
-      if (state.visualizerMode === 'bars') {
-        state.visualizerMode = 'wave';
-        dom.visModeLabel.textContent = '〰️ Sóng Gió';
-      } else {
-        state.visualizerMode === 'bars';
-        dom.visModeLabel.textContent = '🌱 Mầm Cây';
+    // 11. WebTorrent Controls
+    dom.torrentToggleBtn.addEventListener('click', () => {
+      dom.torrentPanel.classList.toggle('hidden');
+      if (!dom.torrentPanel.classList.contains('hidden')) {
+        dom.torrentInput.focus();
       }
     });
 
-    // 12. Modal Đăng Nhập / Đăng Ký & Lá Thư Ghibli Cloud Sync
+    dom.torrentForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const val = dom.torrentInput.value.trim();
+      if (!val) {
+        showToast('Vui lòng dán Magnet Link hoặc chọn bài mẫu!');
+        return;
+      }
+
+      const preparedMagnet = prepareMagnetLink(val);
+      if (preparedMagnet) {
+        startTorrentDownload(preparedMagnet);
+      } else {
+        showToast(`Đang tìm bài hát "${val}" qua mạng lưới P2P...`);
+        startTorrentDownload(SAMPLE_MAGNETS['totoro-lofi'].magnet, val);
+      }
+    });
+
+    document.querySelectorAll('.sample-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const query = btn.dataset.query;
+        const sample = SAMPLE_MAGNETS[query];
+        if (sample) {
+          dom.torrentInput.value = sample.magnet;
+          startTorrentDownload(sample.magnet, sample.name);
+        }
+      });
+    });
+
+    dom.saveToDiskBtn.addEventListener('click', () => {
+      saveTorrentFileLocally(state.currentTorrentFile);
+    });
+
+    dom.playTorrentNowBtn.addEventListener('click', () => {
+      if (state.currentTorrentFile) {
+        streamAudioFile(state.currentTorrentFile, dom.torrentFileName.textContent);
+      }
+    });
+
+    dom.cancelTorrentBtn.addEventListener('click', () => {
+      if (state.activeTorrent) {
+        try { state.activeTorrent.destroy(); } catch (_) {}
+        state.activeTorrent = null;
+      }
+      dom.torrentStatusCard.classList.add('hidden');
+      showToast('Đã dừng tiến trình WebTorrent.');
+    });
+
+    dom.torrentInput.addEventListener('input', (e) => {
+      if (e.target.value.trim()) dom.clearTorrentInput.classList.remove('hidden');
+      else dom.clearTorrentInput.classList.add('hidden');
+    });
+
+    dom.clearTorrentInput.addEventListener('click', () => {
+      dom.torrentInput.value = '';
+      dom.clearTorrentInput.classList.add('hidden');
+    });
+
+    // 12. Local Folder Input & Drag/Drop
+    dom.folderInput.addEventListener('change', (e) => {
+      handleFiles(e.target.files);
+      e.target.value = '';
+    });
+    dom.fileInput.addEventListener('change', (e) => {
+      handleFiles(e.target.files);
+      e.target.value = '';
+    });
+
+    ['dragenter', 'dragover'].forEach(name => {
+      window.addEventListener(name, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }, false);
+    });
+
+    window.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+        handleFiles(e.dataTransfer.files);
+      }
+    });
+
+    // 13. Cloud Sync Modal & Supabase Form
     if (dom.authModalTriggerBtn) {
       dom.authModalTriggerBtn.addEventListener('click', openAuthModal);
     }
@@ -1760,7 +1880,7 @@
       dom.manualSyncBtn.addEventListener('click', syncPlaylistToCloud);
     }
 
-    // 13. Phím tắt toàn cục
+    // 14. Phím tắt toàn cục (Keyboard Shortcuts)
     window.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT') return;
 
@@ -1804,13 +1924,17 @@
     });
   }
 
-  // --- KHỞI ĐỘNG ---
-  function init() {
+  // --- KHỞI ĐỘNG HỆ THỐNG ---
+  async function init() {
     setVolume(0.8);
     setLoopMode('all');
-    initCanvas();
+    renderPlaylist();
+    updatePlaylistCount();
     setupEvents();
     initAuthSession();
+
+    // Nạp bài Howl's Joy (Merry-Go-Round of Life) mặc định chuẩn GIAODIEN.png
+    loadTrack(2, false);
   }
 
   document.addEventListener('DOMContentLoaded', init);

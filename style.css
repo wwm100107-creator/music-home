@@ -1,1256 +1,930 @@
-/* ==========================================================================
-   MUSIC HOME • STUDIO GHIBLI & MY NEIGHBOR TOTORO SOUND STATION
-   Local Playback + WebTorrent P2P + Cloud Sync & Custom Acorn Loop
-   ========================================================================== */
+/**
+ * ============================================================================
+ * MUSIC HOME • STUDIO GHIBLI & MY NEIGHBOR TOTORO PIXEL-PERFECT UI
+ * Designed strictly according to GIAODIEN.png and user assets:
+ * - background.mp4: Fullscreen dynamic video background
+ * - taskbar.png: Left glassmorphic sidebar with precise icons & typography
+ * - wood.jpg / wood.png: Active "Playlists" wooden plank with Kodama spirit
+ * - f.jpg / f.png: Calcifer flame thumb riding along wavy vine progress bar
+ * ============================================================================
+ * 
+ * HỆ THỐNG SKILLS ĐƯỢC ÁP DỤNG TRONG CSS:
+ * - [SKILL: /image-to-code-skill] : Tái tạo trung thực 1:1 tỉ lệ, màu sắc, font chữ và bố cục từ GIAODIEN.png
+ * - [SKILL: /impeccable] : Typography outline (-webkit-text-stroke), glassmorphism (backdrop-filter: blur),
+ *   mix-blend-mode: multiply cho ngọn lửa Calcifer, zero layout-shift.
+ * - [SKILL: /animate & /improve-animations] : Hoạt ảnh ngọn lửa Calcifer nhấp nháy/phập phồng khi phát nhạc,
+ *   nút Play/Pause gỗ đàn hồi (spring), hiệu ứng mở modal lá thư chao nghiêng (leafModalDrop).
+ * - [SKILL: /ponytail & /ponytail-help] : CSS gọn gàng, hiệu năng GPU cao (transform/opacity), không thừa thãi.
+ */
 
-/* --------------------------------------------------------------------------
-   [SKILL: /impeccable & /redesign-existing-projects] DESIGN TOKENS
-   Bảng màu thiên nhiên Ghibli: Bầu trời trong vắt, đồng cỏ xanh, gỗ mộc, giấy da
-   -------------------------------------------------------------------------- */
-:root {
-  /* Bầu trời & Mây trắng Ghibli */
-  --sky-top: #1f6fb2;
-  --sky-mid: #4ea8de;
-  --sky-horizon: #90e0ef;
-  --cloud-white: rgba(255, 255, 255, 0.92);
-  --cloud-shadow: rgba(180, 215, 240, 0.4);
-
-  /* Đồi cỏ & Cây lá xanh Totoro */
-  --grass-far: #74c69d;
-  --grass-mid: #52b788;
-  --grass-front: #2d6a4f;
-  --moss-dark: #1b4332;
-  --leaf-bright: #38b000;
-
-  /* Gỗ mộc, Giấy da & Vỏ cây */
-  --wood-cream: #fffdf7;
-  --wood-light: #faedcd;
-  --wood-warm: #d4a373;
-  --wood-dark: #8c5d2f;
-  --bark-border: #6f4518;
-  
-  --parchment-bg: #fffbf0;
-  --parchment-border: #e6ccb2;
-  --parchment-shadow: rgba(140, 93, 47, 0.15);
-
-  /* Điểm nhấn hoa quả & bọ rùa */
-  --ladybug-red: #e63946;
-  --ladybug-dark: #9b2226;
-  --sun-gold: #ffd166;
-  --flower-pink: #ff758f;
-  --torrent-sky: #0284c7;
-  --acorn-brown: #8d5b4c;
-  --acorn-cap: #583101;
-
-  /* Font chữ bo tròn dễ thương, thân thiện (100% Offline) */
-  --font-ghibli: "Nunito", "Quicksand", "Comfortaa", "Comic Sans MS", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, cursive, sans-serif;
-  --font-hand: "Comic Sans MS", "Chalkboard SE", "Segoe Print", cursive, sans-serif;
-
-  /* Easing chuyển động nảy mềm mại */
-  --spring-soft: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --spring-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  --ease-wind: cubic-bezier(0.45, 0.05, 0.55, 0.95);
-}
-
-/* Reset & Box Sizing */
+/* --- RESET & TOKENS --- */
 *, *::before, *::after {
-  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
 }
 
-body.ghibli-world {
-  font-family: var(--font-ghibli);
-  min-height: 100vh;
-  color: #33271e;
-  overflow-x: hidden;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 35%, var(--sky-horizon) 65%, #d8f3dc 85%, #b7e4c7 100%);
+:root {
+  /* Bảng màu Ghibli & Totoro Vibe từ GIAODIEN.png */
+  --sidebar-glass-bg: rgba(182, 218, 186, 0.72);
+  --sidebar-border: rgba(45, 75, 45, 0.28);
+  --player-glass-bg: rgba(185, 205, 175, 0.76);
+  --player-border: rgba(40, 70, 45, 0.32);
+  
+  --ghibli-cream: #fefae0;
+  --ghibli-yellow-light: #fdf6c7;
+  --ghibli-brown-dark: #2b1810;
+  --ghibli-brown-mid: #4a2c11;
+  --ghibli-brown-wood: #8c5d2f;
+  --ghibli-vine-dark: #2d5a27;
+  --ghibli-vine-bright: #7fc95e;
+  --ghibli-leaf-green: #52b788;
+  
+  --font-ghibli-brand: 'Sniglet', 'Fredoka', cursive, sans-serif;
+  --font-ghibli-nav: 'Fredoka', 'Comfortaa', cursive, sans-serif;
+  --font-ghibli-title: 'Comfortaa', 'Fredoka', cursive, sans-serif;
+  --font-ghibli-meta: 'Quicksand', 'Fredoka', sans-serif;
+
+  /* [SKILL: /animate] Easing curves chuẩn */
+  --ease-out-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-smooth: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+body.ghibli-app-body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  font-family: var(--font-ghibli-nav);
+  color: var(--ghibli-brown-dark);
+  background-color: #72a87d;
   user-select: none;
-}
-
-/* Lớp hình nền Totoro tùy chọn */
-.ghibli-bg-layer {
-  position: fixed;
-  inset: 0;
-  background-size: cover;
-  background-position: center bottom;
-  opacity: 0.95;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.ghibli-bg {
-  background-image: url('./bg.jpg');
+  -webkit-font-smoothing: antialiased;
 }
 
 /* --------------------------------------------------------------------------
-   [SKILL: /animate] BẦU TRỜI GHIBLI: HỆ THỐNG MÂY TRẮNG TRÔI TỰ NHIÊN
+   1. BACKGROUND VIDEO ĐỘNG: BẦU TRỜI & LÂU ĐÀI (FULLSCREEN)
+   [SKILL: /image-to-code-skill]
    -------------------------------------------------------------------------- */
-.cloud-sky {
+.bg-video {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 55vh;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: -2;
   pointer-events: none;
-  z-index: 1;
-  overflow: hidden;
 }
 
-.cloud {
-  position: absolute;
-  background: var(--cloud-white);
-  border-radius: 100px;
-  filter: drop-shadow(0 8px 14px var(--cloud-shadow));
-  opacity: 0.88;
-  will-change: transform;
-}
-
-.cloud::before, .cloud::after {
-  content: "";
-  position: absolute;
-  background: inherit;
-  border-radius: 50%;
-}
-
-.cloud-1 {
-  width: 240px;
-  height: 70px;
-  top: 8%;
-  left: -250px;
-  animation: cloudDrift 42s linear infinite;
-}
-.cloud-1::before { width: 100px; height: 100px; top: -45px; left: 35px; }
-.cloud-1::after  { width: 80px;  height: 80px;  top: -30px; left: 110px; }
-
-.cloud-2 {
-  width: 180px;
-  height: 55px;
-  top: 22%;
-  left: -200px;
-  animation: cloudDrift 58s linear infinite 14s;
-  opacity: 0.75;
-  transform: scale(0.85);
-}
-.cloud-2::before { width: 75px; height: 75px; top: -35px; left: 25px; }
-.cloud-2::after  { width: 60px; height: 60px; top: -22px; left: 85px; }
-
-.cloud-3 {
-  width: 280px;
-  height: 80px;
-  top: 36%;
-  left: -300px;
-  animation: cloudDrift 70s linear infinite 28s;
-  opacity: 0.65;
-  transform: scale(0.9);
-}
-.cloud-3::before { width: 110px; height: 110px; top: -50px; left: 45px; }
-.cloud-3::after  { width: 90px;  height: 90px;  top: -35px; left: 130px; }
-
-.cloud-4 {
-  width: 140px;
-  height: 45px;
-  top: 15%;
-  left: -150px;
-  animation: cloudDrift 36s linear infinite 6s;
-  opacity: 0.8;
-}
-.cloud-4::before { width: 55px; height: 55px; top: -25px; left: 20px; }
-
-@keyframes cloudDrift {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(calc(100vw + 350px)); }
-}
-
-/* Đồi cỏ xanh nhấp nhô */
-.hills-backdrop {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 38vh;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.hill {
-  position: absolute;
-  bottom: 0;
-  border-radius: 50% 50% 0 0;
-}
-
-.hill-back  { width: 120vw; height: 35vh; left: -10vw; background: var(--grass-far); opacity: 0.85; }
-.hill-mid   { width: 130vw; height: 28vh; right: -15vw; background: var(--grass-mid); opacity: 0.9; }
-.hill-front { width: 140vw; height: 18vh; left: -20vw; background: var(--grass-front); box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08); }
-
-/* Đom đóm bay lên từ đĩa nhạc */
-.fireflies-container {
+.nature-overlay {
   position: fixed;
   inset: 0;
+  background: radial-gradient(circle at 60% 45%, rgba(255, 255, 255, 0.05) 0%, rgba(10, 30, 15, 0.18) 100%);
+  z-index: -1;
   pointer-events: none;
-  z-index: 15;
-  overflow: hidden;
-  opacity: 0;
-  transition: opacity 1s ease;
 }
 
-body.music-playing .fireflies-container {
-  opacity: 1;
+/* Đom đóm lấp lánh nhẹ trong rừng */
+.fireflies-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
 }
 
 .firefly {
   position: absolute;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--sun-gold);
-  box-shadow: 0 0 10px 3px rgba(255, 209, 102, 0.85);
-  bottom: 25%;
-  left: 25%;
-  opacity: 0;
-  animation: fireflyFloat 6s infinite ease-in-out;
-}
-
-.f1 { left: 22%; animation-delay: 0s;   animation-duration: 5.5s; --dx: -35px; }
-.f2 { left: 26%; animation-delay: 1.2s; animation-duration: 6.8s; --dx: 45px; width: 8px; height: 8px; }
-.f3 { left: 20%; animation-delay: 2.5s; animation-duration: 4.9s; --dx: -20px; }
-.f4 { left: 28%; animation-delay: 0.8s; animation-duration: 7.2s; --dx: 60px; }
-.f5 { left: 24%; animation-delay: 3.4s; animation-duration: 5.8s; --dx: -50px; width: 7px; height: 7px; }
-.f6 { left: 19%; animation-delay: 1.9s; animation-duration: 6.2s; --dx: 30px; }
-.f7 { left: 30%; animation-delay: 4.1s; animation-duration: 5.2s; --dx: -15px; }
-.f8 { left: 23%; animation-delay: 2.8s; animation-duration: 6.5s; --dx: 40px; }
-
-@keyframes fireflyFloat {
-  0% { transform: translate(0, 0) scale(0.4); opacity: 0; }
-  30% { opacity: 0.95; transform: translate(calc(var(--dx) * 0.5), -70px) scale(1.1); }
-  80% { opacity: 0.7; }
-  100% { transform: translate(var(--dx), -220px) scale(0.2); opacity: 0; }
-}
-
-/* --------------------------------------------------------------------------
-   KHUNG BỐ CỤC ỨNG DỤNG (APP CANVAS)
-   -------------------------------------------------------------------------- */
-.app-canvas {
-  position: relative;
-  z-index: 10;
-  max-width: 1200px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 20px 24px 40px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-/* THANH TIÊU ĐỀ: BẢNG GỖ MỘC TREO DÂY (WOODEN HEADER) */
-.wooden-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 24px;
-  background: var(--wood-light);
-  border: 3px solid var(--bark-border);
-  border-radius: 28px;
-  box-shadow: 
-    0 8px 0 var(--wood-dark),
-    0 14px 28px rgba(60, 40, 20, 0.25);
-  position: relative;
-}
-
-.wooden-header::before, .wooden-header::after {
-  content: "";
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--bark-border);
-  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.5);
-}
-.wooden-header::before { top: 12px; left: 12px; }
-.wooden-header::after { top: 12px; right: 12px; }
-
-.header-brand {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.soot-sprite {
-  width: 44px;
-  height: 44px;
-  position: relative;
-  animation: spriteWiggle 3s ease-in-out infinite;
-}
-
-.sprite-body {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: #1c1917;
-  box-shadow: 0 0 0 3px #292524, 0 4px 10px rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  position: relative;
-}
-
-.sprite-eye {
-  width: 12px;
-  height: 12px;
-  background: #ffffff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.sprite-eye .pupil {
   width: 5px;
   height: 5px;
-  background: #000000;
+  background: #c7f9cc;
   border-radius: 50%;
-  animation: eyeLook 4s infinite;
+  box-shadow: 0 0 10px #70e000, 0 0 18px #d8f3dc;
+  animation: fireflyFloat 8s infinite ease-in-out;
+  opacity: 0.6;
 }
+.firefly.f1 { top: 20%; left: 35%; animation-delay: 0s; }
+.firefly.f2 { top: 45%; left: 70%; animation-delay: 2.5s; }
+.firefly.f3 { top: 65%; left: 45%; animation-delay: 4.8s; }
+.firefly.f4 { top: 30%; left: 85%; animation-delay: 1.2s; }
+.firefly.f5 { top: 75%; left: 80%; animation-delay: 3.4s; }
+.firefly.f6 { top: 15%; left: 55%; animation-delay: 5.5s; }
 
-@keyframes spriteWiggle {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-4px) rotate(4deg); }
-}
-
-@keyframes eyeLook {
-  0%, 100% { transform: translate(0, 0); }
-  25% { transform: translate(2px, -1px); }
-  75% { transform: translate(-2px, 1px); }
-}
-
-.ghibli-title {
-  font-family: var(--font-hand);
-  font-size: 1.5rem;
-  font-weight: 900;
-  letter-spacing: 0.05em;
-  color: #4a2810;
-  text-shadow: 1px 1px 0 #fff;
-  line-height: 1.2;
-}
-
-.ghibli-subtitle {
-  font-size: 0.8rem;
-  color: var(--moss-dark);
-  font-weight: 700;
-  display: block;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Các nút bấm chất liệu gỗ mộc & dây thừng */
-.ghibli-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 16px;
-  border-radius: 20px;
-  font-family: var(--font-ghibli);
-  font-size: 0.88rem;
-  font-weight: 800;
-  cursor: pointer;
-  border: 2px solid var(--bark-border);
-  transition: all 0.16s var(--spring-soft);
-}
-
-.btn-wood-primary {
-  background: var(--leaf-bright);
-  color: #ffffff;
-  box-shadow: 0 4px 0 #1b6c62, 0 8px 14px rgba(45, 106, 79, 0.3);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-}
-.btn-wood-primary:hover {
-  transform: translateY(-3px) scale(1.03);
-  box-shadow: 0 7px 0 #1b6c62, 0 12px 20px rgba(45, 106, 79, 0.4);
-}
-.btn-wood-primary:active { transform: translateY(3px); box-shadow: 0 1px 0 #1b6c62; }
-
-.btn-wood-secondary {
-  background: #fdfbf7;
-  color: #4a2810;
-  box-shadow: 0 4px 0 var(--wood-warm), 0 6px 12px rgba(0, 0, 0, 0.12);
-}
-.btn-wood-secondary:hover { transform: translateY(-2px); box-shadow: 0 6px 0 var(--wood-warm); }
-.btn-wood-secondary:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--wood-warm); }
-
-.btn-torrent-toggle {
-  background: #0284c7;
-  color: #ffffff;
-  border-color: #0369a1;
-  box-shadow: 0 4px 0 #075985, 0 8px 14px rgba(2, 132, 199, 0.35);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.25);
-}
-.btn-torrent-toggle:hover {
-  transform: translateY(-2px) scale(1.03);
-  box-shadow: 0 7px 0 #075985, 0 12px 20px rgba(2, 132, 199, 0.45);
-}
-.btn-torrent-toggle:active { transform: translateY(3px); box-shadow: 0 1px 0 #075985; }
-
-/* Nút bấm Auth & Cloud Sync Pill */
-.btn-auth-pill {
-  background: #fefae0;
-  color: #583101;
-  border-color: #bc6c25;
-  box-shadow: 0 4px 0 #8c5d2f, 0 6px 12px rgba(90, 50, 20, 0.2);
-}
-.btn-auth-pill:hover {
-  transform: translateY(-2px) scale(1.03);
-  background: #fff;
-  box-shadow: 0 6px 0 #8c5d2f;
-}
-.btn-auth-pill:active { transform: translateY(3px); box-shadow: 0 1px 0 #8c5d2f; }
-
-.btn-auth-pill.logged-in {
-  background: #d8f3dc;
-  color: #1b4332;
-  border-color: #2d6a4f;
-  box-shadow: 0 4px 0 #2d6a4f;
+@keyframes fireflyFloat {
+  0%, 100% { transform: translate(0, 0) scale(0.9); opacity: 0.3; }
+  50% { transform: translate(25px, -35px) scale(1.3); opacity: 0.85; }
 }
 
 /* --------------------------------------------------------------------------
-   BẢNG WEBTORRENT GHIBLI COTTAGE PANEL
+   LAYOUT TỔNG THỂ
    -------------------------------------------------------------------------- */
-.torrent-cottage-panel {
-  background: var(--parchment-bg);
-  border: 3px solid var(--wood-warm);
-  border-radius: 28px;
-  box-shadow: 
-    0 8px 0 var(--wood-dark),
-    0 16px 32px var(--parchment-shadow);
-  padding: 20px 24px;
-  transition: all 0.3s var(--spring-soft);
-}
-
-.torrent-panel-inner {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.torrent-search-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.torrent-title-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.acorn-tag {
-  font-size: 0.76rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  background: var(--grass-front);
-  color: #ffffff;
-  padding: 4px 10px;
-  border-radius: 12px;
-  box-shadow: 0 2px 0 #0d281e;
-}
-
-.torrent-tagline {
-  font-size: 0.84rem;
-  font-weight: 700;
-  color: #7f5539;
-}
-
-.sample-magnets-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.sample-label {
-  font-size: 0.78rem;
-  font-weight: 800;
-  color: #8c5d2f;
-}
-
-.sample-btn {
-  background: #faedcd;
-  border: 1px solid var(--bark-border);
-  color: #4a2810;
-  font-family: var(--font-ghibli);
-  font-size: 0.76rem;
-  font-weight: 800;
-  padding: 4px 10px;
-  border-radius: 12px;
-  cursor: pointer;
-  box-shadow: 0 2px 0 var(--wood-warm);
-  transition: all 0.12s;
-}
-.sample-btn:hover { background: #fefae0; transform: translateY(-2px); box-shadow: 0 4px 0 var(--wood-warm); }
-.sample-btn:active { transform: translateY(2px); box-shadow: 0 0 0; }
-
-.torrent-input-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-}
-
-.torrent-input-wrapper {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  background: #ffffff;
-  border: 2px solid var(--wood-warm);
-  border-radius: 20px;
-  padding: 8px 16px;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.08);
-}
-
-.torrent-input-wrapper input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-family: var(--font-ghibli);
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: #3b220d;
-  margin-left: 10px;
-}
-.torrent-input-wrapper input::placeholder { color: #a08060; }
-
-.btn-torrent-action {
-  background: var(--grass-mid);
-  color: #ffffff;
-  border-color: var(--grass-front);
-  box-shadow: 0 4px 0 var(--moss-dark), 0 8px 14px rgba(45, 106, 79, 0.3);
-  padding: 10px 22px;
-  white-space: nowrap;
-}
-.btn-torrent-action:hover { transform: translateY(-2px); box-shadow: 0 6px 0 var(--moss-dark); }
-.btn-torrent-action:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--moss-dark); }
-
-/* Susuwatari Loading Animation */
-.torrent-status-card {
-  background: #ffffff;
-  border: 2px dashed #95d5b2;
-  border-radius: 22px;
-  padding: 16px 20px;
-  box-shadow: inset 0 0 12px rgba(82, 183, 136, 0.1);
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.susuwatari-work-crew {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 6px 0;
+.app-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  grid-template-rows: 1fr 96px;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
   position: relative;
 }
 
-.worker-sprite {
+/* --------------------------------------------------------------------------
+   2. LEFT SIDEBAR (THANH MENU TRÁI KÍNH TRONG SUỐT THEO TASKBAR.PNG)
+   [SKILL: /image-to-code-skill & /impeccable]
+   -------------------------------------------------------------------------- */
+.sidebar-glass {
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+  background: var(--sidebar-glass-bg);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-right: 2px solid var(--sidebar-border);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08);
+  padding: 24px 14px 20px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 10;
+}
+
+.sidebar-glass::-webkit-scrollbar { width: 4px; }
+.sidebar-glass::-webkit-scrollbar-thumb { background: rgba(70, 110, 70, 0.3); border-radius: 4px; }
+
+/* Brand: Home Music */
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px 8px;
+}
+
+.brand-icon {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  background: #1c1917;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+}
+
+.brand-text {
+  font-family: var(--font-ghibli-brand);
+  font-size: 1.32rem;
+  font-weight: 900;
+  color: var(--ghibli-yellow-light);
+  -webkit-text-stroke: 1px var(--ghibli-brown-dark);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+  letter-spacing: 0.02em;
+}
+
+/* Main Navigation Menu */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nav-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.25);
-  animation: workerBounce 1.2s ease-in-out infinite alternate;
-}
-.sprite-left { animation-delay: 0s; }
-.sprite-right { animation-delay: 0.6s; }
-
-.worker-eyes {
-  width: 9px;
-  height: 9px;
-  background: #fff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.worker-eyes .pupil { width: 4px; height: 4px; background: #000; border-radius: 50%; }
-
-.flying-leaf-leaf {
-  font-size: 1.4rem;
-  animation: leafPass 1.2s ease-in-out infinite alternate;
+  gap: 12px;
+  padding: 7px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--ghibli-yellow-light);
+  cursor: pointer;
+  transition: transform 0.18s var(--ease-smooth), background 0.18s;
+  position: relative;
 }
 
-@keyframes workerBounce {
-  0% { transform: translateY(0) scale(1, 1); }
-  100% { transform: translateY(-5px) scale(0.95, 1.05); }
+.nav-item:hover:not(.active) {
+  transform: translateX(5px);
+  background: rgba(255, 255, 255, 0.18);
 }
 
-@keyframes leafPass {
-  0% { transform: translateX(-16px) rotate(-20deg); }
-  100% { transform: translateX(16px) rotate(20deg); }
+.nav-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
 }
 
-.worker-speech {
-  font-size: 0.84rem;
-  font-weight: 800;
-  color: var(--moss-dark);
-  margin-left: 10px;
-}
-
-.torrent-meta-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.torrent-name {
-  font-family: var(--font-hand);
+.nav-text {
+  font-family: var(--font-ghibli-nav);
   font-size: 1.05rem;
-  font-weight: 900;
-  color: #3b220d;
-  margin-bottom: 4px;
-}
-
-.torrent-stats-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
   font-weight: 700;
-  color: #7f5539;
-  flex-wrap: wrap;
-}
-.stat-pill strong { color: var(--grass-front); }
-.stat-separator { color: #d4a373; }
-
-.torrent-actions-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  color: var(--ghibli-yellow-light);
+  -webkit-text-stroke: 0.9px var(--ghibli-brown-dark);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
 }
 
-.btn-save-disk {
-  background: #52b788;
-  color: #ffffff;
-  border-color: #2d6a4f;
-  box-shadow: 0 4px 0 #1b4332;
-  font-size: 0.84rem;
-  padding: 8px 14px;
-}
-.btn-save-disk:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #1b4332; }
-.btn-save-disk:active { transform: translateY(2px); box-shadow: 0 1px 0 #1b4332; }
-
-.btn-play-torrent {
-  background: #ffd166;
-  color: #4a2810;
-  border-color: #d4a31e;
-  box-shadow: 0 4px 0 #b38600;
-  font-size: 0.84rem;
-  padding: 8px 14px;
-}
-
-.btn-cancel-torrent {
-  background: #fdfbf7;
-  color: #8c2f39;
-  border-color: #e63946;
-  box-shadow: 0 3px 0 #9b2226;
-  font-size: 0.8rem;
-  padding: 8px 12px;
-}
-
-.torrent-progress-bar-container {
-  position: relative;
-  width: 100%;
-  height: 16px;
-  background: #d8f3dc;
-  border: 2px solid #74c69d;
-  border-radius: 12px;
-  overflow: visible;
-}
-
-.torrent-progress-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, #52b788, #0284c7);
-  border-radius: 10px;
-  transition: width 0.25s linear;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.cloud-shuttle {
-  font-size: 1rem;
-  transform: translate(6px, -1px);
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-}
-
-.torrent-percent-badge {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.72rem;
-  font-weight: 900;
-  color: var(--moss-dark);
-}
-
-/* --------------------------------------------------------------------------
-   BỐ CỤC CHÍNH (GHIBLI MAIN GRID: PLAYER & PLAYLIST)
-   -------------------------------------------------------------------------- */
-.ghibli-main-grid {
-  display: grid;
-  grid-template-columns: 460px 1fr;
-  gap: 28px;
-}
-
-.nature-card {
-  background: var(--parchment-bg);
-  border: 3px solid var(--wood-warm);
-  border-radius: 32px;
-  box-shadow: 
-    0 10px 0 var(--wood-dark),
-    0 20px 40px var(--parchment-shadow);
-  padding: 26px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  position: relative;
-}
-
-/* Cành lá dây leo đung đưa theo gió */
-.swaying-vine-branch {
-  position: absolute;
-  top: -12px;
-  right: 28px;
-  width: 90px;
-  height: 50px;
-  pointer-events: none;
-  transform-origin: top right;
-  animation: gentleBreeze 4.5s var(--ease-wind) infinite alternate;
-  z-index: 12;
-}
-
-.vine-stem {
-  position: absolute;
-  width: 70px;
-  height: 3px;
-  background: var(--moss-dark);
-  border-radius: 3px;
-  transform: rotate(-10deg);
-}
-
-.vine-leaf {
-  position: absolute;
-  width: 18px;
-  height: 10px;
-  background: var(--leaf-bright);
-  border-radius: 12px 0;
-  box-shadow: inset 0 0 3px rgba(0,0,0,0.15);
-}
-.vine-leaf.l1 { top: 6px;  right: 20px; transform: rotate(-25deg); }
-.vine-leaf.l2 { top: -6px; right: 40px; transform: rotate(35deg); background: #52b788; }
-.vine-leaf.l3 { top: 8px;  right: 55px; transform: rotate(-40deg); }
-.vine-leaf.l4 { top: -4px; right: 70px; transform: rotate(20deg); background: #74c69d; }
-
-@keyframes gentleBreeze {
-  0% { transform: rotate(0deg); }
-  50% { transform: rotate(8deg); }
-  100% { transform: rotate(-4deg); }
-}
-
-/* Đĩa than vân gỗ cây & Visualizer sóng gió */
-.wood-turntable-deck {
-  position: relative;
-  width: 100%;
-  height: 250px;
-  background: #f4ecd8;
-  border-radius: 24px;
-  border: 3px solid #e0ceb5;
-  box-shadow: inset 0 4px 10px rgba(120, 80, 40, 0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.ghibli-visualizer {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  pointer-events: none;
-  opacity: 0.85;
-}
-
-.trunk-disc-wrapper {
-  position: relative;
-  width: 180px;
-  height: 180px;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.trunk-record {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: 
-    repeating-radial-gradient(circle at center, #c99355 0px, #b07d42 2px, #d4a373 4px, #9e6d34 6px, #bc8a52 8px),
-    #b07d42;
-  border: 4px solid var(--bark-border);
-  box-shadow: 
-    0 10px 24px rgba(80, 50, 20, 0.3),
-    inset 0 0 15px rgba(0, 0, 0, 0.25);
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: recordSpin 12s linear infinite;
-  animation-play-state: paused;
-  will-change: transform;
-}
-
-.trunk-record.playing { animation-play-state: running; }
-
-@keyframes recordSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.growth-ring {
-  position: absolute;
-  border-radius: 50%;
-  border: 1px dashed rgba(255, 255, 255, 0.25);
-  pointer-events: none;
-}
-.r1 { width: 84%; height: 84%; }
-.r2 { width: 68%; height: 68%; }
-.r3 { width: 50%; height: 50%; }
-
-.record-sprout-center {
-  width: 66px;
-  height: 66px;
-  border-radius: 50%;
-  background: #faedcd;
-  border: 3px solid var(--bark-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  position: relative;
-}
-
-.record-pin {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  background: #4a2810;
-  border-radius: 50%;
-  border: 2px solid #fff;
-}
-
-.twig-tonearm {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  width: 45px;
-  height: 115px;
-  pointer-events: none;
-  z-index: 3;
-  transform-origin: 30px 15px;
-  transform: rotate(0deg);
-  transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.twig-tonearm.active { transform: rotate(26deg); }
-
-.twig-base-acorn {
-  position: absolute;
-  top: 6px;
-  right: 4px;
-  width: 22px;
-  height: 22px;
-  background: var(--wood-dark);
-  border: 2px solid var(--bark-border);
-  border-radius: 50%;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.25);
-}
-
-.twig-arm {
-  position: absolute;
-  top: 22px;
-  right: 13px;
-  width: 5px;
-  height: 85px;
-  background: #6f4518;
-  border-radius: 3px;
-  box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-}
-
-.twig-leaf-stylus {
-  position: absolute;
-  bottom: 0;
-  right: 6px;
-  width: 16px;
-  height: 18px;
-  background: var(--leaf-bright);
-  border-radius: 12px 0;
-  border: 1px solid var(--moss-dark);
-  box-shadow: 1px 2px 4px rgba(0,0,0,0.25);
-}
-
-.leaf-toggle-btn {
-  position: absolute;
-  bottom: 10px;
-  right: 14px;
-  z-index: 4;
-  padding: 4px 12px;
-  font-family: var(--font-ghibli);
-  font-size: 0.75rem;
-  font-weight: 800;
-  background: #ffffff;
-  color: var(--moss-dark);
-  border: 2px solid var(--wood-warm);
-  border-radius: 16px;
-  cursor: pointer;
-  box-shadow: 0 3px 0 var(--wood-warm);
-  transition: all 0.12s;
-}
-.leaf-toggle-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 0 var(--wood-warm); }
-.leaf-toggle-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--wood-warm); }
-
-/* Màn hình cuộn giấy da */
-.parchment-scroll {
-  background: #ffffff;
-  border: 2px dashed #d4a373;
-  border-radius: 20px;
-  padding: 14px 18px;
-  box-shadow: 
-    0 4px 0 #faedcd,
-    inset 0 0 12px rgba(212, 163, 115, 0.12);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  position: relative;
-}
-
-.scroll-status-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: var(--moss-dark);
-}
-
-.format-tag {
+.spirit-mini-note {
+  font-size: 0.95rem;
   margin-left: auto;
-  font-size: 0.7rem;
-  font-weight: 800;
-  background: #e9d8a6;
-  color: #4a2810;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-
-.track-title-container {
-  width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.parchment-title {
-  font-family: var(--font-hand);
-  font-size: 1.25rem;
-  font-weight: 900;
-  color: #3b220d;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  line-height: 1.3;
-}
-
-.parchment-artist {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #7f5539;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Thanh tiến trình sợi dây leo & Chú bọ rùa */
-.vine-progress-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.vine-progress-track {
-  position: relative;
-  width: 100%;
-  height: 14px;
-  background: #d8f3dc;
-  border-radius: 10px;
-  border: 2px solid #95d5b2;
-  box-shadow: inset 0 2px 4px rgba(45, 106, 79, 0.15);
-  cursor: pointer;
-}
-
-.vine-progress-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, #52b788, #2d6a4f);
-  border-radius: 8px;
-  pointer-events: none;
-}
-
-.ladybug-thumb {
-  position: absolute;
-  top: 50%;
-  left: 0%;
-  width: 22px;
-  height: 22px;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  transition: transform 0.1s;
-}
-
-.vine-progress-track:hover .ladybug-thumb {
-  transform: translate(-50%, -50%) scale(1.25);
-}
-
-.ladybug-shell {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: var(--ladybug-red);
-  border: 2px solid #49111c;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.25);
-  position: relative;
-  overflow: hidden;
-}
-
-.ladybug-head {
-  position: absolute;
-  top: 0;
-  left: 5px;
-  width: 8px;
-  height: 6px;
-  background: #111;
-  border-radius: 50% 50% 0 0;
-}
-
-.ladybug-dot {
-  position: absolute;
-  width: 3px;
-  height: 3px;
-  background: #111;
-  border-radius: 50%;
-}
-.ladybug-dot.d1 { top: 6px;  left: 3px; }
-.ladybug-dot.d2 { top: 6px;  right: 3px; }
-.ladybug-dot.d3 { bottom: 4px; left: 4px; }
-.ladybug-dot.d4 { bottom: 4px; right: 4px; }
-
-.leaf-time-bubble {
-  position: absolute;
-  bottom: 22px;
-  left: 0;
-  transform: translateX(-50%);
-  background: var(--leaf-bright);
-  color: #fff;
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 800;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.time-readout {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: #7f5539;
-}
-
-.breeze-indicator {
-  display: flex;
-  gap: 4px;
-}
-.sprout {
-  width: 4px;
-  background: var(--grass-mid);
-  border-radius: 2px;
-}
-.s1 { height: 6px;  animation: sproutWave 1.2s infinite alternate -0.3s; }
-.s2 { height: 14px; animation: sproutWave 1.2s infinite alternate -0.7s; }
-.s3 { height: 9px;  animation: sproutWave 1.2s infinite alternate -0.1s; }
-
-@keyframes sproutWave {
-  from { height: 4px; }
-  to { height: 16px; }
-}
-
-/* Các phím điều khiển gỗ & lá */
-.nature-controls-panel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 4px 0;
-}
-
-.nature-key-btn {
-  background: #ffffff;
-  color: #4a2810;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 3px solid var(--wood-warm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  position: relative;
-  box-shadow: 
-    0 4px 0 var(--wood-dark),
-    0 8px 12px rgba(80, 50, 20, 0.2);
-  transition: transform 0.12s var(--spring-soft), box-shadow 0.12s;
-}
-
-.nature-key-btn:hover {
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 
-    0 7px 0 var(--wood-dark),
-    0 12px 18px rgba(80, 50, 20, 0.25);
-  background: #fdfbf7;
-}
-
-.nature-key-btn:active {
-  transform: translateY(3px);
-  box-shadow: 0 1px 0 var(--wood-dark);
-}
-
-.wood-active-dot {
-  position: absolute;
-  bottom: 5px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #d4a373;
-}
-
-.nature-key-btn.active .wood-active-dot {
-  background: var(--leaf-bright);
-  box-shadow: 0 0 6px var(--leaf-bright);
+  opacity: 0.9;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
 }
 
 /* 
-  CHẾ ĐỘ LOOP 4 TRẠNG THÁI:
-  Tắt -> Tất cả -> 1 Bài -> Các bài đã chọn (Custom Loop hạt dẻ)
+  [SKILL: /impeccable] MỤC "PLAYLISTS" (ACTIVE) VỚI TẤM GỖ WOOD.JPG / WOOD.PNG
+  Có chú tinh linh Kodama ngồi trên góc phải tấm gỗ
 */
-.loop-badge-indicator {
+.nav-item.active.wood-active-tab {
+  background-image: url('wood.jpg');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 10px;
+  margin: 2px 0;
+  box-shadow: 
+    0 4px 10px rgba(43, 24, 16, 0.35),
+    0 0 15px rgba(254, 250, 224, 0.2);
+  transform: translateX(0);
+}
+
+.nav-item.active.wood-active-tab:hover {
+  transform: translateY(-1px) scale(1.01);
+}
+
+.wood-nav-text {
+  color: #fff9d2 !important;
+  font-weight: 800 !important;
+  font-size: 1.08rem !important;
+  -webkit-text-stroke: 1.1px #23120b !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6) !important;
+}
+
+.wood-glow-spirit {
   position: absolute;
-  top: 3px;
-  right: 6px;
-  font-size: 0.72rem;
-  font-weight: 900;
-  display: none;
+  right: 12px;
+  top: -8px;
+  width: 14px;
+  height: 14px;
+  background: radial-gradient(circle, #ffffff 30%, rgba(200, 255, 220, 0) 80%);
+  border-radius: 50%;
+  box-shadow: 0 0 10px #c7f9cc;
+  animation: spiritPulse 2s infinite ease-in-out;
 }
 
-.nature-key-btn.loop-all .loop-badge-indicator {
-  display: none; /* Icon xanh sáng đại diện */
+@keyframes spiritPulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.6; }
+  50% { transform: scale(1.3); opacity: 1; }
 }
 
-.nature-key-btn.loop-one .loop-badge-indicator {
-  display: block;
-  color: var(--leaf-bright);
+.sidebar-divider {
+  height: 1.5px;
+  background: rgba(50, 80, 50, 0.25);
+  margin: 6px 4px 4px;
+  border-radius: 1px;
 }
 
-.nature-key-btn.loop-custom .loop-badge-indicator {
-  display: block;
-  color: #d97706;
+/* Sub-Playlists List */
+.sidebar-playlists {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
 }
 
-.hero-leaf-btn {
-  width: 68px;
-  height: 68px;
-  background: var(--leaf-bright);
-  color: #ffffff;
-  border-color: #2d6a4f;
-  box-shadow: 
-    0 6px 0 #1b4332,
-    0 12px 20px rgba(45, 106, 79, 0.4);
-}
-
-.hero-leaf-btn:hover {
-  transform: translateY(-4px) scale(1.06);
-  box-shadow: 
-    0 10px 0 #1b4332,
-    0 16px 24px rgba(45, 106, 79, 0.5);
-}
-
-.hero-leaf-btn:active {
-  transform: translateY(4px);
-  box-shadow: 0 2px 0 #1b4332;
-}
-
-.wood-volume-row {
+.sub-playlist-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #f4ecd8;
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: 2px solid #e0ceb5;
-}
-
-.leaf-icon-btn {
+  padding: 6px 10px;
+  border-radius: 10px;
   background: transparent;
   border: none;
-  color: #6f4518;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+  position: relative;
+}
+
+.sub-playlist-item:hover {
+  transform: translateX(4px);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.thumb-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1.5px solid rgba(43, 24, 16, 0.5);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.sub-text {
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ghibli-yellow-light);
+  -webkit-text-stroke: 0.75px var(--ghibli-brown-dark);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.tea-kodama-spirit {
+  font-size: 0.85rem;
+  margin-left: auto;
+  opacity: 0.85;
+}
+
+/* --------------------------------------------------------------------------
+   3. MAIN CONTENT (DANH SÁCH PHÁT TRUNG TÂM THEO GIAODIEN.PNG)
+   [SKILL: /image-to-code-skill]
+   -------------------------------------------------------------------------- */
+.main-content {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+  padding: 16px 36px 110px 32px;
+  overflow-y: auto;
+  position: relative;
+}
+
+.main-content::-webkit-scrollbar { width: 6px; }
+.main-content::-webkit-scrollbar-thumb { background: rgba(50, 80, 50, 0.35); border-radius: 6px; }
+
+/* Top Navigation Bar */
+.top-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.nav-history-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-circle-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(30, 50, 30, 0.45);
+  backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.95rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.history-circle-btn:hover {
+  transform: scale(1.1);
+  background: rgba(45, 75, 45, 0.65);
+}
+
+.top-search-shell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  padding: 6px 14px;
+  width: 320px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: width 0.2s, background 0.2s;
+}
+
+.top-search-shell:focus-within {
+  width: 380px;
+  background: rgba(255, 255, 255, 0.55);
+  border-color: #ffffff;
+}
+
+.top-search-shell input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--ghibli-brown-dark);
+  width: 100%;
+}
+
+.top-search-shell input::placeholder {
+  color: rgba(43, 24, 16, 0.65);
+}
+
+.clear-search-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--ghibli-brown-mid);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.top-actions-cluster {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.top-action-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 18px;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.88rem;
+  font-weight: 700;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.top-action-pill:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.22);
+}
+
+.btn-torrent-pill {
+  background: #d8f3dc;
+  color: #1b4332;
+  border-color: #74c69d;
+}
+
+.btn-cloud-pill {
+  background: #faedcd;
+  color: #7f5539;
+  border-color: #d4a373;
+}
+
+.user-avatar-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(8px);
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s;
+}
+
+.user-avatar-circle:hover {
+  transform: scale(1.1);
+}
+
+.avatar-face {
+  font-size: 1.1rem;
+}
+
+/* Section Title: Playlists */
+.view-main-title {
+  font-family: var(--font-ghibli-title);
+  font-size: 2.35rem;
+  font-weight: 900;
+  color: #ffffff;
+  -webkit-text-stroke: 1.6px var(--ghibli-brown-dark);
+  text-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+  margin: 12px 0 16px 2px;
+  letter-spacing: 0.02em;
+}
+
+/* 
+  PLAYLISTS GRID (6 CARDS CHUẨN GIAODIEN.PNG)
+  [SKILL: /image-to-code-skill]
+*/
+.playlists-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  max-width: 960px;
+}
+
+.playlist-card {
+  width: 132px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.22s var(--ease-out-spring);
+}
+
+.playlist-card:hover {
+  transform: translateY(-5px);
+}
+
+.card-art-box {
+  width: 132px;
+  height: 130px;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  border: 2.5px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 
+    0 8px 18px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(40, 20, 10, 0.2);
+  background: #2b3d2b;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.playlist-card:hover .card-art-box {
+  box-shadow: 
+    0 12px 24px rgba(0, 0, 0, 0.38),
+    0 0 16px rgba(255, 255, 255, 0.4);
+}
+
+.card-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s ease;
+}
+
+.playlist-card:hover .card-cover-img {
+  transform: scale(1.08);
+}
+
+/* Nút Play hiển thị khi hover card */
+.card-hover-play {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #7fc95e;
+  border: 2px solid #2b1810;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transform: translateY(8px) scale(0.8);
+  transition: all 0.22s var(--ease-out-spring);
+}
+
+.playlist-card:hover .card-hover-play {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.play-arrow {
+  font-size: 0.95rem;
+  margin-left: 2px;
+}
+
+.card-title-text {
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #ffffff;
+  text-align: center;
+  -webkit-text-stroke: 0.85px var(--ghibli-brown-dark);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.65);
+  margin-top: 8px;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   4. BOTTOM PLAYER BAR (THANH PHÁT NHẠC KÍNH MỜ THEO GIAODIEN.PNG)
+   [SKILL: /image-to-code-skill & /impeccable]
+   -------------------------------------------------------------------------- */
+.bottom-player-glass {
+  grid-column: 1 / 3;
+  grid-row: 2 / 3;
+  background: var(--player-glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 2px solid var(--player-border);
+  box-shadow: 0 -6px 25px rgba(0, 0, 0, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  z-index: 100;
+}
+
+/* Left Group: Album Cover + Song Meta + Heart */
+.player-left-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 220px;
+}
+
+.album-cover-frame {
+  width: 66px;
+  height: 66px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid var(--ghibli-brown-dark);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
+.now-playing-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.now-playing-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.song-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.track-title-text {
+  font-family: var(--font-ghibli-nav);
+  font-size: 1.06rem;
+  font-weight: 800;
+  color: var(--ghibli-brown-dark);
+  white-space: nowrap;
+}
+
+.leaf-heart-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.05rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: transform 0.15s;
+}
+
+.leaf-heart-btn:hover {
+  transform: scale(1.25);
+}
+
+.track-artist-text {
+  font-family: var(--font-ghibli-meta);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #4a3525;
+}
+
+.track-album-text {
+  font-family: var(--font-ghibli-meta);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6a4f3b;
+  font-style: italic;
+}
+
+/* Center Group: Controls + Wavy Vine Track + Calcifer Thumb */
+.player-center-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  max-width: 520px;
+}
+
+.player-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nature-ctrl-btn {
+  background: transparent;
+  border: none;
+  color: var(--ghibli-brown-dark);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s, color 0.15s;
+  position: relative;
+}
+
+.nature-ctrl-btn:hover {
+  transform: scale(1.15);
+  color: #1b4332;
+}
+
+.nature-ctrl-btn:active {
+  transform: scale(0.95);
+}
+
+/* Nút Play/Pause đĩa gỗ tròn trung tâm */
+.wood-disc-play-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #caa071 0%, #8c5d2f 85%, #5e3a18 100%);
+  border: 3px solid #3d2311;
+  color: #fffde0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 4px 10px rgba(0, 0, 0, 0.35),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: transform 0.15s var(--ease-out-spring), box-shadow 0.15s;
+}
+
+.wood-disc-play-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 
+    0 6px 14px rgba(0, 0, 0, 0.42),
+    inset 0 2px 5px rgba(255, 255, 255, 0.55);
+}
+
+.wood-disc-play-btn:active {
+  transform: scale(0.94);
+}
+
+.wood-play-icon {
+  font-size: 1.15rem;
+  margin-left: 3px;
+}
+
+.wood-pause-icon {
+  font-size: 1.1rem;
+}
+
+.loop-badge-dot {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+/* 
+  [SKILL: /animate & /improve-animations] 
+  THANH TIẾN TRÌNH DÂY LEO LƯỢN SÓNG & CỤC CHẠY NGỌN LỬA CALCIFER (F.JPG / F.PNG)
+*/
+.wavy-progress-wrapper {
+  position: relative;
+  width: 100%;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.wavy-vine-svg {
+  width: 100%;
+  height: 22px;
+  overflow: visible;
+}
+
+.vine-base-track {
+  fill: none;
+  stroke: var(--ghibli-vine-dark);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
+}
+
+.vine-progress-fill {
+  fill: none;
+  stroke: var(--ghibli-vine-bright);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  transition: stroke-dashoffset 0.1s linear;
+}
+
+/* Cục chạy Calcifer Flame Thumb */
+.calcifer-thumb-anchor {
+  position: absolute;
+  top: 0;
+  left: 0%;
+  transform: translate(-50%, -65%);
+  pointer-events: none;
+  transition: left 0.1s linear;
+  z-index: 10;
+}
+
+.calcifer-flame {
+  width: 38px;
+  height: 52px;
+  background-image: url('f.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  /* [SKILL: /impeccable] Khử nền trắng nếu dùng f.jpg */
+  mix-blend-mode: multiply;
+  transform-origin: bottom center;
+  filter: drop-shadow(0 0 8px rgba(255, 140, 0, 0.8));
+  transition: transform 0.15s ease-out;
+}
+
+/* Khi nhạc đang phát: Calcifer nhấp nháy, phập phồng phập phồng */
+body.music-playing .calcifer-flame {
+  animation: calciferBreathe 1.3s infinite ease-in-out alternate;
+}
+
+@keyframes calciferBreathe {
+  0% {
+    transform: scale(0.95, 1.05) translateY(0) rotate(-2deg);
+    filter: drop-shadow(0 0 6px rgba(255, 120, 0, 0.75));
+  }
+  50% {
+    transform: scale(1.06, 0.94) translateY(2px) rotate(2deg);
+    filter: drop-shadow(0 0 16px rgba(255, 200, 0, 0.95));
+  }
+  100% {
+    transform: scale(1, 1) translateY(-2px) rotate(-1deg);
+    filter: drop-shadow(0 0 10px rgba(255, 90, 0, 0.85));
+  }
+}
+
+.time-floating-chip {
+  position: absolute;
+  top: -24px;
+  left: 0;
+  transform: translateX(-50%);
+  background: var(--ghibli-brown-dark);
+  color: #ffffff;
+  font-family: var(--font-ghibli-meta);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.time-readout-row {
+  position: absolute;
+  right: 0;
+  bottom: -4px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-ghibli-meta);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ghibli-brown-dark);
+}
+
+.time-divider {
+  opacity: 0.6;
+}
+
+/* Right Group: Volume + Loa + Danh sách phát */
+.player-right-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+  justify-content: flex-end;
+}
+
+.volume-text-label {
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ghibli-brown-dark);
+}
+
+.volume-speaker-btn {
+  background: transparent;
+  border: none;
+  color: var(--ghibli-brown-dark);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: transform 0.15s;
 }
-.leaf-icon-btn:hover {
-  transform: scale(1.2);
-  color: var(--leaf-bright);
+
+.volume-speaker-btn:hover {
+  transform: scale(1.15);
 }
 
-.wood-slider-shell {
-  flex: 1;
+.volume-slider-shell {
+  width: 80px;
   display: flex;
   align-items: center;
 }
@@ -1259,10 +933,10 @@ body.music-playing .fireflies-container {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 8px;
+  height: 6px;
   border-radius: 6px;
-  background: #d8c3a5;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+  background: #b58957;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
   outline: none;
   cursor: pointer;
 }
@@ -1270,298 +944,421 @@ body.music-playing .fireflies-container {
 .nature-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: var(--wood-warm);
-  border: 2px solid var(--bark-border);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+  background: radial-gradient(circle, #fffdf5, #d4a373);
+  border: 2px solid var(--ghibli-brown-dark);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
   cursor: pointer;
   transition: transform 0.12s;
 }
 
 .nature-slider::-webkit-slider-thumb:hover {
   transform: scale(1.25);
-  background: var(--leaf-bright);
+  background: var(--ghibli-vine-bright);
 }
 
-.volume-text {
+.volume-percent-badge {
+  font-family: var(--font-ghibli-meta);
   font-size: 0.8rem;
   font-weight: 800;
+  color: #4a2c11;
+  width: 32px;
+}
+
+.queue-toggle-btn {
+  background: #faedcd;
+  border: 1.5px solid #d4a373;
   color: #7f5539;
-  width: 36px;
-  text-align: right;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 0 #b58957;
+  transition: all 0.15s;
+}
+
+.queue-toggle-btn:hover {
+  background: #fefae0;
+  transform: translateY(-2px);
 }
 
 /* --------------------------------------------------------------------------
-   PHẦN 2: BẢNG DANH SÁCH BÀI HÁT GIẤY DA (PARCHMENT PLAYLIST)
+   5. BẢNG WEBTORRENT P2P & NGĂN KÉO DANH SÁCH BÀI HÁT
    -------------------------------------------------------------------------- */
-.playlist-wood-top {
+.torrent-cottage-panel {
+  position: absolute;
+  top: 70px;
+  left: 32px;
+  right: 36px;
+  background: #fffdf5;
+  border: 3px solid #6f4518;
+  border-radius: 20px;
+  padding: 20px 24px;
+  box-shadow: 0 14px 35px rgba(45, 25, 10, 0.35);
+  z-index: 50;
+  animation: modalPopIn 0.3s var(--ease-out-spring);
+}
+
+.torrent-search-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  margin-bottom: 14px;
   flex-wrap: wrap;
-}
-
-.pl-header-title {
-  display: flex;
-  align-items: center;
   gap: 10px;
 }
 
-.moss-badge {
-  font-size: 0.75rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  background: var(--moss-dark);
-  color: #ffffff;
+.acorn-tag {
+  font-size: 0.8rem;
+  font-weight: 800;
+  background: #d8f3dc;
+  color: #1b4332;
   padding: 4px 10px;
-  border-radius: 12px;
-  box-shadow: 0 2px 0 #0d281e;
+  border-radius: 10px;
 }
 
-.acorn-counter {
-  font-size: 0.85rem;
+.torrent-tagline {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #7f5539;
+  margin-left: 8px;
+}
+
+.sample-magnets-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sample-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #6f4518;
+}
+
+.sample-btn {
+  background: #faedcd;
+  border: 1px solid #d4a373;
+  color: #6f4518;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.sample-btn:hover {
+  background: #e9d8a6;
+}
+
+.torrent-input-bar {
+  display: flex;
+  gap: 10px;
+}
+
+.torrent-input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 2px solid #b58957;
+  border-radius: 16px;
+  padding: 8px 14px;
+  gap: 8px;
+}
+
+.torrent-input-wrapper input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.92rem;
+  color: var(--ghibli-brown-dark);
+}
+
+.clear-wood-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  color: #a08060;
+  cursor: pointer;
+}
+
+.ghibli-action-btn {
+  background: #7fc95e;
+  border: 2px solid #2d6a4f;
+  color: #ffffff;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.92rem;
   font-weight: 800;
+  padding: 8px 18px;
+  border-radius: 16px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #1b4332;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+
+.ghibli-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #1b4332;
+}
+
+.ghibli-action-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #1b4332;
+}
+
+.torrent-status-card {
+  margin-top: 14px;
+  background: #fdfaf0;
+  border: 2px dashed #b58957;
+  border-radius: 14px;
+  padding: 12px 16px;
+}
+
+.susuwatari-work-crew {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.worker-sprite {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #2b1810;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: workerHop 0.4s infinite alternate;
+}
+
+@keyframes workerHop {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-4px); }
+}
+
+.worker-eyes {
+  width: 8px;
+  height: 8px;
+  background: #ffffff;
+  border-radius: 50%;
+  position: relative;
+}
+
+.pupil {
+  width: 4px;
+  height: 4px;
+  background: #000000;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+}
+
+.worker-speech {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #4a2c11;
+}
+
+.torrent-meta-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 6px 0;
+  font-size: 0.82rem;
+  font-weight: 700;
   color: #7f5539;
 }
 
-/* Chip thông báo đang bật Custom Loop Hạt Dẻ */
+.torrent-bar-shell {
+  height: 10px;
+  background: #e9d8a6;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  margin: 6px 0;
+}
+
+.torrent-bar-fill {
+  height: 100%;
+  background: #7fc95e;
+  border-radius: 6px;
+  transition: width 0.2s;
+}
+
+.torrent-percent-text {
+  position: absolute;
+  right: 6px;
+  top: -16px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #2d6a4f;
+}
+
+.torrent-actions-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btn-save-disk {
+  background: #e76f51;
+  border-color: #9d0208;
+  box-shadow: 0 4px 0 #6a040f;
+}
+
+/* Ngăn kéo Playlist Drawer (Chứa các checkbox hạt dẻ Custom Loop) */
+.playlist-drawer-cottage {
+  position: absolute;
+  top: 70px;
+  right: 36px;
+  width: 380px;
+  max-height: 440px;
+  background: #fffdf5;
+  border: 3px solid #6f4518;
+  border-radius: 20px;
+  padding: 16px 20px;
+  box-shadow: 0 14px 35px rgba(45, 25, 10, 0.35);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  animation: modalPopIn 0.25s var(--ease-out-spring);
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 2px dashed #b58957;
+  margin-bottom: 12px;
+}
+
+.moss-stamp {
+  font-size: 0.75rem;
+  font-weight: 900;
+  background: #2d6a4f;
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 8px;
+}
+
+.counter-badge {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #7f5539;
+  margin-left: 6px;
+}
+
 .custom-loop-chip {
   font-size: 0.72rem;
   font-weight: 900;
   background: #faedcd;
   color: #8c5d2f;
   border: 1px dashed #d4a373;
-  padding: 3px 8px;
-  border-radius: 10px;
-  animation: pulseLoopChip 2s infinite ease-in-out;
+  padding: 2px 6px;
+  border-radius: 8px;
+  margin-left: 6px;
 }
 
-@keyframes pulseLoopChip {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-
-.twig-search-box {
-  position: relative;
-  display: flex;
-  align-items: center;
-  background: #ffffff;
-  border: 2px solid var(--wood-warm);
-  border-radius: 18px;
-  padding: 6px 14px;
-  min-width: 220px;
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.06);
-}
-
-.twig-search-box input {
-  background: transparent;
-  border: none;
-  outline: none;
-  font-family: var(--font-ghibli);
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #4a2810;
-  margin-left: 8px;
-  width: 100%;
-}
-
-.clear-wood-btn {
-  background: transparent;
-  border: none;
-  font-size: 1.1rem;
-  color: #a08060;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.nature-subbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.nature-folder-pill {
+.drawer-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #6f4518;
-  background: #faedcd;
-  padding: 6px 14px;
-  border-radius: 14px;
-  border: 1px dashed var(--wood-dark);
 }
 
 .sync-tiny-btn {
   background: #ffffff;
-  border: 1px solid var(--wood-warm);
+  border: 1px solid #b58957;
   color: #7f5539;
-  font-family: var(--font-ghibli);
-  font-size: 0.76rem;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.75rem;
   font-weight: 800;
-  padding: 4px 10px;
-  border-radius: 12px;
-  cursor: pointer;
-  box-shadow: 0 2px 0 var(--wood-warm);
-  transition: all 0.12s;
-}
-.sync-tiny-btn:hover { background: #fefae0; transform: translateY(-2px); }
-.sync-tiny-btn:active { transform: translateY(2px); box-shadow: 0 0 0; }
-
-.parchment-scroll-area {
-  height: 420px;
-  overflow-y: auto;
-  padding-right: 6px;
-}
-
-.parchment-scroll-area::-webkit-scrollbar { width: 8px; }
-.parchment-scroll-area::-webkit-scrollbar-track { background: #faedcd; border-radius: 4px; }
-.parchment-scroll-area::-webkit-scrollbar-thumb { background: #d4a373; border-radius: 4px; }
-.parchment-scroll-area::-webkit-scrollbar-thumb:hover { background: var(--moss-dark); }
-
-/* Empty State */
-.empty-nature-state {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 30px;
-  border: 3px dashed var(--wood-warm);
-  border-radius: 24px;
-  background: rgba(250, 237, 205, 0.4);
-  transition: all 0.2s;
-}
-
-.empty-nature-state.drag-over {
-  border-color: var(--leaf-bright);
-  background: rgba(116, 198, 157, 0.25);
-  transform: scale(0.99);
-}
-
-.acorn-basket-art {
-  margin-bottom: 12px;
-  animation: basketBob 2.5s ease-in-out infinite;
-}
-
-@keyframes basketBob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
-
-.empty-nature-state h3 {
-  font-family: var(--font-hand);
-  font-size: 1.25rem;
-  font-weight: 900;
-  color: #4a2810;
-  margin-bottom: 6px;
-}
-
-.empty-nature-state p {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #7f5539;
-  max-width: 320px;
-  line-height: 1.5;
-  margin-bottom: 14px;
-}
-
-.format-leaf-pills {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.format-leaf-pills span {
-  font-size: 0.72rem;
-  font-weight: 800;
-  background: #faedcd;
-  color: #6f4518;
   padding: 3px 8px;
-  border-radius: 8px;
+  border-radius: 10px;
+  cursor: pointer;
 }
 
-/* --------------------------------------------------------------------------
-   [SKILL: /impeccable & /animate] 
-   CHECKBOX HẠT DẺ (ACORN CHECKBOX) & CHẾ ĐỘ CUSTOM LOOP
-   -------------------------------------------------------------------------- */
+.close-drawer-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.3rem;
+  color: #6f4518;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.drawer-scroll-box {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 340px;
+}
+
+.drawer-scroll-box::-webkit-scrollbar { width: 5px; }
+.drawer-scroll-box::-webkit-scrollbar-thumb { background: #d4a373; border-radius: 4px; }
+
+/* 
+  DANH SÁCH BÀI HÁT VÀ CHECKBOX HẠT DẺ (ACORN CHECKBOX)
+  [SKILL: /impeccable & /animate]
+*/
 .nature-song-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .nature-song-card {
   background: #ffffff;
-  border: 2px solid var(--parchment-border);
-  border-radius: 18px;
-  padding: 12px 16px;
+  border: 1.5px solid #e0ceb5;
+  border-radius: 14px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
-  box-shadow: 
-    0 3px 0 var(--wood-light),
-    0 5px 10px rgba(80, 50, 20, 0.08);
-  transition: background 0.15s, border-color 0.15s, transform 0.2s var(--spring-bounce);
-  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  transition: all 0.15s;
 }
 
 .nature-song-card:hover {
-  animation: susuwatariBounce 0.4s var(--spring-bounce);
   background: #fefae0;
-  border-color: var(--grass-mid);
-  transform: translateY(-3px);
-  box-shadow: 
-    0 6px 0 var(--wood-warm),
-    0 10px 16px rgba(80, 50, 20, 0.15);
-}
-
-@keyframes susuwatariBounce {
-  0% { transform: translateY(0) scale(1, 1); }
-  35% { transform: translateY(-6px) scale(0.97, 1.05); }
-  70% { transform: translateY(1px) scale(1.03, 0.96); }
-  100% { transform: translateY(-3px) scale(1, 1); }
-}
-
-.nature-song-card:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 var(--wood-warm);
+  border-color: #52b788;
+  transform: translateX(3px);
 }
 
 .nature-song-card.active {
   background: #d8f3dc;
-  border-color: var(--grass-front);
-  box-shadow: 0 4px 0 var(--grass-mid), 0 8px 18px rgba(45, 106, 79, 0.2);
+  border-color: #2d6a4f;
 }
 
-/* 
-  Ô CHECKBOX HÌNH LÁ CÂY & HẠT DẺ (ACORN CHECKBOX)
-  Mặc định ẩn, chỉ hiển thị mượt mà khi bật Custom Loop
-*/
+.card-left-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Checkbox Hạt Dẻ Ghibli */
 .acorn-checkbox-wrapper {
-  display: none;
-  width: 28px;
-  height: 28px;
-  margin-right: 10px;
+  width: 24px;
+  height: 24px;
+  display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
   position: relative;
-}
-
-/* Khi chế độ Custom Loop được kích hoạt */
-.custom-loop-active .acorn-checkbox-wrapper {
-  display: flex;
 }
 
 .acorn-checkbox-input {
@@ -1572,36 +1369,32 @@ body.music-playing .fireflies-container {
 }
 
 .acorn-checkbox-icon {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: #faedcd;
-  border: 1.5px solid var(--wood-dark);
+  border: 1.5px solid #6f4518;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s var(--spring-soft);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.2s;
 }
 
-/* Trạng thái chưa chọn: Chiếc lá */
 .acorn-checkbox-icon::before {
   content: "🍃";
-  font-size: 0.85rem;
-  transition: transform 0.2s;
+  font-size: 0.8rem;
 }
 
-/* Trạng thái đã chọn hạt dẻ: Acorn Bouncy Pop & Sparkle */
 .acorn-checkbox-input:checked + .acorn-checkbox-icon {
   background: #ffe8d6;
   border-color: #a76b3f;
-  box-shadow: 0 0 10px rgba(212, 163, 115, 0.6), 0 2px 0 #6f4518;
+  box-shadow: 0 0 8px rgba(212, 163, 115, 0.7);
 }
 
 .acorn-checkbox-input:checked + .acorn-checkbox-icon::before {
   content: "🌰";
-  font-size: 1rem;
-  animation: acornPop 0.35s var(--spring-bounce);
+  font-size: 0.95rem;
+  animation: acornPop 0.35s var(--ease-out-spring);
 }
 
 @keyframes acornPop {
@@ -1610,34 +1403,23 @@ body.music-playing .fireflies-container {
   100% { transform: scale(1) rotate(0deg); }
 }
 
-.card-left-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  flex: 1;
-}
-
 .leaf-num-stamp {
-  width: 30px;
-  height: 30px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: #faedcd;
   color: #6f4518;
-  font-family: var(--font-hand);
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 900;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 2px 0 var(--wood-warm);
 }
 
 .nature-song-card.active .leaf-num-stamp {
-  background: var(--leaf-bright);
+  background: #7fc95e;
   color: #ffffff;
-  box-shadow: 0 2px 0 var(--moss-dark);
 }
 
 .card-song-details {
@@ -1646,339 +1428,278 @@ body.music-playing .fireflies-container {
 }
 
 .card-title {
-  font-family: var(--font-hand);
-  font-size: 0.95rem;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.88rem;
   font-weight: 800;
-  color: #3b220d;
+  color: #2b1810;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   display: block;
 }
 
-.nature-song-card.active .card-title {
-  color: #1b4332;
-}
-
 .card-subtext {
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.72rem;
+  font-weight: 600;
   color: #7f5539;
-  margin-top: 2px;
 }
 
 .card-leaf-badge {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 800;
   background: #faedcd;
   color: #6f4518;
-  padding: 3px 8px;
-  border-radius: 8px;
+  padding: 2px 6px;
+  border-radius: 6px;
   flex-shrink: 0;
 }
 
-.nature-song-card.active .card-leaf-badge {
-  background: var(--grass-front);
-  color: #ffffff;
-}
-
-/* Playlist Footer */
-.playlist-footer-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 12px;
-  border-top: 2px dashed var(--wood-warm);
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: #7f5539;
-}
-
-.eco-status { display: flex; align-items: center; gap: 6px; }
-.nature-shortcut-hint { cursor: help; color: var(--moss-dark); }
-.nature-shortcut-hint:hover { text-decoration: underline; }
-
 /* --------------------------------------------------------------------------
-   [SKILL: /animate & /impeccable] 
-   MODAL ĐĂNG NHẬP / ĐĂNG KÝ: LÁ THƯ TAY GHIBLI (LETTER MODAL)
-   Hiệu ứng chiếc lá rơi từ trên trời xuống nhẹ nhàng chao nghiêng
+   6. MODAL LÁ THƯ TAY GHIBLI (SUPABASE CLOUD SYNC)
+   [SKILL: /animate & /impeccable]
    -------------------------------------------------------------------------- */
 .auth-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(27, 67, 50, 0.45);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  z-index: 900;
+  background: rgba(20, 50, 30, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  transition: opacity 0.3s ease;
 }
 
 .ghibli-letter-modal {
   position: relative;
   width: 100%;
-  max-width: 480px;
+  max-width: 460px;
   background: #fffdf5;
-  border: 4px solid var(--bark-border);
-  border-radius: 28px;
-  padding: 32px 28px 24px;
+  border: 4px solid #4a2c11;
+  border-radius: 26px;
+  padding: 30px 26px 22px;
   box-shadow: 
-    0 14px 0 var(--wood-dark),
-    0 24px 50px rgba(45, 25, 10, 0.35);
-  /* [SKILL: /animate] Hiệu ứng lá rơi chao nghiêng */
+    0 14px 0 #2b1810,
+    0 24px 50px rgba(25, 15, 5, 0.4);
   animation: leafModalDrop 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 @keyframes leafModalDrop {
-  0% {
-    transform: translateY(-120%) rotate(-12deg) scale(0.85);
-    opacity: 0;
-  }
-  60% {
-    transform: translateY(12px) rotate(4deg) scale(1.02);
-    opacity: 1;
-  }
-  80% {
-    transform: translateY(-5px) rotate(-2deg) scale(0.99);
-  }
-  100% {
-    transform: translateY(0) rotate(0deg) scale(1);
-    opacity: 1;
-  }
+  0% { transform: translateY(-120%) rotate(-12deg) scale(0.85); opacity: 0; }
+  60% { transform: translateY(12px) rotate(4deg) scale(1.02); opacity: 1; }
+  80% { transform: translateY(-5px) rotate(-2deg) scale(0.99); }
+  100% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
 }
 
-/* Dây thừng treo lá thư */
 .letter-ropes {
   position: absolute;
-  top: -24px;
+  top: -36px;
   left: 0;
   right: 0;
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
+  padding: 0 45px;
   pointer-events: none;
 }
+
 .rope {
   width: 4px;
-  height: 24px;
-  background: repeating-linear-gradient(0deg, #d4a373, #d4a373 4px, #a66a38 4px, #a66a38 8px);
+  height: 40px;
+  background: #8c5d2f;
   border-radius: 2px;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
 }
 
 .close-letter-btn {
   position: absolute;
   top: 14px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #faedcd;
-  border: 2px solid var(--bark-border);
-  font-size: 1.2rem;
-  font-weight: 900;
-  color: #4a2810;
+  right: 18px;
+  background: transparent;
+  border: none;
+  font-size: 1.6rem;
+  color: #6f4518;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 0 var(--wood-dark);
-  transition: all 0.12s;
+  line-height: 1;
 }
-.close-letter-btn:hover { background: #e63946; color: #fff; transform: scale(1.1); }
 
 .letter-header {
   text-align: center;
 }
+
 .wax-seal-icon {
   font-size: 2.2rem;
   margin-bottom: 4px;
-  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.15));
 }
+
 .letter-title {
-  font-family: var(--font-hand);
+  font-family: var(--font-ghibli-brand);
   font-size: 1.4rem;
   font-weight: 900;
-  color: #4a2810;
+  color: #3b220d;
 }
+
 .letter-subtitle {
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 600;
   color: #7f5539;
   margin-top: 2px;
 }
 
-/* Tabs */
 .letter-tabs {
   display: flex;
-  gap: 8px;
-  border-bottom: 2px dashed #d4a373;
-  padding-bottom: 10px;
+  background: #faedcd;
+  border: 1.5px solid #d4a373;
+  border-radius: 14px;
+  padding: 3px;
+  gap: 4px;
 }
+
 .letter-tab {
   flex: 1;
-  background: #faedcd;
-  border: 1px solid var(--bark-border);
-  color: #6f4518;
-  font-family: var(--font-ghibli);
+  background: transparent;
+  border: none;
+  padding: 6px 0;
+  font-family: var(--font-ghibli-nav);
   font-size: 0.82rem;
   font-weight: 800;
-  padding: 6px 10px;
-  border-radius: 12px;
+  color: #6f4518;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s;
 }
+
 .letter-tab.active {
-  background: var(--leaf-bright);
-  color: #ffffff;
-  border-color: #2d6a4f;
-  box-shadow: 0 2px 0 #1b4332;
+  background: #ffffff;
+  color: #2b1810;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Form fields */
 .letter-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  text-align: left;
-}
 .form-group label {
-  font-size: 0.78rem;
+  display: block;
+  font-size: 0.82rem;
   font-weight: 800;
-  color: #6f4518;
+  color: #4a2c11;
+  margin-bottom: 4px;
 }
+
 .form-group input {
+  width: 100%;
   background: #ffffff;
-  border: 2px solid var(--wood-warm);
-  border-radius: 14px;
-  padding: 8px 14px;
-  font-family: var(--font-ghibli);
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #3b220d;
+  border: 2px solid #d4a373;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.9rem;
+  color: var(--ghibli-brown-dark);
   outline: none;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
-}
-.form-group input:focus {
-  border-color: var(--grass-mid);
-  box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.25);
 }
 
 .config-tip {
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   color: #7f5539;
   line-height: 1.4;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .btn-send-letter {
   width: 100%;
-  justify-content: center;
-  background: var(--grass-mid);
-  color: #ffffff;
-  border-color: var(--grass-front);
-  box-shadow: 0 4px 0 var(--moss-dark), 0 8px 14px rgba(45, 106, 79, 0.3);
-  padding: 10px 20px;
+  margin-top: 6px;
+  padding: 10px;
 }
 
-/* Logged In Status Card */
 .logged-in-box {
+  background: #f4ecd8;
+  border: 2px dashed #d4a373;
+  border-radius: 14px;
+  padding: 14px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  background: #d8f3dc;
-  border: 2px solid #52b788;
-  border-radius: 18px;
-  padding: 14px;
+  gap: 12px;
 }
+
 .acorn-avatar {
-  font-size: 2rem;
+  font-size: 1.8rem;
 }
+
 .logged-info {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
+
 .user-greeting {
-  font-size: 0.76rem;
-  font-weight: 800;
-  color: #2d6a4f;
+  font-size: 0.8rem;
+  color: #7f5539;
 }
+
 .user-email-display {
-  font-size: 0.92rem;
-  color: #1b4332;
+  font-size: 0.95rem;
+  color: #2b1810;
 }
+
 .sync-count-info {
-  font-size: 0.74rem;
-  color: #52b788;
+  font-size: 0.75rem;
+  color: #2d6a4f;
   font-weight: 700;
 }
-.btn-logout {
-  padding: 6px 12px;
+
+.ghibli-btn-subtle {
+  background: transparent;
+  border: 1.5px solid #b58957;
+  color: #6f4518;
+  font-family: var(--font-ghibli-nav);
   font-size: 0.8rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 10px;
+  cursor: pointer;
 }
 
-/* --------------------------------------------------------------------------
-   THÔNG BÁO TOAST KIỂU BẢNG GỖ GHIBLI
-   -------------------------------------------------------------------------- */
+/* Toast Ghibli */
 .ghibli-toast {
   position: fixed;
-  bottom: 30px;
+  bottom: 110px;
   left: 50%;
-  transform: translateX(-50%) translateY(0);
-  background: var(--wood-light);
-  border: 3px solid var(--bark-border);
-  color: #4a2810;
-  padding: 10px 24px;
+  transform: translateX(-50%);
+  background: #2b1810;
+  color: #fffde0;
+  border: 2px solid #b58957;
+  padding: 10px 22px;
   border-radius: 20px;
-  font-family: var(--font-hand);
-  font-size: 0.95rem;
-  font-weight: 900;
-  box-shadow: 
-    0 6px 0 var(--wood-dark),
-    0 12px 24px rgba(60, 40, 20, 0.35);
-  z-index: 999;
-  transition: all 0.25s var(--spring-soft);
-  pointer-events: none;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.92rem;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 2000;
+  animation: toastFade 0.25s var(--ease-out-spring);
 }
 
-.ghibli-toast.hidden {
-  opacity: 0;
-  transform: translateX(-50%) translateY(30px) scale(0.9);
+@keyframes toastFade {
+  0% { transform: translate(-50%, 15px); opacity: 0; }
+  100% { transform: translate(-50%, 0); opacity: 1; }
 }
 
+/* Utilities */
 .hidden {
   display: none !important;
 }
 
-/* --------------------------------------------------------------------------
-   RESPONSIVE DESIGN (TABLET & MOBILE)
-   -------------------------------------------------------------------------- */
-@media (max-width: 960px) {
-  .app-canvas { padding: 12px; }
-  .ghibli-main-grid { grid-template-columns: 1fr; gap: 20px; }
-  .parchment-scroll-area { height: 340px; }
-  .torrent-input-bar { flex-direction: column; }
-  .btn-torrent-action { width: 100%; justify-content: center; }
+.cursor-pointer {
+  cursor: pointer;
 }
 
-@media (max-width: 600px) {
-  .ghibli-title { font-size: 1.2rem; }
-  .ghibli-subtitle { display: none; }
-  .wood-turntable-deck { height: 200px; }
-  .trunk-disc-wrapper { width: 140px; height: 140px; }
-  .record-sprout-center { width: 52px; height: 52px; }
-  .nature-controls-panel { gap: 10px; }
-  .nature-key-btn { width: 42px; height: 42px; }
-  .hero-leaf-btn { width: 56px; height: 56px; }
+/* Keyframe modal pop */
+@keyframes modalPopIn {
+  0% { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }

@@ -3,463 +3,508 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MUSIC HOME • Studio Ghibli & Totoro Vibe (Cloud Sync & WebTorrent)</title>
-  <meta name="description" content="Trình phát nhạc Studio Ghibli với tính năng WebTorrent P2P Streaming, Đồng bộ Cloud Sync đa thiết bị và Chế độ lặp tùy chọn hạt dẻ.">
-  
+  <title>Home Music • Studio Ghibli & Totoro Vibe</title>
+  <meta name="description" content="Trình phát nhạc Studio Ghibli pixel-perfect theo thiết kế GIAODIEN.png, tích hợp WebTorrent P2P, Supabase Cloud Sync và Calcifer Wavy Progress Bar.">
+
+  <!-- Google Fonts: Whimsical Rounded Typography cho chuẩn phong cách Anime Ghibli -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@600;700;800;900&family=Fredoka:wght@500;600;700;800&family=Sniglet:wght@800&family=Quicksand:wght@600;700;800&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="style.css">
 
   <!-- WebTorrent Browser Core Library (WebRTC P2P) -->
   <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
 
   <!-- 
-    ========================================================================
     [SKILL: /ponytail] SUPABASE CLOUD SYNC & AUTH SDK (CDN)
-    Thư viện BaaS gọn nhẹ cho phép xác thực tài khoản và đồng bộ Playlist lên Cloud
-    ========================================================================
+    Thư viện BaaS gọn nhẹ xác thực tài khoản và đồng bộ Playlist lên Cloud
   -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="ghibli-world">
-  <!-- BẦU TRỜI GHIBLI, MÂY TRÔI & ĐỒNG CỎ XANH BÌNH YÊN -->
-  <div class="ghibli-bg-layer ghibli-bg"></div>
+<body class="ghibli-app-body">
 
-  <!-- Hệ thống mây trôi tự nhiên bằng CSS Animation -->
-  <div class="cloud-sky" aria-hidden="true">
-    <div class="cloud cloud-1"></div>
-    <div class="cloud cloud-2"></div>
-    <div class="cloud cloud-3"></div>
-    <div class="cloud cloud-4"></div>
-  </div>
+  <!-- 
+    ========================================================================
+    1. BACKGROUND ĐỘNG: BẦU TRỜI & LÂU ĐÀI (VIDEO TOÀN MÀN HÌNH)
+    [SKILL: /image-to-code-skill & /impeccable]
+    Video nền phủ kín toàn màn hình (object-fit: cover) và nằm dưới mọi layer UI
+    ========================================================================
+  -->
+  <video class="bg-video" autoplay loop muted playsinline poster="bg.jpg">
+    <source src="background.mp4" type="video/mp4">
+  </video>
 
-  <!-- Những ngọn đồi cỏ xanh nhấp nhô phía chân trời -->
-  <div class="hills-backdrop">
-    <div class="hill hill-back"></div>
-    <div class="hill hill-mid"></div>
-    <div class="hill hill-front"></div>
-  </div>
+  <!-- Lớp phủ ánh sáng thiên nhiên dịu mắt -->
+  <div class="nature-overlay" aria-hidden="true"></div>
 
-  <!-- [SKILL: /animate] Đom đóm & Bào tử ánh sáng bay bổng khi phát nhạc -->
-  <div class="fireflies-container" id="firefliesContainer" aria-hidden="true">
+  <!-- [SKILL: /animate] Những hạt đom đóm xanh lấp lánh nhẹ nhàng -->
+  <div class="fireflies-layer" aria-hidden="true">
     <span class="firefly f1"></span>
     <span class="firefly f2"></span>
     <span class="firefly f3"></span>
     <span class="firefly f4"></span>
     <span class="firefly f5"></span>
     <span class="firefly f6"></span>
-    <span class="firefly f7"></span>
-    <span class="firefly f8"></span>
   </div>
 
-  <!-- KHUNG ỨNG DỤNG CHÍNH -->
-  <div class="app-canvas">
-    
-    <!-- THANH TIÊU ĐỀ: BẢNG GỖ MỘC TREO DÂY -->
-    <header class="wooden-header">
-      <div class="header-brand">
-        <!-- Linh vật Susuwatari (Bụi bồ hóng nhí) đáng yêu -->
-        <div class="soot-sprite" title="Susuwatari • Bụi bồ hóng nhí">
-          <div class="sprite-body">
-            <div class="sprite-eye left"><div class="pupil"></div></div>
-            <div class="sprite-eye right"><div class="pupil"></div></div>
-          </div>
-        </div>
-        <div class="brand-titles">
-          <h1 class="ghibli-title">MUSIC HOME</h1>
-          <span class="ghibli-subtitle">Ghibli & Totoro Melodies • Cloud Sync & WebTorrent</span>
-        </div>
-      </div>
-
-      <!-- Nút thao tác bằng gỗ mộc & dây thừng -->
-      <div class="header-actions">
-        <!-- Nút Đăng nhập & Đồng bộ Cloud (Lá thư Ghibli) -->
-        <button id="authModalTriggerBtn" class="ghibli-btn btn-auth-pill" title="Đăng nhập & Đồng bộ Playlist lên Cloud">
-          <span class="cloud-sync-icon" id="syncStatusIcon">☁️</span>
-          <span id="userAuthBadgeText">Đăng Nhập</span>
-        </button>
-
-        <!-- Nút bật/tắt thanh WebTorrent -->
-        <button id="torrentToggleBtn" class="ghibli-btn btn-torrent-toggle" title="Tìm & Tải nhạc qua WebTorrent">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <path d="M12 8v8"></path>
-            <path d="m8 12 4 4 4-4"></path>
-          </svg>
-          <span>WebTorrent</span>
-        </button>
-
-        <!-- Nút nạp thư mục nhạc cục bộ -->
-        <label for="folderInput" class="ghibli-btn btn-wood-primary" title="Mở thư mục chứa nhạc trên máy">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2Z"></path>
-            <path d="M2 13.5h20"></path>
-            <path d="M7 6a5 5 0 0 1 10 0"></path>
-          </svg>
-          <span>Mở Thư Mục</span>
-        </label>
-        <input type="file" id="folderInput" webkitdirectory directory multiple accept="audio/*" style="display: none;">
-
-        <!-- Nút chọn file lẻ -->
-        <label for="fileInput" class="ghibli-btn btn-wood-secondary" title="Chọn file nhạc lẻ">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 14.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Zm0-7V5l5 1v3.5Z"></path>
-          </svg>
-          <span>Chọn File</span>
-        </label>
-        <input type="file" id="fileInput" multiple accept="audio/*" style="display: none;">
-      </div>
-    </header>
+  <!-- KHUNG ỨNG DỤNG CHÍNH (SIDEBAR + MAIN + BOTTOM PLAYER) -->
+  <div class="app-layout">
 
     <!-- 
-      ========================================================================
-      BẢNG WEBTORRENT GHIBLI COTTAGE SEARCH & STREAM
-      ========================================================================
+      ======================================================================
+      2. LEFT SIDEBAR (THANH MENU TRÁI KÍNH TRONG SUỐT)
+      [SKILL: /image-to-code-skill & /impeccable]
+      Chuẩn typography, icon và khoảng cách từ taskbar.jpg / taskbar.png
+      Màu nền xanh lục nhạt kết hợp backdrop-filter blur.
+      Mục "Playlists" (Active) sử dụng hình ảnh tấm gỗ wood.jpg / wood.png.
+      ======================================================================
     -->
-    <section class="torrent-cottage-panel hidden" id="torrentPanel">
-      <div class="torrent-panel-inner">
-        
-        <div class="torrent-search-header">
-          <div class="torrent-title-group">
-            <span class="acorn-tag">🌱 WEBTORRENT P2P</span>
-            <span class="torrent-tagline">Tải & Stream Nhạc Trực Tuyến Xuống Máy Bằng Trình Duyệt</span>
-          </div>
-          <div class="sample-magnets-row">
-            <span class="sample-label">Thử mẫu:</span>
-            <button class="sample-btn" data-query="totoro-lofi">🍃 Totoro Lofi Theme</button>
-            <button class="sample-btn" data-query="ghibli-relax">🌾 Ghibli Nature Sounds</button>
-            <button class="sample-btn" data-query="sintel-track">🌰 Sintel Free Audio</button>
-          </div>
-        </div>
-
-        <form id="torrentForm" class="torrent-input-bar">
-          <div class="torrent-input-wrapper">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-            </svg>
-            <input type="text" id="torrentInput" placeholder="Dán Magnet URL (magnet:?xt=...) hoặc nhập tên bài hát cần tải...">
-            <button type="button" id="clearTorrentInput" class="clear-wood-btn hidden" title="Xóa">&times;</button>
-          </div>
-          <button type="submit" id="torrentSubmitBtn" class="ghibli-btn btn-torrent-action">
-            <span>🍃 Tải & Stream</span>
-          </button>
-        </form>
-
-        <!-- BẢNG TIẾN TRÌNH TẢI TORRENT VỚI SUSUWATARI LOADING ANIMATION -->
-        <div class="torrent-status-card hidden" id="torrentStatusCard">
-          
-          <div class="susuwatari-work-crew" id="susuwatariCrew">
-            <div class="worker-sprite sprite-left">
-              <div class="worker-eyes"><span class="pupil"></span></div>
-            </div>
-            <div class="flying-leaf-leaf">🍃</div>
-            <div class="worker-sprite sprite-right">
-              <div class="worker-eyes"><span class="pupil"></span></div>
-            </div>
-            <span class="worker-speech" id="workerSpeech">Đang kết nối các hạt giống peers trong khu rừng...</span>
-          </div>
-
-          <div class="torrent-meta-row">
-            <div class="torrent-info-left">
-              <h4 class="torrent-name" id="torrentFileName">Đang phân tích dữ liệu Magnet...</h4>
-              <div class="torrent-stats-line">
-                <span class="stat-pill"><strong id="torrentPeers">0</strong> Bọ rùa/Peers</span>
-                <span class="stat-separator">•</span>
-                <span class="stat-pill">Tốc độ: <strong id="torrentSpeed">0 KB/s</strong></span>
-                <span class="stat-separator">•</span>
-                <span class="stat-pill">Đã tải: <strong id="torrentDownloaded">0 MB</strong> / <span id="torrentTotalSize">0 MB</span></span>
-              </div>
-            </div>
-
-            <div class="torrent-actions-right">
-              <button id="saveToDiskBtn" class="ghibli-btn btn-save-disk hidden" title="Lưu vĩnh viễn file nhạc xuống máy tính (File System Access API)">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                  <polyline points="7 3 7 8 15 8"></polyline>
-                </svg>
-                <span>💾 Lưu Vào Máy</span>
-              </button>
-
-              <button id="playTorrentNowBtn" class="ghibli-btn btn-play-torrent hidden" title="Stream phát nhạc trực tiếp">
-                <span>▶️ Nghe Ngay</span>
-              </button>
-
-              <button id="cancelTorrentBtn" class="ghibli-btn btn-cancel-torrent" title="Hủy tải Torrent">
-                <span>Hủy</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="torrent-progress-bar-container">
-            <div class="torrent-progress-fill" id="torrentProgressFill">
-              <span class="cloud-shuttle">☁️</span>
-            </div>
-            <span class="torrent-percent-badge" id="torrentPercent">0%</span>
-          </div>
-
-        </div>
-
+    <aside class="sidebar-glass" id="sidebar">
+      
+      <!-- Brand Logo: Home Music -->
+      <div class="sidebar-brand">
+        <img src="icon-home-music.png" alt="Home Music" class="brand-icon">
+        <span class="brand-text">Home Music</span>
       </div>
-    </section>
 
-    <!-- BỐ CỤC CHÍNH (2 PHẦN: MÁY PHÁT GỖ & BẢNG DANH SÁCH GIẤY DA) -->
-    <main class="ghibli-main-grid">
+      <!-- Main Navigation Menu -->
+      <nav class="sidebar-nav">
+        <a href="#home" class="nav-item" id="navHome" title="Trang chủ">
+          <img src="icon-home.png" alt="Home" class="nav-icon">
+          <span class="nav-text">Home</span>
+        </a>
 
-      <!-- ====================================================================
-           PHẦN 1: MÁY PHÁT NHẠC THÂN CÂY (NATURE SOUND STATION)
-           ==================================================================== -->
-      <section class="nature-card player-cottage">
-        
-        <!-- Cành dây leo đung đưa theo làn gió -->
-        <div class="swaying-vine-branch" aria-hidden="true">
-          <div class="vine-stem"></div>
-          <div class="vine-leaf l1"></div>
-          <div class="vine-leaf l2"></div>
-          <div class="vine-leaf l3"></div>
-          <div class="vine-leaf l4"></div>
-        </div>
+        <a href="#search" class="nav-item" id="navSearch" title="Tìm kiếm & Tải nhạc WebTorrent">
+          <img src="icon-search.png" alt="Search" class="nav-icon">
+          <span class="nav-text">Search</span>
+        </a>
 
-        <!-- Khu vực đĩa than vân gỗ & Visualizer sóng gió -->
-        <div class="wood-turntable-deck">
-          <canvas id="visualizerCanvas" class="ghibli-visualizer"></canvas>
-
-          <div class="trunk-disc-wrapper" id="discWrapper">
-            <div class="trunk-record" id="trunkRecord">
-              <div class="bark-edge"></div>
-              <div class="growth-ring r1"></div>
-              <div class="growth-ring r2"></div>
-              <div class="growth-ring r3"></div>
-              <div class="record-sprout-center">
-                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#2d6a4f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M7 20h10"></path>
-                  <path d="M12 20v-8"></path>
-                  <path d="M12 12c-4-4-2-9 4-9 0 6-4 9-4 9Z" fill="#74c69d"></path>
-                  <path d="M12 12c0-5-5-7-7-4 0 5 7 4 7 4Z" fill="#52b788"></path>
-                </svg>
-                <div class="record-pin"></div>
-              </div>
-            </div>
-            
-            <div class="twig-tonearm" id="twigTonearm">
-              <div class="twig-base-acorn"></div>
-              <div class="twig-arm"></div>
-              <div class="twig-leaf-stylus"></div>
-            </div>
-          </div>
-
-          <button id="visualizerModeBtn" class="leaf-toggle-btn" title="Đổi hiệu ứng sóng: Mầm Cây / Sóng Gió">
-            <span id="visModeLabel">🌱 Mầm Cây</span>
-          </button>
-        </div>
-
-        <!-- Màn hình cuộn giấy da -->
-        <div class="parchment-scroll">
-          <div class="scroll-wood-pin top"></div>
-          <div class="scroll-content">
-            <div class="scroll-status-line">
-              <span class="leaf-indicator" id="leafIndicator">🍃</span>
-              <span class="status-msg" id="playStatusText">SẴN SÀNG</span>
-              <span class="format-tag" id="trackFormat">GHIBLI</span>
-            </div>
-            <div class="track-title-container">
-              <h2 class="parchment-title" id="trackTitle">Chưa có bài hát nào</h2>
-            </div>
-            <div class="parchment-artist" id="trackArtist">Hãy mở thư mục nhạc hoặc dán Magnet để thưởng thức</div>
-          </div>
-          <div class="scroll-wood-pin bottom"></div>
-        </div>
-
-        <!-- Thanh tiến trình sợi dây leo & Chú bọ rùa (Ladybug Thumb) -->
-        <div class="vine-progress-wrapper">
-          <div class="vine-progress-track" id="progressContainer" title="Nhấp hoặc kéo để tua nhạc">
-            <div class="vine-progress-fill" id="progressBar">
-              <span class="tiny-vine-bud b1"></span>
-              <span class="tiny-vine-bud b2"></span>
-              <span class="tiny-vine-bud b3"></span>
-            </div>
-
-            <div class="ladybug-thumb" id="progressThumb" title="Bọ rùa tua nhạc">
-              <div class="ladybug-shell">
-                <div class="ladybug-head"></div>
-                <div class="ladybug-dot d1"></div>
-                <div class="ladybug-dot d2"></div>
-                <div class="ladybug-dot d3"></div>
-                <div class="ladybug-dot d4"></div>
-              </div>
-            </div>
-
-            <div class="leaf-time-bubble" id="progressHoverTime">00:00</div>
-          </div>
-
-          <div class="time-readout">
-            <span id="currentTime">00:00</span>
-            <div class="breeze-indicator">
-              <span class="sprout s1"></span>
-              <span class="sprout s2"></span>
-              <span class="sprout s3"></span>
-            </div>
-            <span id="totalDuration">00:00</span>
-          </div>
-        </div>
+        <!-- Nút mở thư mục nhạc cục bộ từ máy tính -->
+        <label for="folderInput" class="nav-item cursor-pointer" id="navLibrary" title="Mở thư mục nhạc trên máy tính [Local Audio]">
+          <img src="icon-library.png" alt="Your Library" class="nav-icon">
+          <span class="nav-text">Your Library</span>
+          <span class="spirit-mini-note" title="Kodama âm nhạc">🍃</span>
+        </label>
+        <input type="file" id="folderInput" webkitdirectory directory multiple accept="audio/*" style="display: none;">
+        <input type="file" id="fileInput" multiple accept="audio/*" style="display: none;">
 
         <!-- 
-          CÁC PHÍM ĐIỀU KHIỂN & CHẾ ĐỘ LOOP 4 TRẠNG THÁI
-          [SKILL: /ponytail & /animate]
-          1. Tắt -> 2. Lặp cả list -> 3. Lặp 1 bài -> 4. Lặp bài đã chọn (Custom Loop hạt dẻ)
+          MỤC PLAYLISTS ACTIVE: SỬ DỤNG HÌNH ẢNH TẤM GỖ WOOD.JPG
+          Có chú Kodama đáng yêu ngồi trên góc phải tấm gỗ
         -->
-        <div class="nature-controls-panel">
-          <!-- Nút Shuffle -->
-          <button id="shuffleBtn" class="nature-key-btn" title="Phát ngẫu nhiên (Shuffle) [S]">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 18h2.5c1.5 0 2.8-.7 3.7-2l5.6-8c.9-1.3 2.2-2 3.7-2H21"></path>
-              <path d="m18 3 3 3-3 3"></path>
-              <path d="M3 6h2.5c1.5 0 2.8.7 3.7 2"></path>
-              <path d="M21 18h-2.5c-1.5 0-2.8-.7-3.7-2l-.6-.8"></path>
-              <path d="m18 15 3 3-3 3"></path>
-            </svg>
-            <span class="wood-active-dot"></span>
+        <a href="#playlists" class="nav-item active wood-active-tab" id="navPlaylists" title="Danh sách phát">
+          <img src="icon-playlists.png" alt="Playlists" class="nav-icon wood-nav-icon">
+          <span class="nav-text wood-nav-text">Playlists</span>
+          <!-- Các đốm sáng Susuwatari lơ lửng quanh tấm gỗ -->
+          <span class="wood-glow-spirit" aria-hidden="true"></span>
+        </a>
+
+        <a href="#create" class="nav-item" id="navCreate" title="Tạo danh sách phát mới">
+          <img src="icon-create.png" alt="Create Playlist" class="nav-icon">
+          <span class="nav-text">Create Playlist</span>
+        </a>
+      </nav>
+
+      <!-- Đường ngăn cách mộc mạc -->
+      <div class="sidebar-divider"></div>
+
+      <!-- Sub-Playlists List -->
+      <div class="sidebar-playlists">
+        <button class="sub-playlist-item" data-playlist="ghibli-melodies" title="Nghe Ghibli Melodies">
+          <img src="thumb-ghibli.png" alt="Ghibli Melodies" class="thumb-icon">
+          <span class="sub-text">Ghibli Melodies</span>
+        </button>
+
+        <button class="sub-playlist-item" data-playlist="forest-beats" title="Nghe Forest Beats">
+          <img src="thumb-forest.png" alt="Forest Beats" class="thumb-icon">
+          <span class="sub-text">Forest Beats</span>
+        </button>
+
+        <button class="sub-playlist-item" data-playlist="lofi-woods" title="Nghe Lofi Woods">
+          <img src="thumb-lofi.png" alt="Lofi Woods" class="thumb-icon">
+          <span class="sub-text">Lofi Woods</span>
+        </button>
+
+        <button class="sub-playlist-item" data-playlist="tea-time" title="Nghe Tea Time Tunes">
+          <img src="thumb-tea.png" alt="Tea Time Tunes" class="thumb-icon">
+          <span class="sub-text">Tea Time Tunes</span>
+          <span class="tea-kodama-spirit" title="Linh hồn trà xanh">✨</span>
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- 
+      ======================================================================
+      3. MAIN CONTENT (DANH SÁCH PHÁT TRUNG TÂM THEO GIAODIEN.PNG)
+      [SKILL: /image-to-code-skill]
+      Grid layout các Card vuông bo góc tròn mềm mại + Top Nav Controls
+      ======================================================================
+    -->
+    <main class="main-content" id="mainContent">
+
+      <!-- Top Bar: Nút điều hướng `<` `>` + Thanh tìm kiếm + Nút Cloud Sync -->
+      <header class="top-nav-bar">
+        <div class="nav-history-btns">
+          <button class="history-circle-btn" id="historyBackBtn" title="Quay lại">&lt;</button>
+          <button class="history-circle-btn" id="historyForwardBtn" title="Tiến tới">&gt;</button>
+        </div>
+
+        <div class="top-search-shell">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="searchInput" placeholder="Tìm bài hát, nghệ sĩ hoặc giai điệu...">
+          <button id="clearSearchBtn" class="clear-search-btn hidden" title="Xóa">&times;</button>
+        </div>
+
+        <div class="top-actions-cluster">
+          <!-- Nút bật bảng WebTorrent P2P -->
+          <button id="torrentToggleBtn" class="top-action-pill btn-torrent-pill" title="Mở bảng WebTorrent P2P">
+            <span class="acorn-emoji">📡</span>
+            <span>WebTorrent</span>
           </button>
 
-          <!-- Nút Prev -->
-          <button id="prevBtn" class="nature-key-btn" title="Bài trước [P]">
+          <!-- Nút Lá Thư Ghibli: Đăng nhập & Đồng bộ Cloud Supabase -->
+          <button id="authModalTriggerBtn" class="top-action-pill btn-cloud-pill" title="Đăng nhập & Đồng bộ Playlist lên Cloud">
+            <span class="cloud-icon" id="syncStatusIcon">☁️</span>
+            <span id="userAuthBadgeText">Đăng Nhập</span>
+          </button>
+
+          <!-- Avatar tròn phong cách Ghibli -->
+          <div class="user-avatar-circle" id="profileAvatarBtn" title="Thông tin người bạn rừng xanh">
+            <div class="avatar-face">🌱</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- SECTION CHÍNH: PLAYLISTS GRID -->
+      <section class="playlists-view-section">
+        <h1 class="view-main-title">Playlists</h1>
+
+        <!-- GRID 6 CARD CHÍNH CHUẨN PIXEL-PERFECT TỪ GIAODIEN.PNG -->
+        <div class="playlists-grid">
+          
+          <!-- Card 1: Ghibli Melodies -->
+          <div class="playlist-card" data-playlist="ghibli-melodies" data-track="Spirited Away - One Summer's Day" data-artist="Joe Hisaishi" data-cover="card-ghibli.jpg">
+            <div class="card-art-box">
+              <img src="card-ghibli.jpg" alt="Ghibli Melodies" class="card-cover-img" loading="lazy">
+              <button class="card-hover-play" title="Phát ngay">
+                <span class="play-arrow">▶</span>
+              </button>
+            </div>
+            <h3 class="card-title-text">GHIBLI MELODIES</h3>
+          </div>
+
+          <!-- Card 2: Nature Sounds -->
+          <div class="playlist-card" data-playlist="nature-sounds" data-track="My Neighbor Totoro - Wind Forest" data-artist="Joe Hisaishi" data-cover="card-totoro.jpg">
+            <div class="card-art-box">
+              <img src="card-totoro.jpg" alt="Nature Sounds" class="card-cover-img" loading="lazy">
+              <button class="card-hover-play" title="Phát ngay">
+                <span class="play-arrow">▶</span>
+              </button>
+            </div>
+            <h3 class="card-title-text">NATURE SOUNDS</h3>
+          </div>
+
+          <!-- Card 3: Howl's Joy -->
+          <div class="playlist-card" data-playlist="howls-joy" data-track="Merry-Go-Round of Life" data-artist="Joe Hisaishi" data-album="Howl's Moving Castle" data-cover="card-howl.jpg">
+            <div class="card-art-box">
+              <img src="card-howl.jpg" alt="Howl's Joy" class="card-cover-img" loading="lazy">
+              <button class="card-hover-play" title="Phát ngay">
+                <span class="play-arrow">▶</span>
+              </button>
+            </div>
+            <h3 class="card-title-text">HOWL'S JOY</h3>
+          </div>
+
+          <!-- Card 4: Ki-Ki's Music -->
+          <div class="playlist-card" data-playlist="kikis-music" data-track="A Town with an Ocean View" data-artist="Joe Hisaishi" data-cover="card-kiki.jpg">
+            <div class="card-art-box">
+              <img src="card-kiki.jpg" alt="Ki-Ki's Music" class="card-cover-img" loading="lazy">
+              <button class="card-hover-play" title="Phát ngay">
+                <span class="play-arrow">▶</span>
+              </button>
+            </div>
+            <h3 class="card-title-text">KI-KI'S MUSIC</h3>
+          </div>
+
+          <!-- Card 5: Wind Rises -->
+          <div class="playlist-card" data-playlist="wind-rises" data-track="The Wind Rises (A Journey)" data-artist="Joe Hisaishi" data-cover="card-wind.jpg">
+            <div class="card-art-box">
+              <img src="card-wind.jpg" alt="Wind Rises" class="card-cover-img" loading="lazy">
+              <button class="card-hover-play" title="Phát ngay">
+                <span class="play-arrow">▶</span>
+              </button>
+            </div>
+            <h3 class="card-title-text">WIND RISES</h3>
+          </div>
+
+          <!-- Card 6: Forest Beats (Hàng thứ 2 trong GIAODIEN.png) -->
+          <div class="playlist-card" data-playlist="forest-beats" data-track="Kiki's Flying Delivery - Lofi Beats" data-artist="Studio Ghibli Chill" data-cover="card-kiki-town.jpg">
+            <div class="card-art-box">
+              <img src="card-kiki-town.jpg" alt="Forest Beats" class="card-cover-img" loading="lazy">
+              <button class="card-hover-play" title="Phát ngay">
+                <span class="play-arrow">▶</span>
+              </button>
+            </div>
+            <h3 class="card-title-text">FOREST BEATS</h3>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- 
+        BẢNG WEBTORRENT GHIBLI P2P SEARCH & STREAM
+        [SKILL: /ponytail] Logic tìm kiếm & stream trực tiếp qua WebRTC
+      -->
+      <section class="torrent-cottage-panel hidden" id="torrentPanel">
+        <div class="torrent-panel-inner">
+          <div class="torrent-search-header">
+            <div class="torrent-title-group">
+              <span class="acorn-tag">🌱 WEBTORRENT P2P</span>
+              <span class="torrent-tagline">Tải & Stream Nhạc Trực Tuyến Xuống Máy Bằng Trình Duyệt</span>
+            </div>
+            <div class="sample-magnets-row">
+              <span class="sample-label">Thử mẫu:</span>
+              <button class="sample-btn" data-query="totoro-lofi">🍃 Totoro Lofi Theme</button>
+              <button class="sample-btn" data-query="ghibli-relax">🌾 Ghibli Nature Sounds</button>
+              <button class="sample-btn" data-query="sintel-track">🌰 Sintel Free Audio</button>
+            </div>
+          </div>
+
+          <form id="torrentForm" class="torrent-input-bar">
+            <div class="torrent-input-wrapper">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+              </svg>
+              <input type="text" id="torrentInput" placeholder="Dán Magnet URL (magnet:?xt=...) hoặc nhập tên bài hát cần tải...">
+              <button type="button" id="clearTorrentInput" class="clear-wood-btn hidden" title="Xóa">&times;</button>
+            </div>
+            <button type="submit" id="torrentSubmitBtn" class="ghibli-action-btn btn-torrent-action">
+              <span>🍃 Tải & Stream</span>
+            </button>
+          </form>
+
+          <!-- Bảng tiến trình tải WebTorrent Susuwatari -->
+          <div class="torrent-status-card hidden" id="torrentStatusCard">
+            <div class="susuwatari-work-crew" id="susuwatariCrew">
+              <div class="worker-sprite sprite-left"><div class="worker-eyes"><span class="pupil"></span></div></div>
+              <div class="flying-leaf-leaf">🍃</div>
+              <div class="worker-sprite sprite-right"><div class="worker-eyes"><span class="pupil"></span></div></div>
+              <span class="worker-speech" id="workerSpeech">Đang kết nối các hạt giống peers trong khu rừng...</span>
+            </div>
+
+            <div class="torrent-meta-row">
+              <span class="torrent-meta-name" id="torrentFileName">Giai điệu Ghibli</span>
+              <div class="torrent-stats">
+                <span>Peers: <strong id="torrentPeers">0</strong></span>
+                <span>Tốc độ: <strong id="torrentSpeed">0 KB/s</strong></span>
+                <span>Đã tải: <strong id="torrentDownloaded">0 MB</strong> / <strong id="torrentTotalSize">0 MB</strong></span>
+              </div>
+            </div>
+
+            <div class="torrent-bar-shell">
+              <div class="torrent-bar-fill" id="torrentProgressFill" style="width: 0%;"></div>
+              <span class="torrent-percent-text" id="torrentPercent">0%</span>
+            </div>
+
+            <div class="torrent-actions-row">
+              <button id="saveToDiskBtn" class="ghibli-action-btn btn-save-disk hidden" title="Lưu vĩnh viễn vào ổ cứng bằng File System Access API">
+                💾 Lưu Vào Máy
+              </button>
+              <button id="playTorrentNowBtn" class="ghibli-action-btn btn-stream-now hidden">
+                ▶ Phát Ngay
+              </button>
+              <button id="cancelTorrentBtn" class="ghibli-btn-subtle">
+                Dừng Tải
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 
+        DANH SÁCH BÀI HÁT CHI TIẾT (PLAYLIST QUEUE DRAWER)
+        Chứa các ô checkbox Hạt Dẻ 🌰 cho chế độ Custom Loop
+      -->
+      <section class="playlist-drawer-cottage hidden" id="playlistCottage">
+        <div class="drawer-header">
+          <div class="drawer-title-group">
+            <span class="moss-stamp">DANH SÁCH PHÁT</span>
+            <span class="counter-badge" id="playlistCount">0 Bài Hát</span>
+            <span class="custom-loop-chip hidden" id="customLoopChip">🌰 Đang Lặp Hạt Dẻ</span>
+          </div>
+          <div class="drawer-actions">
+            <span class="folder-pill" id="folderNameBadge">Thư viện nhạc</span>
+            <button id="manualSyncBtn" class="sync-tiny-btn" title="Đồng bộ ngay lên Cloud Supabase">
+              <span>🔄 Đồng bộ Cloud</span>
+            </button>
+            <button id="closeDrawerBtn" class="close-drawer-btn" title="Thu gọn danh sách">&times;</button>
+          </div>
+        </div>
+
+        <div class="drawer-scroll-box" id="playlistContainer">
+          <!-- Trạng thái trống -->
+          <div class="empty-nature-state" id="emptyState">
+            <div class="acorn-basket-art">🧺</div>
+            <h3>Giai Điệu Khu Rừng Đang Ngủ Yên</h3>
+            <p>Bấm <strong>"Your Library"</strong> để mở thư mục nhạc trên máy hoặc chọn các Playlist mẫu ở trên.</p>
+          </div>
+
+          <!-- Danh sách thẻ bài hát tích hợp ô Checkbox Hạt Dẻ -->
+          <ul class="nature-song-list" id="songList"></ul>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- 
+      ======================================================================
+      4. BOTTOM PLAYER BAR (THANH PHÁT NHẠC KÍNH MỜ NGẢ VÀNG ĐẤT)
+      [SKILL: /image-to-code-skill & /impeccable]
+      Chuẩn pixel-perfect từ GIAODIEN.png:
+      - Left: Album Art Howl + Merry-Go-Round of Life + Joe Hisaishi + 💚
+      - Center: Control Buttons (Play giả gỗ) + Wavy Vine Track + Calcifer Thumb
+      - Right: Volume horn + Slider + Queue toggle
+      ======================================================================
+    -->
+    <footer class="bottom-player-glass" id="bottomPlayer">
+
+      <!-- LEFT: Bìa album + Tên bài hát + Nghệ sĩ + Yêu thích -->
+      <div class="player-left-group">
+        <div class="album-cover-frame">
+          <img id="currentTrackCover" src="album-howl.jpg" alt="Merry-Go-Round of Life" class="now-playing-cover">
+        </div>
+        <div class="now-playing-meta">
+          <div class="song-title-row">
+            <span id="trackTitle" class="track-title-text" title="Merry-Go-Round of Life">Merry-Go-Round of Life</span>
+            <button id="likeBtn" class="leaf-heart-btn active" title="Yêu thích bài này">💚</button>
+          </div>
+          <span id="trackArtist" class="track-artist-text">Joe Hisaishi</span>
+          <span id="trackAlbum" class="track-album-text">Howl's Moving Castle</span>
+          <span id="trackFormat" class="hidden">MP3</span>
+        </div>
+      </div>
+
+      <!-- CENTER: Cụm nút bấm gỗ + Thanh tiến trình lượn sóng & Chú lửa Calcifer -->
+      <div class="player-center-group">
+        
+        <!-- Hàng nút điều khiển chính -->
+        <div class="player-controls-row">
+          <!-- Shuffle -->
+          <button id="shuffleBtn" class="nature-ctrl-btn" title="Phát ngẫu nhiên (Shuffle) [S]">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 3h5v5"></path>
+              <path d="M4 20L21 3"></path>
+              <path d="M21 16v5h-5"></path>
+              <path d="M15 15l6 6"></path>
+              <path d="M4 4l5 5"></path>
+            </svg>
+          </button>
+
+          <!-- Prev -->
+          <button id="prevBtn" class="nature-ctrl-btn" title="Bài trước [P]">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
               <path d="M6 5a1 1 0 0 0-1 1v12a1 1 0 0 0 2 0V6a1 1 0 0 0-1-1Zm12.4 1.2a1 1 0 0 0-1.5-.86l-9 5.5a1 1 0 0 0 0 1.72l9 5.5A1 1 0 0 0 19 17.2V6.8a1 1 0 0 0-.6-.6Z"></path>
             </svg>
           </button>
 
-          <!-- Nút Play / Pause Trung Tâm -->
-          <button id="playPauseBtn" class="nature-key-btn hero-leaf-btn" title="Phát / Tạm dừng [Space]">
-            <svg id="playIcon" viewBox="0 0 24 24" width="30" height="30" fill="currentColor">
-              <path d="M6 3c5 0 13 6 13 9s-8 9-13 9c0-6 4-9 4-9s-4-3-4-9Z"></path>
-              <path d="M6 12c5 0 9 0 13 0" stroke="#2d6a4f" stroke-width="1.8" stroke-linecap="round"></path>
-            </svg>
-            <svg id="pauseIcon" class="hidden" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round">
-              <line x1="7" y1="5" x2="7" y2="19"></line>
-              <line x1="17" y1="5" x2="17" y2="19"></line>
-            </svg>
+          <!-- 
+            NÚT PLAY/PAUSE TRUNG TÂM: VÒNG TRÒN HỌA TIẾT GIẢ GỖ
+            [SKILL: /impeccable & /animate]
+          -->
+          <button id="playPauseBtn" class="wood-disc-play-btn" title="Phát / Tạm dừng [Space]">
+            <span id="playIcon" class="wood-play-icon">▶</span>
+            <span id="pauseIcon" class="wood-pause-icon hidden">⏸</span>
           </button>
 
-          <!-- Nút Next -->
-          <button id="nextBtn" class="nature-key-btn" title="Bài tiếp theo [N]">
+          <!-- Next -->
+          <button id="nextBtn" class="nature-ctrl-btn" title="Bài tiếp theo [N]">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
               <path d="M18 5a1 1 0 0 1 1 1v12a1 1 0 0 1-2 0V6a1 1 0 0 1 1-1ZM5.6 6.2A1 1 0 0 1 7.1 5.34l9 5.5a1 1 0 0 1 0 1.72l-9 5.5A1 1 0 0 1 5 17.2V6.8a1 1 0 0 1 .6-.6Z"></path>
             </svg>
           </button>
 
-          <!-- Nút Loop 4 Trạng Thái (Tắt -> Tất cả -> 1 Bài -> Bài đã chọn) -->
-          <button id="loopBtn" class="nature-key-btn" title="Chế độ lặp: Tắt / Toàn bộ / 1 Bài / Bài đã chọn [L]">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Loop 4 Trạng Thái (Tắt -> Toàn bộ -> 1 Bài -> Hạt dẻ Custom Loop) -->
+          <button id="loopBtn" class="nature-ctrl-btn active" title="Chế độ lặp: Toàn bộ / 1 Bài / Hạt dẻ [L]">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
               <path d="m17 2 4 4-4 4"></path>
               <path d="M3 11v-1a4 4 0 0 1 4-4h14"></path>
               <path d="m7 22-4-4 4-4"></path>
               <path d="M21 13v1a4 4 0 0 1-4 4H3"></path>
             </svg>
-            <span class="loop-badge-indicator" id="loopBadge">1</span>
-            <span class="wood-active-dot"></span>
+            <span class="loop-badge-dot" id="loopBadge">🌰</span>
           </button>
         </div>
 
-        <!-- Thanh điều chỉnh âm lượng gỗ mộc -->
-        <div class="wood-volume-row">
-          <button id="muteBtn" class="leaf-icon-btn" title="Bật / Tắt âm thanh [M]">
-            <svg id="volumeHighIcon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-            </svg>
-            <svg id="volumeMutedIcon" class="hidden" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <line x1="23" y1="9" x2="17" y2="15"></line>
-              <line x1="17" y1="9" x2="23" y2="15"></line>
-            </svg>
-          </button>
+        <!-- 
+          THANH TIẾN TRÌNH LƯỢN SÓNG ĐẶC BIỆT & CỤC CHẠY NGỌN LỬA CALCIFER (F.JPG / F.PNG)
+          [SKILL: /animate & /improve-animations]
+          - Đường cong lượn sóng nhẹ màu xanh lá bằng SVG
+          - Cục chạy (Thumb) sử dụng ảnh ngọn lửa f.jpg / f.png với mix-blend-mode: multiply khử nền trắng
+          - CSS keyframes ngọn lửa nhấp nháy, phập phồng nhẹ khi nhạc đang phát
+        -->
+        <div class="wavy-progress-wrapper" id="progressContainer" title="Nhấp hoặc kéo chú lửa Calcifer để tua nhạc">
           
-          <div class="wood-slider-shell">
-            <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.8" class="nature-slider">
-          </div>
-          <span id="volumePercent" class="volume-text">80%</span>
-        </div>
+          <svg class="wavy-vine-svg" id="wavyVineSvg" viewBox="0 0 600 24" preserveAspectRatio="none">
+            <!-- Đường cong lượn sóng nền -->
+            <path id="vineBasePath" class="vine-base-track" d="M 0 12 Q 150 20, 300 12 T 600 12"/>
+            <!-- Đoạn tiến trình đã phát -->
+            <path id="vineProgressFill" class="vine-progress-fill" d="M 0 12 Q 150 20, 300 12 T 600 12"/>
+          </svg>
 
-      </section>
-
-      <!-- ====================================================================
-           PHẦN 2: BẢNG DANH SÁCH BÀI HÁT GIẤY DA & TÍCH CHỌN HẠT DẺ
-           ==================================================================== -->
-      <section class="nature-card playlist-cottage" id="playlistCottage">
-        
-        <!-- Đầu bảng danh sách: Tiêu đề & Ô tìm kiếm mộc mạc -->
-        <div class="playlist-wood-top">
-          <div class="pl-header-title">
-            <span class="moss-badge">DANH SÁCH PHÁT</span>
-            <span class="acorn-counter" id="playlistCount">0 Bài Hát</span>
-            <!-- Báo hiệu đang bật chế độ Lặp các bài đã chọn -->
-            <span class="custom-loop-chip hidden" id="customLoopChip">🌰 Đang Lặp Hạt Dẻ</span>
+          <!-- Cục chạy Ngọn lửa Calcifer chạy dọc theo đường cong -->
+          <div class="calcifer-thumb-anchor" id="progressThumb">
+            <div class="calcifer-flame" id="calciferFlame" title="Calcifer Flame Thumb"></div>
           </div>
 
-          <div class="twig-search-box">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="text" id="searchInput" placeholder="Tìm bài hát trong khu rừng...">
-            <button id="clearSearchBtn" class="clear-wood-btn hidden" title="Xóa tìm kiếm">&times;</button>
+          <!-- Bong bóng hiển thị thời gian khi rê chuột -->
+          <div class="time-floating-chip" id="progressHoverTime">00:00</div>
+
+          <!-- Thời gian phát -->
+          <div class="time-readout-row">
+            <span id="currentTime">00:00</span>
+            <span class="time-divider">/</span>
+            <span id="totalDuration">00:00</span>
           </div>
-        </div>
-
-        <!-- Thư mục nguồn & nút đồng bộ tay nhanh -->
-        <div class="nature-subbar">
-          <div class="nature-folder-pill">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
-            </svg>
-            <span id="folderNameBadge">Chưa chọn thư mục nào</span>
-          </div>
-
-          <!-- Nút bấm đồng bộ ngay lên Cloud -->
-          <button id="manualSyncBtn" class="sync-tiny-btn" title="Đồng bộ ngay lên Cloud Supabase">
-            <span>🔄 Đồng bộ Cloud</span>
-          </button>
-        </div>
-
-        <!-- Vùng cuộn danh sách thẻ bài hát giấy da -->
-        <div class="parchment-scroll-area" id="playlistContainer">
-          
-          <!-- Trạng thái trống (Empty State Totoro Vibe) -->
-          <div class="empty-nature-state" id="emptyState">
-            <div class="acorn-basket-art">
-              <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="#2d6a4f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 3a9 9 0 0 1 9 9v1H3v-1a9 9 0 0 1 9-9Z" fill="#a7c957"></path>
-                <path d="M12 13v6a2 2 0 0 1-4 0"></path>
-                <path d="M12 3V1"></path>
-              </svg>
-            </div>
-            <h3>Giai Điệu Khu Rừng Đang Ngủ Yên</h3>
-            <p>Nhấp <strong>"Mở Thư Mục Nhạc"</strong> hoặc dán <strong>Magnet WebTorrent</strong> ở trên để thưởng thức âm nhạc.</p>
-            <div class="format-leaf-pills">
-              <span>🍃 MP3</span><span>🌱 WAV</span><span>🌾 FLAC</span><span>📡 WEBTORRENT</span><span>☁️ CLOUD SYNC</span>
-            </div>
-          </div>
-
-          <!-- 
-            DANH SÁCH BÀI HÁT TÍCH HỢP Ô CHECKBOX HẠT DẺ 
-            [SKILL: /impeccable & /animate]
-          -->
-          <ul class="nature-song-list" id="songList"></ul>
 
         </div>
 
-        <!-- Chân bảng danh sách -->
-        <div class="playlist-footer-banner">
-          <span class="eco-status">
-            <span class="sprout-icon">🌱</span> WebTorrent & Cloud Sync Ready
-          </span>
-          <span class="nature-shortcut-hint" title="Space: Phát/Dừng | N/P: Bài tiếp/trước | S: Shuffle | L: Loop 4 chế độ | M: Tắt tiếng">
-            ⌨ Phím tắt
-          </span>
+      </div>
+
+      <!-- RIGHT: Âm lượng + Loa mộc + Bật/Tắt Danh sách phát -->
+      <div class="player-right-group">
+        <span class="volume-text-label">Volume</span>
+
+        <button id="muteBtn" class="volume-speaker-btn" title="Bật / Tắt âm lượng [M]">
+          <!-- Biểu tượng loa mộc Ghibli -->
+          <svg id="volumeHighIcon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+          </svg>
+          <svg id="volumeMutedIcon" class="hidden" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+            <line x1="23" y1="9" x2="17" y2="15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></line>
+            <line x1="17" y1="9" x2="23" y2="15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></line>
+          </svg>
+        </button>
+
+        <div class="volume-slider-shell">
+          <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.8" class="nature-slider">
         </div>
+        <span id="volumePercent" class="volume-percent-badge">80%</span>
 
-      </section>
+        <!-- Nút bật/tắt ngăn kéo danh sách phát -->
+        <button id="queueToggleBtn" class="queue-toggle-btn" title="Xem danh sách bài hát & ô chọn hạt dẻ">
+          <span>🌰 Hạt Dẻ</span>
+        </button>
+      </div>
 
-    </main>
+    </footer>
 
   </div>
 
@@ -467,7 +512,7 @@
     ========================================================================
     [SKILL: /animate & /impeccable] 
     MODAL ĐĂNG NHẬP / ĐĂNG KÝ: LÁ THƯ TAY TỪ RỪNG XANH (GHIBLI HANDWRITTEN LETTER)
-    Rơi từ trên trời xuống nhẹ nhàng như một chiếc lá chao nghiêng
+    Rơi từ trên trời xuống nhẹ nhàng chao nghiêng như một chiếc lá (leafModalDrop)
     ========================================================================
   -->
   <div class="auth-modal-overlay hidden" id="authModalOverlay">
@@ -522,7 +567,7 @@
         </div>
 
         <div class="form-actions">
-          <button type="submit" id="authSubmitBtn" class="ghibli-btn btn-send-letter">
+          <button type="submit" id="authSubmitBtn" class="ghibli-action-btn btn-send-letter">
             <span id="authSubmitText">🍃 Gửi Thư • Đăng Nhập</span>
           </button>
         </div>
@@ -536,7 +581,7 @@
           <strong class="user-email-display" id="userEmailDisplay">totoro@forest</strong>
           <span class="sync-count-info" id="syncCountInfo">Đang đồng bộ 0 bài hát</span>
         </div>
-        <button id="logoutBtn" class="ghibli-btn btn-wood-secondary btn-logout">Đăng Xuất</button>
+        <button id="logoutBtn" class="ghibli-btn-subtle btn-logout">Đăng Xuất</button>
       </div>
 
     </div>
