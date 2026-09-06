@@ -22,75 +22,11 @@
   // --- HẰNG SỐ ĐỊNH DẠNG ÂM THANH HỖ TRỢ ---
   const SUPPORTED_AUDIO_EXT = ['.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac', '.opus', '.weba'];
 
-  // [SKILL: /image-to-code-skill] 6 GIAI ĐIỆU GHIBLI MẪU CHUẨN GIAODIEN.PNG
-  const DEFAULT_GHIBLI_TRACKS = [
-    {
-      id: 'ghibli_card_1',
-      name: "Spirited Away - One Summer's Day.mp3",
-      title: "One Summer's Day",
-      artist: "Joe Hisaishi",
-      album: "Spirited Away OST",
-      cover: "card-ghibli.jpg",
-      format: "FLAC",
-      size: "24.5 MB",
-      synthTheme: 'summer'
-    },
-    {
-      id: 'ghibli_card_2',
-      name: "My Neighbor Totoro - Wind Forest.mp3",
-      title: "Wind Forest",
-      artist: "Joe Hisaishi",
-      album: "My Neighbor Totoro",
-      cover: "card-totoro.jpg",
-      format: "MP3",
-      size: "8.4 MB",
-      synthTheme: 'totoro'
-    },
-    {
-      id: 'ghibli_card_3',
-      name: "Howl's Moving Castle - Merry-Go-Round of Life.mp3",
-      title: "Merry-Go-Round of Life",
-      artist: "Joe Hisaishi",
-      album: "Howl's Moving Castle",
-      cover: "album-howl.jpg",
-      format: "FLAC",
-      size: "32.1 MB",
-      synthTheme: 'howl'
-    },
-    {
-      id: 'ghibli_card_4',
-      name: "Kiki's Delivery Service - A Town with an Ocean View.mp3",
-      title: "A Town with an Ocean View",
-      artist: "Joe Hisaishi",
-      album: "Kiki's Delivery Service",
-      cover: "card-kiki.jpg",
-      format: "MP3",
-      size: "9.2 MB",
-      synthTheme: 'kiki'
-    },
-    {
-      id: 'ghibli_card_5',
-      name: "The Wind Rises - A Journey.mp3",
-      title: "The Wind Rises (A Journey)",
-      artist: "Joe Hisaishi",
-      album: "The Wind Rises",
-      cover: "card-wind.jpg",
-      format: "MP3",
-      size: "7.8 MB",
-      synthTheme: 'wind'
-    },
-    {
-      id: 'ghibli_card_6',
-      name: "Forest Beats - Lofi Chill Ghibli.mp3",
-      title: "Kiki's Flying Delivery (Forest Beats)",
-      artist: "Studio Ghibli Chill",
-      album: "Ghibli Lofi Woods",
-      cover: "card-kiki-town.jpg",
-      format: "MP3",
-      size: "6.9 MB",
-      synthTheme: 'lofi'
-    }
-  ];
+  // [SKILL: /ponytail] BẢO MẬT DOM XSS: Chống tiêm mã độc qua tên bài hát / metadata
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+  }
 
   // --------------------------------------------------------------------------
   // [SKILL: /ponytail] STATE MANAGEMENT: Quản lý trạng thái bài hát
@@ -480,7 +416,8 @@
 
     if (state.currentIndex >= 0 && state.currentIndex !== index) {
       const prev = state.playlist[state.currentIndex];
-      if (prev && prev.url && !prev.synthTheme) {
+      // [SKILL: /ponytail] Chỉ revoke blob URL tạm thời từ File cục bộ, bảo tồn nguyên vẹn URL stream từ Cobalt / Cloud
+      if (prev && prev.url && prev.file && typeof prev.url === 'string' && prev.url.startsWith('blob:')) {
         URL.revokeObjectURL(prev.url);
         prev.url = null;
       }
@@ -492,6 +429,8 @@
     if (track.youtubeId) {
       applyYouTubeThumbnailCover(track.youtubeId);
     } else if (dom.currentTrackCover) {
+      dom.currentTrackCover.onerror = null;
+      dom.currentTrackCover.classList.remove('cover-fade-in');
       dom.currentTrackCover.src = track.cover || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='24' fill='%23fefae0'>🎵</text></svg>";
       dom.currentTrackCover.alt = track.title;
     }
@@ -895,21 +834,26 @@
       li.className = 'nature-song-card' + (playlistIdx === state.currentIndex ? ' active' : '');
       li.dataset.index = playlistIdx;
 
-      const isAcornChecked = state.selectedLoopTrackIds.has(track.id);
+      const safeId = escapeHtml(track.id);
+      const safeTitle = escapeHtml(track.title);
+      const safeName = escapeHtml(track.name);
+      const safeArtist = escapeHtml(track.artist || 'Giai điệu Ghibli');
+      const safeSize = escapeHtml(track.size || '');
+      const safeFormat = escapeHtml(track.format || 'AUDIO');
 
       li.innerHTML = `
         <div class="card-left-group">
           <label class="acorn-checkbox-wrapper" title="Tích chọn bài này để lặp Hạt Dẻ 🌰">
-            <input type="checkbox" class="acorn-checkbox-input" data-id="${track.id}" ${isAcornChecked ? 'checked' : ''}>
+            <input type="checkbox" class="acorn-checkbox-input" data-id="${safeId}" ${isAcornChecked ? 'checked' : ''}>
             <span class="acorn-checkbox-icon"></span>
           </label>
           <div class="leaf-num-stamp">${displayIdx + 1}</div>
           <div class="card-song-details">
-            <span class="card-title" title="${track.name}">${track.title}</span>
-            <div class="card-subtext">${track.artist || 'Giai điệu Ghibli'} • ${track.size || ''} ${track.isCobalt ? '🕊️ Cobalt' : ''}</div>
+            <span class="card-title" title="${safeName}">${safeTitle}</span>
+            <div class="card-subtext">${safeArtist} • ${safeSize} ${track.isCobalt ? '🕊️ Cobalt' : ''}</div>
           </div>
         </div>
-        <span class="card-leaf-badge">${track.format || 'AUDIO'}</span>
+        <span class="card-leaf-badge">${safeFormat}</span>
       `;
 
       const checkbox = li.querySelector('.acorn-checkbox-input');
@@ -958,6 +902,8 @@
       card.className = 'playlist-card' + (playlistIdx === state.currentIndex ? ' active' : '');
       card.dataset.index = playlistIdx;
 
+      const safeDisplayTitle = escapeHtml(track.title || track.name);
+
       // Thumbnail để trống theo yêu cầu
       card.innerHTML = `
         <div class="card-art-box">
@@ -968,7 +914,7 @@
             <span class="play-arrow">▶</span>
           </button>
         </div>
-        <h3 class="card-title-text" title="${track.title || track.name}">${track.title || track.name}</h3>
+        <h3 class="card-title-text" title="${safeDisplayTitle}">${safeDisplayTitle}</h3>
       `;
 
       card.addEventListener('click', () => {
@@ -1682,8 +1628,10 @@
       cover: t.cover,
       format: t.format,
       size: t.size,
-      url: t.url || null,
-      isCobalt: !!t.isCobalt
+      // [SKILL: /ponytail] Chỉ đồng bộ URL stream thực tế (Cobalt / HTTPS), bỏ qua blob URL tạm thời
+      url: (t.url && typeof t.url === 'string' && !t.url.startsWith('blob:')) ? t.url : null,
+      isCobalt: !!t.isCobalt,
+      youtubeId: t.youtubeId || null
     }));
 
     const client = getSupabaseClient();
@@ -1852,6 +1800,11 @@
     });
 
     dom.progressContainer.addEventListener('pointerup', (e) => {
+      state.isScrubbing = false;
+      try { dom.progressContainer.releasePointerCapture(e.pointerId); } catch (_) {}
+    });
+
+    dom.progressContainer.addEventListener('pointercancel', (e) => {
       state.isScrubbing = false;
       try { dom.progressContainer.releasePointerCapture(e.pointerId); } catch (_) {}
     });
