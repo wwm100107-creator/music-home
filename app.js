@@ -478,6 +478,9 @@
   }
 
   function playAudio() {
+    if (dom.calciferFlame && dom.calciferFlame.paused && typeof dom.calciferFlame.play === 'function') {
+      dom.calciferFlame.play().catch(() => {});
+    }
     dom.audio.play().then(() => {
       state.isPlaying = true;
       updatePlaybackUI();
@@ -2076,6 +2079,16 @@
     // Nếu có bài hát thì tải bài đầu tiên, ngược lại giữ trạng thái trống sẵn sàng
     if (state.playlist.length > 0) {
       loadTrack(0, false);
+    }
+
+    // [SKILL: /animate] Đảm bảo video ngọn lửa Calcifer (fire.mp4) tự động phát lặp vô hạn
+    if (dom.calciferFlame && typeof dom.calciferFlame.play === 'function') {
+      dom.calciferFlame.play().catch(() => {});
+      document.addEventListener('pointerdown', () => {
+        if (dom.calciferFlame && dom.calciferFlame.paused && typeof dom.calciferFlame.play === 'function') {
+          dom.calciferFlame.play().catch(() => {});
+        }
+      }, { once: true });
     }
 
     // [SKILL: /animate & /impeccable] Khởi tạo thanh trượt tấm gỗ ở mục Active ban đầu (Playlists)

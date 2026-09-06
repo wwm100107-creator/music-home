@@ -392,10 +392,10 @@
         </div>
 
         <!-- 
-          THANH TIẾN TRÌNH LƯỢN SÓNG ĐẶC BIỆT & CỤC CHẠY NGỌN LỬA CALCIFER (F.JPG / F.PNG)
+          THANH TIẾN TRÌNH LƯỢN SÓNG ĐẶC BIỆT & CỤC CHẠY NGỌN LỬA CALCIFER (FIRE.MP4)
           [SKILL: /animate & /improve-animations]
           - Đường cong lượn sóng nhẹ màu xanh lá bằng SVG
-          - Cục chạy (Thumb) sử dụng ảnh ngọn lửa f.jpg / f.png với mix-blend-mode: multiply khử nền trắng
+          - Cục chạy (Thumb) sử dụng video fire.mp4 lặp vô hạn với mix-blend-mode: multiply khử phông nền
           - CSS keyframes ngọn lửa nhấp nháy, phập phồng nhẹ khi nhạc đang phát
         -->
         <div class="wavy-progress-wrapper" id="progressContainer" title="Nhấp hoặc kéo chú lửa Calcifer để tua nhạc">
@@ -407,9 +407,11 @@
             <path id="vineProgressFill" class="vine-progress-fill" d="M 0 12 Q 150 20, 300 12 T 600 12"/>
           </svg>
 
-          <!-- Cục chạy Ngọn lửa Calcifer chạy dọc theo đường cong -->
+          <!-- Cục chạy Ngọn lửa Calcifer chạy dọc theo đường cong (fire.mp4 lặp vô hạn) -->
           <div class="calcifer-thumb-anchor" id="progressThumb">
-            <div class="calcifer-flame" id="calciferFlame" title="Calcifer Flame Thumb"></div>
+            <video class="calcifer-flame" id="calciferFlame" autoplay loop muted playsinline aria-hidden="true" title="Calcifer Flame Thumb">
+              <source src="fire.mp4" type="video/mp4">
+            </video>
           </div>
 
           <!-- Bong bóng hiển thị thời gian khi rê chuột -->
