@@ -220,7 +220,7 @@ body.ghibli-app-body {
   height: 64px;
   pointer-events: none;
   z-index: 1;
-  background-image: url('wood_2.png');
+  background-image: url('wood_2.jpg'), url('wood_2.png');
   background-size: 100% 100%;
   background-repeat: no-repeat;
   background-position: center bottom;
@@ -230,7 +230,7 @@ body.ghibli-app-body {
   outline: none !important;
   box-shadow: none !important;
   filter: drop-shadow(0 4px 10px rgba(35, 20, 12, 0.4));
-  transform: translateY(168px); /* Vị trí mặc định chuẩn Playlists */
+  transform: translateY(56px); /* Vị trí mặc định chuẩn Search theo Search.png */
   opacity: 1; /* Luôn hiển thị rõ nét ngay từ frame đầu tiên */
   /* [SKILL: /animate] Đường cong chuyển động trượt êm ái tự nhiên */
   transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.25s ease;
@@ -450,64 +450,62 @@ body.ghibli-app-body {
   background: rgba(45, 75, 45, 0.65);
 }
 
-.top-search-shell {
+/* ==========================================================================
+   [SKILL: /image-to-code-skill & /impeccable]
+   SMART SEARCH BAR: BỀ MẶT GIẤY DA CUỘN GỖ VỚI ĐÈN BÃO WARM LANTERN (SEARCHICON.PNG)
+   - Wrapper <div> gán background-image: url('searchicon.png')
+   - Thẻ <input> bên trong hoàn toàn trong suốt (transparent), viền không màu
+   - Người dùng gõ trực tiếp lên bề mặt cuộn giấy da
+   - Padding trái 28px và phải 78px để không bị chạm viền gỗ hoặc che mất đèn bão
+   ========================================================================== */
+.search-parchment-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 530px;
+  height: 56px;
+  background-image: url('searchicon.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.35);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  border-radius: 20px;
-  padding: 6px 14px;
-  width: 320px;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  filter: drop-shadow(0 4px 10px rgba(35, 20, 10, 0.4));
+  transition: transform 0.25s ease, filter 0.25s ease;
+  user-select: none;
 }
 
-.top-search-shell:focus-within {
-  width: 380px;
-  background: rgba(255, 255, 255, 0.55);
-  border-color: #ffffff;
+.search-parchment-wrapper:focus-within {
+  filter: drop-shadow(0 6px 14px rgba(35, 20, 10, 0.55)) drop-shadow(0 0 10px rgba(255, 225, 140, 0.35));
+  transform: translateY(-1px);
 }
 
-/* SMART INPUT: Khi phát hiện Link URL YouTube / TikTok */
-.top-search-shell.url-mode {
-  width: 440px;
-  background: rgba(240, 253, 244, 0.75);
-  border-color: #52b788;
-  box-shadow: inset 0 2px 4px rgba(45, 106, 79, 0.1), 0 0 14px rgba(82, 183, 136, 0.45);
+.search-parchment-wrapper.url-mode {
+  filter: drop-shadow(0 6px 14px rgba(35, 20, 10, 0.55)) drop-shadow(0 0 14px rgba(82, 183, 136, 0.55));
 }
 
-.search-icon-box {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
+.search-parchment-input {
+  width: 100%;
+  height: 100%;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #2b1a0d;
+  padding: 0 78px 0 28px;
+  letter-spacing: 0.01em;
 }
 
-.search-icon-lens {
-  color: var(--ghibli-brown-dark);
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s;
-}
-
-.search-icon-pigeon {
-  font-size: 1.15rem;
-  line-height: 1;
-  display: inline-block;
-  animation: pigeonFlutter 1.6s infinite ease-in-out alternate;
-  transform-origin: center bottom;
-}
-
-@keyframes pigeonFlutter {
-  0% { transform: translateY(0) rotate(-3deg) scale(1); }
-  50% { transform: translateY(-2px) rotate(3deg) scale(1.08); }
-  100% { transform: translateY(0) rotate(-1deg) scale(1); }
+.search-parchment-input::placeholder {
+  color: #5a4533;
+  opacity: 0.85;
+  font-weight: 600;
 }
 
 .search-link-tag {
+  position: absolute;
+  right: 76px;
   background: #2d6a4f;
   color: #ffffff;
   font-family: var(--font-ghibli-nav);
@@ -519,6 +517,7 @@ body.ghibli-app-body {
   letter-spacing: 0.3px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   animation: tagPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 2;
 }
 
 @keyframes tagPopIn {
@@ -526,28 +525,39 @@ body.ghibli-app-body {
   100% { transform: scale(1); opacity: 1; }
 }
 
-.top-search-shell input {
-  background: transparent;
-  border: none;
-  outline: none;
-  font-family: var(--font-ghibli-nav);
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: var(--ghibli-brown-dark);
-  width: 100%;
-}
-
-.top-search-shell input::placeholder {
-  color: rgba(43, 24, 16, 0.65);
-}
-
 .clear-search-btn {
+  position: absolute;
+  right: 60px;
   background: transparent;
   border: none;
-  font-size: 1.1rem;
-  color: var(--ghibli-brown-mid);
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #4a3422;
   cursor: pointer;
   line-height: 1;
+  padding: 4px;
+  border-radius: 50%;
+  transition: transform 0.15s, color 0.15s;
+  z-index: 2;
+}
+
+.clear-search-btn:hover {
+  color: #932f2f;
+  transform: scale(1.15);
+}
+
+/* Fallback tương thích ngược với top-search-shell cũ nếu có */
+.top-search-shell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  padding: 6px 14px;
+  width: 320px;
 }
 
 /* ==========================================================================
@@ -891,6 +901,268 @@ body.ghibli-app-body {
 
 .avatar-face {
   font-size: 1.1rem;
+}
+
+/* ==========================================================================
+   [SKILL: /image-to-code-skill & /impeccable & /animate]
+   SEARCH VIEW SECTION (CLONE PIXEL-PERFECT TỪ SEARCH.PNG)
+   ========================================================================== */
+.search-view-section {
+  position: relative;
+  width: 100%;
+  max-width: 980px;
+  animation: searchSectionFadeIn 0.35s ease-out;
+}
+
+@keyframes searchSectionFadeIn {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Tinh linh Kodama bay lơ lửng bằng CSS Keyframes */
+.kodama-spirit-floating {
+  position: absolute;
+  pointer-events: none;
+  z-index: 4;
+  filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.8)) drop-shadow(0 2px 5px rgba(0, 0, 0, 0.25));
+}
+
+.kodama-float-top {
+  top: 16px;
+  right: 280px;
+  animation: kodamaFloat 4.2s ease-in-out infinite alternate;
+}
+
+.kodama-float-mid {
+  top: 156px;
+  right: 290px;
+  animation: kodamaFloatAlt 5s ease-in-out infinite alternate;
+}
+
+.kodama-float-right {
+  bottom: 25px;
+  right: 8px;
+  animation: kodamaFloat 3.8s ease-in-out infinite alternate;
+}
+
+.kodama-ghost-img {
+  width: 28px;
+  height: auto;
+  display: block;
+}
+
+@keyframes kodamaFloat {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-9px) rotate(3deg);
+  }
+  100% {
+    transform: translateY(-2px) rotate(-1deg);
+  }
+}
+
+@keyframes kodamaFloatAlt {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(-3.5deg);
+  }
+  100% {
+    transform: translateY(-4px) rotate(1.5deg);
+  }
+}
+
+/* Header tiêu đề Search */
+.search-hero-header {
+  margin: 6px 0 16px 2px;
+}
+
+.search-hero-title {
+  font-family: var(--font-ghibli-title);
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #2c1a0e;
+  -webkit-text-stroke: 0.5px rgba(44, 26, 14, 0.4);
+  text-shadow: 0 2px 4px rgba(255, 255, 255, 0.45);
+  margin: 0 0 2px 0;
+  letter-spacing: 0.01em;
+}
+
+.search-hero-subtitle {
+  font-family: var(--font-ghibli-nav);
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #3e2d1d;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+/* Các khối phân mục Theme & Genre */
+.search-section-block {
+  margin-bottom: 22px;
+}
+
+.search-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 11px;
+}
+
+.search-section-title {
+  font-family: var(--font-ghibli-title);
+  font-size: 1.32rem;
+  font-weight: 800;
+  color: #2c1a0e;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.5);
+  margin: 0;
+}
+
+.search-quill-glyph {
+  font-size: 1.2rem;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+}
+
+.search-kodama-header-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+}
+
+/* Grids */
+.search-cards-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.theme-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 126px);
+  gap: 14px;
+}
+
+.genre-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 106px);
+  gap: 13px;
+}
+
+.genres-row-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  position: relative;
+}
+
+/* Cậu bé ngồi trên tảng đá nghe nhạc & Lâu đài Laputa chuẩn Search.png */
+.search-scene-boy-rock {
+  position: relative;
+  width: 158px;
+  margin-bottom: 14px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.boy-rock-img {
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  filter: drop-shadow(0 6px 14px rgba(20, 25, 15, 0.35));
+  display: block;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+}
+
+.kodama-standing-laputa {
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  animation: kodamaFloat 3.8s ease-in-out infinite alternate;
+}
+
+.kodama-mini-sprite {
+  width: 22px;
+  height: auto;
+  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.85));
+}
+
+/* Card thiết kế chung */
+.ghibli-search-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  /* [SKILL: /animate] Hover vào thẻ Card nổi lên scale(1.05) */
+  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), filter 0.25s ease;
+}
+
+.card-thumb-frame {
+  position: relative;
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(25, 30, 20, 0.32);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: rgba(30, 45, 30, 0.2);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.theme-cards-grid .card-thumb-frame {
+  width: 126px;
+  height: 96px;
+}
+
+.genre-cards-grid .card-thumb-frame {
+  width: 106px;
+  height: 106px;
+}
+
+.card-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.35s ease;
+}
+
+.card-title-text {
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #28190d;
+  text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.75);
+  transition: color 0.25s, text-shadow 0.25s;
+}
+
+/* [SKILL: /animate] HIỆU ỨNG HOVER NỔI LÊN SCALE(1.05) */
+.ghibli-search-card:hover {
+  transform: scale(1.05);
+}
+
+.ghibli-search-card:hover .card-thumb-frame {
+  box-shadow: 0 8px 22px rgba(20, 30, 20, 0.45), 0 0 14px rgba(255, 240, 180, 0.55);
+  border-color: rgba(255, 255, 255, 0.9);
+}
+
+.ghibli-search-card:hover .card-thumb-img {
+  transform: scale(1.05);
+}
+
+.ghibli-search-card:hover .card-title-text {
+  color: #120803;
+  text-shadow: 0 1px 4px rgba(255, 245, 180, 0.95);
+}
+
+.ghibli-search-card:active {
+  transform: scale(0.98);
 }
 
 /* Section Title: Playlists */

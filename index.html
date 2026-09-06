@@ -97,8 +97,8 @@
             </a>
           </li>
 
-          <!-- 2. Search -->
-          <li class="sidebar-nav-item" data-tab="search" id="tabSearch">
+          <!-- 2. Search (Active mặc định theo chuẩn Search.png) -->
+          <li class="sidebar-nav-item active" data-tab="search" id="tabSearch">
             <a href="#search" class="nav-item-link" title="Tìm kiếm & Tải nhạc">
               <div class="nav-item-content">
                 <img src="icon-search.png" alt="Search" class="nav-icon">
@@ -118,8 +118,8 @@
             </label>
           </li>
 
-          <!-- 4. Playlists (Active mặc định chuẩn GIAODIEN.png) -->
-          <li class="sidebar-nav-item active" data-tab="playlists" id="tabPlaylists">
+          <!-- 4. Playlists -->
+          <li class="sidebar-nav-item" data-tab="playlists" id="tabPlaylists">
             <a href="#playlists" class="nav-item-link" title="Danh sách phát">
               <div class="nav-item-content">
                 <img src="icon-playlists.png" alt="Playlists" class="nav-icon">
@@ -172,33 +172,40 @@
 
     <!-- 
       ======================================================================
-      3. MAIN CONTENT (DANH SÁCH PHÁT TRUNG TÂM THEO GIAODIEN.PNG)
-      [SKILL: /image-to-code-skill]
-      Grid layout các Card vuông bo góc tròn mềm mại + Top Nav Controls
+      3. MAIN CONTENT (MÀN HÌNH TÌM KIẾM CHUẨN SEARCH.PNG)
+      [SKILL: /image-to-code-skill & /impeccable]
+      - Top Bar: Điều hướng + Thanh Search da cuộn gỗ lantern + Avatar
+      - Main: Header "Search", 4 Cards "Browse by Theme", 5 Cards "Explore Top Genres"
       ======================================================================
     -->
     <main class="main-content" id="mainContent">
 
-      <!-- Top Bar: Nút điều hướng `<` `>` + Thanh tìm kiếm + Nút Cloud Sync -->
+      <!-- Top Bar: Nút điều hướng `<` `>` + Thanh tìm kiếm da cuộn gỗ + Nút Cloud Sync -->
       <header class="top-nav-bar">
         <div class="nav-history-btns">
           <button class="history-circle-btn" id="historyBackBtn" title="Quay lại">&lt;</button>
           <button class="history-circle-btn" id="historyForwardBtn" title="Tiến tới">&gt;</button>
         </div>
 
-        <!-- SMART SEARCH BAR: Nhận diện Keyword hoặc Link YouTube / TikTok -->
-        <div class="top-search-shell" id="searchShell">
-          <div class="search-icon-box" id="searchIconBox">
-            <!-- Icon kính lúp mặc định cho Keyword -->
-            <svg class="search-icon-lens" id="searchIconLens" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <!-- Icon chim bồ câu đưa thư Ghibli xuất hiện khi dán Link URL -->
-            <span class="search-icon-pigeon hidden" id="searchIconPigeon" title="Liên kết đa phương tiện (YouTube / TikTok)">🕊️</span>
-          </div>
-
-          <input type="text" id="searchInput" placeholder="Tìm bài hát hoặc dán link YouTube/TikTok...">
+        <!-- 
+          ====================================================================
+          [SKILL: /image-to-code-skill & /impeccable]
+          SMART SEARCH BAR: BỀ MẶT GIẤY DA CUỘN GỖ VỚI ĐÈN BÃO WARM LANTERN (SEARCHICON.PNG)
+          - Wrapper <div> gán background-image: url('searchicon.png')
+          - Thẻ <input> bên trong hoàn toàn trong suốt (transparent), viền không màu
+          - Người dùng gõ trực tiếp lên bề mặt cuộn giấy da
+          - Padding trái/phải đảm bảo chữ không chạm viền gỗ hoặc đè lên ngọn đèn lồng
+          ====================================================================
+        -->
+        <div class="search-parchment-wrapper" id="searchShell">
+          <input 
+            type="text" 
+            id="searchInput" 
+            class="search-parchment-input" 
+            placeholder="Search for Songs, Artists, or Podcasts..." 
+            autocomplete="off" 
+            spellcheck="false"
+          >
           <span class="search-link-tag hidden" id="searchLinkTag">YouTube MP3</span>
           <button id="clearSearchBtn" class="clear-search-btn hidden" title="Xóa">&times;</button>
         </div>
@@ -257,8 +264,137 @@
         </div>
       </div>
 
-      <!-- SECTION CHÍNH: PLAYLISTS GRID -->
-      <section class="playlists-view-section">
+      <!-- 
+        ======================================================================
+        [SKILL: /image-to-code-skill & /impeccable & /animate]
+        MÀN HÌNH TÌM KIẾM CHÍNH (SEARCH VIEW SECTION - CHUẨN SEARCH.PNG)
+        ======================================================================
+      -->
+      <section class="search-view-section" id="searchViewSection">
+        
+        <!-- Tinh linh cây Kodama bay lơ lửng bằng CSS Keyframes (lên xuống nhẹ nhàng) -->
+        <div class="kodama-spirit-floating kodama-float-top" aria-hidden="true">
+          <img src="icon-kodama.png" alt="Kodama" class="kodama-ghost-img">
+        </div>
+        <div class="kodama-spirit-floating kodama-float-mid" aria-hidden="true">
+          <img src="kodama-sitting.png" alt="Kodama" class="kodama-ghost-img">
+        </div>
+        <div class="kodama-spirit-floating kodama-float-right" aria-hidden="true">
+          <img src="kodama-rock.png" alt="Kodama" class="kodama-ghost-img">
+        </div>
+
+        <!-- Header: Search + Explore the World of Ghibli Soundscapes -->
+        <div class="search-hero-header">
+          <h1 class="search-hero-title">Search</h1>
+          <p class="search-hero-subtitle">Explore the World of Ghibli Soundscapes</p>
+        </div>
+
+        <!-- 1. BROWSE BY THEME (4 THẺ CARD HÌNH CHỮ NHẬT BO GÓC) -->
+        <div class="search-section-block">
+          <div class="search-section-header">
+            <h2 class="search-section-title">Browse by Theme</h2>
+            <span class="search-quill-glyph" title="Browse by Theme">🪶</span>
+          </div>
+
+          <div class="search-cards-grid theme-cards-grid">
+            <!-- 1. Quiet Mornings (Kiki Delivery Service) -->
+            <div class="ghibli-search-card" data-title="Quiet Mornings" data-theme="kiki" title="Quiet Mornings • Kiki's Delivery Service">
+              <div class="card-thumb-frame">
+                <img src="theme-quiet-mornings.png" alt="Quiet Mornings" class="card-thumb-img" loading="lazy">
+              </div>
+              <span class="card-title-text">Quiet Mornings</span>
+            </div>
+
+            <!-- 2. Wind & Wings (The Wind Rises) -->
+            <div class="ghibli-search-card" data-title="Wind & Wings" data-theme="wind" title="Wind & Wings • The Wind Rises">
+              <div class="card-thumb-frame">
+                <img src="theme-wind-wings.png" alt="Wind & Wings" class="card-thumb-img" loading="lazy">
+              </div>
+              <span class="card-title-text">Wind & Wings</span>
+            </div>
+
+            <!-- 3. Rainy Days (My Neighbor Totoro) -->
+            <div class="ghibli-search-card" data-title="Rainy Days" data-theme="totoro" title="Rainy Days • My Neighbor Totoro">
+              <div class="card-thumb-frame">
+                <img src="theme-rainy-days.png" alt="Rainy Days" class="card-thumb-img" loading="lazy">
+              </div>
+              <span class="card-title-text">Rainy Days</span>
+            </div>
+
+            <!-- 4. Forest Spirits (Princess Mononoke) -->
+            <div class="ghibli-search-card" data-title="Forest Spirits" data-theme="kodama" title="Forest Spirits • Princess Mononoke">
+              <div class="card-thumb-frame">
+                <img src="theme-forest-spirits.png" alt="Forest Spirits" class="card-thumb-img" loading="lazy">
+              </div>
+              <span class="card-title-text">Forest Spirits</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. EXPLORE TOP GENRES (5 THẺ CARD VUÔNG BO GÓC) -->
+        <div class="search-section-block">
+          <div class="search-section-header">
+            <h2 class="search-section-title">Explore Top Genres</h2>
+            <img src="icon-kodama.png" alt="Top Genres" class="search-kodama-header-icon" aria-hidden="true">
+          </div>
+
+          <div class="genres-row-container">
+            <div class="search-cards-grid genre-cards-grid">
+              <!-- 1. Mononoke Hime -->
+              <div class="ghibli-search-card" data-title="Mononoke Hime" data-genre="mononoke" title="Mononoke Hime • Princess Mononoke">
+                <div class="card-thumb-frame">
+                  <img src="genre-mononoke.png" alt="Mononoke Hime" class="card-thumb-img" loading="lazy">
+                </div>
+                <span class="card-title-text">Mononoke Hime</span>
+              </div>
+
+              <!-- 2. Ponyo -->
+              <div class="ghibli-search-card" data-title="Ponyo" data-genre="ponyo" title="Ponyo on the Cliff by the Sea">
+                <div class="card-thumb-frame">
+                  <img src="genre-ponyo.png" alt="Ponyo" class="card-thumb-img" loading="lazy">
+                </div>
+                <span class="card-title-text">Ponyo</span>
+              </div>
+
+              <!-- 3. Spirited Away -->
+              <div class="ghibli-search-card" data-title="Spirited Away" data-genre="spirited" title="Spirited Away • Bathhouse Aburaya">
+                <div class="card-thumb-frame">
+                  <img src="genre-spirited-away.png" alt="Spirited Away" class="card-thumb-img" loading="lazy">
+                </div>
+                <span class="card-title-text">Spirited Away</span>
+              </div>
+
+              <!-- 4. Grave of the Fireflies -->
+              <div class="ghibli-search-card" data-title="Grave of the Fireflies" data-genre="fireflies" title="Grave of the Fireflies">
+                <div class="card-thumb-frame">
+                  <img src="genre-fireflies.png" alt="Grave of the Fireflies" class="card-thumb-img" loading="lazy">
+                </div>
+                <span class="card-title-text">Grave of the Fireflies</span>
+              </div>
+
+              <!-- 5. Castle in the Sky -->
+              <div class="ghibli-search-card" data-title="Castle in the Sky" data-genre="laputa" title="Castle in the Sky • Laputa">
+                <div class="card-thumb-frame">
+                  <img src="genre-castle-sky.png" alt="Castle in the Sky" class="card-thumb-img" loading="lazy">
+                </div>
+                <span class="card-title-text">Castle in the Sky</span>
+              </div>
+            </div>
+
+            <!-- Minh họa Cậu bé nghe nhạc trên tảng đá & Lâu đài Laputa chuẩn Search.png -->
+            <div class="search-scene-boy-rock" aria-hidden="true" title="Boy listening to music on rock looking at Laputa">
+              <img src="ghibli-boy-rock.png" alt="Ghibli Scene" class="boy-rock-img">
+              <div class="kodama-standing-laputa">
+                <img src="kodama-sitting.png" alt="Kodama" class="kodama-mini-sprite">
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- SECTION PLAYLISTS (ĐƯỢC ẨN MẶC ĐỊNH KHI Ở MÀN HÌNH TÌM KIẾM) -->
+      <section class="playlists-view-section hidden" id="playlistsViewSection">
         <h1 class="view-main-title">Playlists</h1>
 
         <!-- GRID CHỨA CÁC CARD BÀI HÁT (SẼ TỰ ĐỘNG HIỂN THỊ KHI NGƯỜI DÙNG THÊM NHẠC VÀO WEB) -->

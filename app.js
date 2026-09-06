@@ -1855,25 +1855,69 @@
           moveWoodSliderToItem(item, true);
 
           const tab = item.dataset.tab;
-          if (tab === 'home') {
-            const main = document.getElementById('mainContent');
-            if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
-          } else if (tab === 'search') {
+          const searchSec = document.getElementById('searchViewSection');
+          const plSec = document.getElementById('playlistsViewSection');
+
+          if (tab === 'search') {
+            if (searchSec) searchSec.classList.remove('hidden');
+            if (plSec) plSec.classList.add('hidden');
             if (dom.searchInput) {
               dom.searchInput.focus();
               dom.searchInput.select();
             }
+          } else if (tab === 'playlists') {
+            if (searchSec) searchSec.classList.add('hidden');
+            if (plSec) plSec.classList.remove('hidden');
+          } else if (tab === 'home') {
+            if (searchSec) searchSec.classList.remove('hidden');
+            if (plSec) plSec.classList.add('hidden');
+            const main = document.getElementById('mainContent');
+            if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
           } else if (tab === 'library') {
             if (dom.folderInput) dom.folderInput.click();
-          } else if (tab === 'playlists') {
-            const plSection = document.querySelector('.playlists-view-section');
-            if (plSection) plSection.scrollIntoView({ behavior: 'smooth' });
           } else if (tab === 'create') {
             showToast('Tính năng tạo danh sách phát cá nhân Ghibli 🌱');
           }
         });
       });
     }
+
+    // 8a. Tương tác khi nhấp vào thẻ Card Theme & Genre trên màn hình Search
+    document.querySelectorAll('.ghibli-search-card').forEach(card => {
+      card.addEventListener('click', async () => {
+        const title = card.dataset.title;
+        const theme = card.dataset.theme;
+        const genre = card.dataset.genre;
+        const img = card.querySelector('.card-thumb-img')?.src;
+
+        // Cập nhật ngay bìa bài hát ở góc Now Playing với hiệu ứng fade-in
+        if (dom.currentTrackCover && img) {
+          dom.currentTrackCover.classList.remove('cover-fade-in');
+          void dom.currentTrackCover.offsetWidth;
+          dom.currentTrackCover.src = img;
+          dom.currentTrackCover.classList.add('cover-fade-in');
+        }
+        if (dom.trackTitle) {
+          dom.trackTitle.textContent = title;
+          dom.trackTitle.title = title;
+        }
+        if (dom.trackArtist) dom.trackArtist.textContent = genre ? 'Studio Ghibli Soundtrack' : 'Ghibli Atmosphere';
+        if (dom.trackAlbum) dom.trackAlbum.textContent = theme ? 'Browse by Theme' : 'Explore Top Genres';
+
+        // Phát giai điệu mẫu tương ứng
+        const synthKey = genre || theme || 'howl';
+        try {
+          const audioUrl = await generateGhibliSynthAudio(synthKey);
+          if (audioUrl) {
+            dom.audio.src = audioUrl;
+            dom.audio.load();
+            await playAudio();
+          }
+        } catch (_) {}
+
+        showToast(`Đang thưởng thức: "${title}" 🍃✨`);
+      });
+    });
 
     // Tự động căn chỉnh lại vị trí thanh gỗ khi thay đổi kích thước cửa sổ
     window.addEventListener('resize', () => {
@@ -2091,8 +2135,8 @@
       }, { once: true });
     }
 
-    // [SKILL: /animate & /impeccable] Khởi tạo thanh trượt tấm gỗ ở mục Active ban đầu (Playlists)
-    const initialActive = document.querySelector('.sidebar-nav-item.active') || document.getElementById('tabPlaylists');
+    // [SKILL: /animate & /impeccable] Khởi tạo thanh trượt tấm gỗ ở mục Active ban đầu (Search theo Search.png)
+    const initialActive = document.querySelector('.sidebar-nav-item.active') || document.getElementById('tabSearch');
     if (initialActive) {
       moveWoodSliderToItem(initialActive, false);
       setTimeout(() => {
