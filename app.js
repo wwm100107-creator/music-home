@@ -1200,11 +1200,16 @@
   // Đồng thời dùng File System Access API (showSaveFilePicker) ngầm lưu file audio vào thư mục Local.
   // Xử lý Loading: Cục than Susuwatari kéo nốt nhạc bằng CSS. Bắt lỗi try/catch cẩn thận nếu API sập.
   // ==========================================================================
+  // ==========================================================================
+  // [SKILL: /ponytail & /impeccable] COBALT API AUDIO STREAMER & DOWNLOADER
+  // Tích hợp CORS Proxy, cấu hình Headers chuẩn, cập nhật Payload theo spec
+  // Chi tiết console.log() để debug và cảnh báo alert() thân thiện kiểu Ghibli
+  // ==========================================================================
   async function fetchCobaltAudio(userUrl) {
     const cleanUrl = (userUrl || '').trim();
     if (!cleanUrl) return;
 
-    // // TODO: [SKILL: /animate] Bật hiệu ứng Loading: Cục than Susuwatari kéo nốt nhạc
+    // [SKILL: /animate] Bật hiệu ứng Loading: Cục than Susuwatari kéo nốt nhạc
     setSearchLoading(
       true,
       'Bầy Susuwatari đang kéo nốt nhạc từ Cobalt... 🎵✨',
@@ -1216,20 +1221,19 @@
     const ytId = extractYouTubeID(cleanUrl);
     let trackCover = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : '';
 
-    // Ngay khi nhận diện được URL là của YouTube, lập tức hiển thị Thumbnail lên Now Playing
+    // Bước 1 (Thumbnail): Tách Video ID từ YouTube link và áp dụng ngay Now Playing với fade-in
     if (ytId) {
       applyYouTubeThumbnailCover(ytId);
     }
 
     try {
-      // 1. Thu thập metadata nhanh từ oEmbed để hiển thị tên bài và ảnh bìa
+      // 1. Thu thập metadata nhanh từ oEmbed để lấy tên bài hát & nghệ sĩ chính xác
       try {
         if (/youtube\.com|youtu\.be/i.test(cleanUrl)) {
           const oeRes = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json`);
           if (oeRes.ok) {
             const meta = await oeRes.json();
             if (meta.title) trackTitle = meta.title;
-            // 5. Cập nhật Text: Điền chữ "YouTube Stream" vào vị trí tên Tác giả/Ca sĩ
             trackArtist = 'YouTube Stream';
           }
         } else if (/tiktok\.com/i.test(cleanUrl)) {
@@ -1241,71 +1245,100 @@
           }
         }
       } catch (metaErr) {
-        console.warn('Metadata notice:', metaErr);
+        console.warn('Metadata oEmbed notice:', metaErr);
       }
 
       if (dom.loaderStatusTitle) {
         dom.loaderStatusTitle.textContent = `Bầy Susuwatari đang kéo: "${trackTitle.slice(0, 32)}..."`;
       }
 
-      // 2. // TODO: [SKILL: /ponytail] Gọi Cobalt API chính xác theo cấu hình yêu cầu
+      // 2. Chuẩn hóa Headers và Payload chuẩn Cobalt API (hỗ trợ cả spec v7 và v10)
+      const requestHeaders = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      };
+
+      const cobaltPayload = {
+        url: cleanUrl,
+        aFormat: 'mp3',
+        isAudioOnly: true,
+        downloadMode: 'audio',
+        audioFormat: 'mp3'
+      };
+
+      // Danh sách các endpoints thử nghiệm (bao gồm CORS Proxy theo yêu cầu)
+      const cobaltEndpoints = [
+        'https://api.cobalt.tools/api/json',
+        'https://corsproxy.io/?https://api.cobalt.tools/api/json',
+        'https://api.cobalt.tools/',
+        'https://co.wuk.sh/api/json'
+      ];
+
       let streamUrl = null;
+      let lastError = null;
 
-      try {
-        const cobaltRes = await fetch('https://api.cobalt.tools/api/json', {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            url: cleanUrl,
-            isAudioOnly: true
-          })
-        });
-
-        if (cobaltRes.ok) {
-          const data = await cobaltRes.json();
-          streamUrl = data.url || (data.picker && data.picker[0]?.url) || data.audio || data.link;
-        } else {
-          console.warn(`Cobalt API primary trả mã ${cobaltRes.status}`);
-        }
-      } catch (fetchErr) {
-        console.warn('Cobalt primary fetch error, thử qua instance dự phòng:', fetchErr);
-        // Thử instance dự phòng nếu instance chính bị rate-limit hoặc CORS
+      // Thử tuần tự qua các endpoint và ghi log chi tiết cho việc debug
+      for (const endpoint of cobaltEndpoints) {
         try {
-          const mirrorRes = await fetch('https://co.wuk.sh/api/json', {
+          console.log(`[Cobalt API] Đang gửi yêu cầu tới endpoint: ${endpoint}`);
+          console.log(`[Cobalt API] Headers:`, requestHeaders);
+          console.log(`[Cobalt API] Body payload:`, cobaltPayload);
+
+          const res = await fetch(endpoint, {
             method: 'POST',
-            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: cleanUrl, isAudioOnly: true })
+            headers: requestHeaders,
+            body: JSON.stringify(cobaltPayload)
           });
-          if (mirrorRes.ok) {
-            const mData = await mirrorRes.json();
-            streamUrl = mData.url || (mData.picker && mData.picker[0]?.url) || mData.audio;
+
+          console.log(`[Cobalt API Response] Endpoint: ${endpoint} | Status: ${res.status} ${res.statusText}`, res);
+
+          if (res.ok) {
+            const data = await res.json();
+            console.log(`[Cobalt API JSON Data] từ ${endpoint}:`, data);
+
+            // Bóc tách direct URL từ phản hồi
+            streamUrl = data.url || (data.picker && data.picker[0]?.url) || data.audio || data.link;
+            if (streamUrl) {
+              console.log(`[Cobalt API Success] Lấy được Direct Stream URL:`, streamUrl);
+              break;
+            }
+          } else {
+            const errText = await res.text().catch(() => '');
+            console.warn(`[Cobalt API Warn] Endpoint ${endpoint} trả mã lỗi ${res.status}:`, errText);
+            lastError = new Error(`HTTP ${res.status}: ${errText}`);
           }
-        } catch (_) {}
+        } catch (fetchErr) {
+          console.warn(`[Cobalt API Warn] Lỗi mạng khi gọi ${endpoint}:`, fetchErr);
+          lastError = fetchErr;
+        }
       }
 
-      // Fallback an toàn nếu cả hai instance đều không phản hồi do mạng/CORS
+      // 3. Xử lý khi không lấy được luồng âm thanh từ Cobalt
       if (!streamUrl) {
+        console.error('[Cobalt API Error] Tất cả endpoint Cobalt API đều thất bại:', lastError);
+
+        // BẮT BUỘC: Hiển thị alert() thông báo kiểu Ghibli thân thiện cho người dùng
+        alert('Ôi không, các tinh linh Susuwatari đang bị kẹt mạng, vui lòng thử lại sau! 🍂✨');
+
+        // Phát giai điệu Lâu đài Howl dự phòng từ nhạc viện Ghibli để không ngắt quãng trải nghiệm
         const synthUrl = await generateGhibliSynthAudio('howl');
         if (synthUrl) {
           streamUrl = synthUrl;
           showToast('Máy chủ Cobalt tạm bận, đang phát giai điệu Lâu đài Howl thay thế! 🏰🍃');
         } else {
-          throw new Error('Không thể lấy luồng âm thanh từ liên kết này.');
+          throw lastError || new Error('Không thể trích xuất luồng âm thanh từ liên kết này.');
         }
       }
 
-      // 3. XỬ LÝ RESPONSE: Nạp thẳng vào <audio src="..."> để phát ngay lập tức
+      // 4. Nạp Direct URL vào thẻ Audio để phát ngay lập tức
       dom.audio.src = streamUrl;
       dom.audio.load();
       await playAudio();
 
-      // Cập nhật Bottom Player UI
+      // Cập nhật giao diện Now Playing ở Bottom Player
       dom.trackTitle.textContent = trackTitle;
       dom.trackTitle.title = trackTitle;
-      dom.trackArtist.textContent = 'YouTube Stream';
+      dom.trackArtist.textContent = trackArtist;
       dom.trackAlbum.textContent = ytId ? 'YouTube Stream' : 'Cobalt Audio Stream';
       if (ytId) {
         applyYouTubeThumbnailCover(ytId);
@@ -1313,16 +1346,16 @@
         dom.currentTrackCover.src = trackCover || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='24' fill='%23fefae0'>🎵</text></svg>";
       }
 
-      // Thêm bài hát vào danh sách phát
+      // Thêm bài hát vào danh sách phát hiện tại
       const newTrack = {
         id: 'cobalt_' + Date.now(),
         name: `${trackTitle}.mp3`,
         title: trackTitle,
-        artist: 'YouTube Stream',
+        artist: trackArtist,
         album: ytId ? 'YouTube Stream' : 'Cobalt Audio Stream',
         cover: ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : '',
         format: 'MP3',
-        size: 'YouTube Audio',
+        size: 'Cobalt Audio',
         url: streamUrl,
         isCobalt: true,
         youtubeId: ytId || null
@@ -1340,9 +1373,8 @@
         syncPlaylistToCloud();
       }
 
-      // 4. // TODO: [SKILL: /impeccable] FILE SYSTEM ACCESS API (showSaveFilePicker)
-      // Ngầm lưu file audio đó vào thư mục Local Folder của người dùng
-      if ('showSaveFilePicker' in window) {
+      // 5. FILE SYSTEM ACCESS API (showSaveFilePicker): Ngầm hỏi user lưu file .mp3 xuống thư mục máy tính
+      if ('showSaveFilePicker' in window && !streamUrl.startsWith('blob:')) {
         try {
           const safeName = `${trackTitle.replace(/[\\/:*?"<>|]/g, '_').slice(0, 36)}.mp3`;
           if (dom.loaderStatusSub) {
@@ -1373,8 +1405,8 @@
       }
 
     } catch (err) {
-      // Bắt lỗi try/catch cẩn thận nếu API sập
-      console.error('Lỗi Cobalt API:', err);
+      console.error('[Cobalt API Catch Error]:', err);
+      alert('Ôi không, các tinh linh Susuwatari đang bị kẹt mạng, vui lòng thử lại sau! 🍂');
       showToast(`Lỗi kết nối Cobalt: ${err.message || 'Không thể trích xuất'} 🍂`);
     } finally {
       // Tắt trạng thái Loading
