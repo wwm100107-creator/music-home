@@ -339,63 +339,6 @@ body.ghibli-app-body {
   filter: brightness(1.1);
 }
 
-.sidebar-divider {
-  height: 1.5px;
-  background: rgba(50, 80, 50, 0.25);
-  margin: 8px 4px 6px;
-  border-radius: 1px;
-}
-
-/* Sub-Playlists List */
-.sidebar-playlists {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.sub-playlist-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 6px 10px;
-  border-radius: 10px;
-  background: transparent;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-  transition: transform 0.15s, background 0.15s;
-  position: relative;
-}
-
-.sub-playlist-item:hover {
-  transform: translateX(4px);
-  background: rgba(255, 255, 255, 0.16);
-}
-
-.thumb-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  object-fit: cover;
-  border: 1.5px solid rgba(43, 24, 16, 0.5);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.sub-text {
-  font-family: var(--font-ghibli-nav);
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--ghibli-yellow-light);
-  -webkit-text-stroke: 0 !important;
-  text-shadow: 0 1px 2px rgba(43, 24, 16, 0.4);
-}
-
-.tea-kodama-spirit {
-  font-size: 0.85rem;
-  margin-left: auto;
-  opacity: 0.85;
-}
-
 /* --------------------------------------------------------------------------
    3. MAIN CONTENT (DANH SÁCH PHÁT TRUNG TÂM THEO GIAODIEN.PNG)
    [SKILL: /image-to-code-skill]
