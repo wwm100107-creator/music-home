@@ -88,6 +88,7 @@
                 <img src="icon-home.png" alt="Home" class="nav-icon">
                 <span class="nav-text">Home</span>
               </div>
+              <span class="nav-item-suffix" aria-hidden="true"></span>
             </a>
           </li>
 
@@ -98,6 +99,7 @@
                 <img src="icon-search.png" alt="Search" class="nav-icon">
                 <span class="nav-text">Search</span>
               </div>
+              <span class="nav-item-suffix" aria-hidden="true"></span>
             </a>
           </li>
 
@@ -108,6 +110,7 @@
                 <img src="icon-library.png" alt="Your Library" class="nav-icon">
                 <span class="nav-text">Your Library</span>
               </div>
+              <span class="nav-item-suffix" aria-hidden="true"></span>
             </a>
           </li>
 
@@ -118,6 +121,7 @@
                 <img src="icon-playlists.png" alt="Playlists" class="nav-icon">
                 <span class="nav-text">Playlists</span>
               </div>
+              <span class="nav-item-suffix" aria-hidden="true"></span>
             </a>
           </li>
 
@@ -128,6 +132,7 @@
                 <img src="icon-create.png" alt="Create Playlist" class="nav-icon">
                 <span class="nav-text">Create Playlist</span>
               </div>
+              <span class="nav-item-suffix" aria-hidden="true"></span>
             </a>
           </li>
 
@@ -138,15 +143,23 @@
 
     <!-- 
       ======================================================================
-      3. MAIN CONTENT (GIAO DIỆN ĐỂ TRỐNG)
-      - Home: Vùng chứa trống (#viewHome)
-      - Các view ẩn khác (#viewSearch, #viewLibrary, #viewPlaylists, #viewCreate)
-        đã được xóa hoàn toàn khỏi DOM và bộ nhớ theo yêu cầu.
+      3. MAIN CONTENT (GIAO DIỆN CHÍNH)
+      - Home: Vùng chứa trống (#viewHome) kèm card demo kích hoạt Player Bar
       ======================================================================
     -->
     <main class="main-content" id="mainContent">
-      <!-- 1. Home (Giao diện để trống) -->
-      <section class="tab-view-section active" id="viewHome" data-tab="home"></section>
+      <!-- 1. Home (Giao diện Home với card demo kích hoạt thanh Player) -->
+      <section class="tab-view-section active" id="viewHome" data-tab="home">
+        <div class="player-demo-trigger-card">
+          <div class="demo-card-badge">🍃 Ghibli Sound Station</div>
+          <h2 class="demo-card-title">Khởi động Trình phát nhạc</h2>
+          <p class="demo-card-desc">Nhấp nút dưới đây để trải nghiệm hiệu ứng thanh Player trượt mượt mà từ dưới lên với lớp gương trong suốt (Clear Glass).</p>
+          <button class="demo-play-trigger-btn" id="demoPlayTriggerBtn" data-play="demo" title="Nhấp để hiện thanh Player Bar">
+            <span class="demo-btn-icon">▶</span>
+            <span class="demo-btn-text">Phát nhạc mẫu & Mở thanh Player</span>
+          </button>
+        </div>
+      </section>
     </main>
 
     <!-- 

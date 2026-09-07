@@ -26,10 +26,11 @@
 
 :root {
   /* Bảng màu Ghibli & Totoro Vibe từ GIAODIEN.png */
-  --sidebar-glass-bg: rgba(182, 218, 186, 0.72);
-  --sidebar-border: rgba(45, 75, 45, 0.28);
-  --player-glass-bg: rgba(185, 205, 175, 0.76);
-  --player-border: rgba(40, 70, 45, 0.32);
+  /* [SKILL: /apple-design & /impeccable] Frosted Glass (Sidebar) & Clear Glass (Bottom Player) */
+  --sidebar-glass-bg: rgba(255, 255, 255, 0.15);
+  --sidebar-border: rgba(255, 255, 255, 0.28);
+  --player-glass-bg: rgba(255, 255, 255, 0.05);
+  --player-border: rgba(255, 255, 255, 0.18);
   
   --ghibli-cream: #fefae0;
   --ghibli-yellow-light: #fdf6c7;
@@ -119,9 +120,7 @@ body.ghibli-app-body {
    LAYOUT TỔNG THỂ
    -------------------------------------------------------------------------- */
 .app-layout {
-  display: grid;
-  grid-template-columns: 240px 1fr;
-  grid-template-rows: 1fr 96px;
+  display: flex;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
@@ -129,22 +128,28 @@ body.ghibli-app-body {
 }
 
 /* --------------------------------------------------------------------------
-   2. LEFT SIDEBAR (THANH MENU TRÁI KÍNH TRONG SUỐT THEO TASKBAR.PNG)
-   [SKILL: /image-to-code-skill & /impeccable]
+   1. LEFT SIDEBAR - HIỆU ỨNG GƯƠNG ĐỤC (FROSTED GLASS)
+   [SKILL: /image-to-code-skill, /impeccable & /apple-design]
+   Tham chiếu: Screenshot 2026-09-07 170430.png
+   - Lớp sương mờ đục: backdrop-filter: blur(12px)
+   - Màu nền bán trong suốt: background-color: rgba(255, 255, 255, 0.15) (pha ám xanh nhẹ)
+   - Video/hình nền phong cảnh phía sau hiện mờ mờ tạo chiều sâu, không rối chữ
    -------------------------------------------------------------------------- */
 .sidebar-glass {
-  grid-column: 1 / 2;
-  grid-row: 1 / 2;
-  background: var(--sidebar-glass-bg);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border-right: 2px solid var(--sidebar-border);
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08);
+  width: 260px;
+  min-width: 260px;
+  height: 100vh;
+  background-color: var(--sidebar-glass-bg);
+  background-image: linear-gradient(180deg, rgba(240, 252, 242, 0.22) 0%, rgba(220, 242, 225, 0.15) 100%);
+  backdrop-filter: blur(12px) saturate(135%);
+  -webkit-backdrop-filter: blur(12px) saturate(135%);
+  border-right: 1.5px solid var(--sidebar-border);
+  box-shadow: 4px 0 28px rgba(0, 0, 0, 0.08);
   padding: 24px 14px 20px 16px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   z-index: 10;
 }
 
@@ -162,8 +167,8 @@ body.ghibli-app-body {
 }
 
 .brand-icon {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   object-fit: contain;
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.35));
   transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -176,7 +181,7 @@ body.ghibli-app-body {
 
 .brand-text {
   font-family: var(--font-ghibli-brand);
-  font-size: 1.35rem;
+  font-size: 1.45rem;
   font-weight: 900;
   color: var(--ghibli-yellow-light);
   -webkit-text-stroke: 1px var(--ghibli-brown-dark);
@@ -184,14 +189,14 @@ body.ghibli-app-body {
   letter-spacing: 0.02em;
 }
 
-/* Main Navigation Menu */
-/* ==========================================================================
-   [SKILL: /animate & /impeccable]
-   SEGMENTED CONTROL: HỆ THỐNG THANH TRƯỢT TẤM GỖ (WOODEN SLIDING SWITCH)
-   - Một element duy nhất .wood-slider-switch trượt mượt mà giữa các mục
-   - Transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)
-   - Active state phóng to scale(1.06) lọt thỏm cân đối bên trong tấm gỗ
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   3. SIDEBAR - CĂN CHỈNH LAYOUT & KÍCH THƯỚC
+   [SKILL: /impeccable & /apple-design]
+   Tham chiếu: Screenshot 2026-09-07 170430.png
+   - Tăng kích thước 1.2 lần cho icon (32px) và font chữ (1.24rem)
+   - Bố cục Flexbox đặc biệt: justify-content: space-between căn đều 2 bên lề
+   - RÀNG BUỘC KHOẢNG CÁCH: Tuyệt đối KHÔNG ĐƯỢC làm giãn khoảng cách giữa Icon và Chữ (gap: 12px)
+   -------------------------------------------------------------------------- */
 .sidebar-segmented-nav {
   position: relative;
   width: 100%;
@@ -204,7 +209,7 @@ body.ghibli-app-body {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
 }
 
@@ -214,10 +219,10 @@ body.ghibli-app-body {
 */
 .wood-slider-switch {
   position: absolute;
-  top: -14px;
+  top: -12px;
   left: 0;
   width: 100%;
-  height: 64px;
+  height: 76px;
   pointer-events: none;
   z-index: 1;
   background-image: url('wood_2.jpg'), url('wood_2.png');
@@ -247,15 +252,21 @@ body.ghibli-app-body {
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
-  height: 48px;
+  height: 56px; /* Tăng chiều cao phù hợp kích cỡ chữ và icon 1.2x */
   display: flex;
   align-items: center;
   user-select: none;
 }
 
+/* 
+  [YÊU CẦU 3]: BỐ CỤC FLEXBOX ĐẶC BIỆT
+  Container chứa (.nav-item-link) sử dụng display: flex; justify-content: space-between;
+  để căn đều nội dung ra 2 bên lề của Sidebar.
+*/
 .nav-item-link {
   display: flex;
   align-items: center;
+  justify-content: space-between; /* Căn đều nội dung ra 2 bên lề của Sidebar */
   width: 100%;
   height: 100%;
   padding: 0 16px;
@@ -269,34 +280,35 @@ body.ghibli-app-body {
 }
 
 /* 
-  Container bọc Icon + Chữ để áp dụng scale(1.06) mượt mà
-  ĐIỀU KIỆN RÀNG BUỘC (/impeccable): Tuyệt đối không vượt quá ranh giới tấm gỗ!
-  - Chiều cao item = 48px.
-  - Icon = 26px, Text = 16px. Khi scale(1.06) -> cao ~27.5px.
-  - Luôn còn dư padding ~10px trên và ~10px dưới, nằm lọt thỏm cân đối ngay giữa tấm gỗ.
+  [YÊU CẦU 3]: RÀNG BUỘC KHOẢNG CÁCH
+  Tuyệt đối KHÔNG ĐƯỢC làm giãn khoảng cách giữa Icon và Chữ của cùng một mục.
+  Bọc Icon và Chữ vào một div chung (.nav-item-content), dùng display: flex; gap: 12px;
+  để chúng luôn dính sát và cân đối với nhau.
 */
 .nav-item-content {
   display: flex;
   align-items: center;
-  gap: 12px;
-  width: 100%;
+  gap: 12px; /* Khoảng cách cố định 12px, dính sát và cân đối */
+  flex-shrink: 0;
   transform-origin: left center;
   /* [SKILL: /animate] Đồng bộ thời gian scale với thời gian thanh gỗ trượt tới */
   transition: transform 0.38s cubic-bezier(0.25, 1, 0.5, 1), filter 0.25s ease;
 }
 
+/* Icon phóng to ~1.2 lần (từ 26px lên 32px) */
 .nav-icon {
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   flex-shrink: 0;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.28));
   transition: transform 0.38s cubic-bezier(0.25, 1, 0.5, 1), filter 0.25s ease;
 }
 
+/* Font chữ phóng to ~1.2 lần (từ 1.02rem lên 1.24rem) */
 .nav-text {
   font-family: var(--font-ghibli-nav);
-  font-size: 1.02rem;
+  font-size: 1.24rem;
   font-weight: 700;
   color: #fff8dc;
   -webkit-text-stroke: 0 !important;
@@ -306,24 +318,26 @@ body.ghibli-app-body {
   transition: color 0.3s, font-weight 0.3s, text-shadow 0.3s;
 }
 
-.spirit-mini-note {
-  font-size: 0.95rem;
-  margin-left: auto;
-  opacity: 0.9;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+/* Thành phần phụ bên phải để justify-content: space-between căn đều sang lề phải */
+.nav-item-suffix {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 14px;
+  height: 14px;
+  opacity: 0.7;
 }
 
 /* 
-  // TODO: [SKILL: /animate & /impeccable] TRẠNG THÁI ACTIVE:
-  Khi tấm gỗ trượt đến item nào, item đó nổi bật, scale(1.08) và chuyển chữ sáng ấm.
-  RÀNG BUỘC: Tuyệt đối không tràn khỏi ranh giới tấm gỗ (chiều cao item 48px, nội dung ~28px -> dư ~10px padding trên/dưới an toàn tuyệt đối).
+  [SKILL: /animate & /impeccable] TRẠNG THÁI ACTIVE:
+  Khi tấm gỗ trượt đến item nào, item đó nổi bật, scale(1.06) lọt thỏm cân đối bên trong tấm gỗ.
 */
 .sidebar-nav-item.active .nav-item-content {
-  transform: scale(1.08) translateX(2px);
+  transform: scale(1.06) translateX(2px);
 }
 
 .sidebar-nav-item.active .nav-icon {
-  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45)) brightness(1.12);
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45)) brightness(1.15);
 }
 
 .sidebar-nav-item.active .nav-text {
@@ -344,9 +358,9 @@ body.ghibli-app-body {
    [SKILL: /image-to-code-skill]
    -------------------------------------------------------------------------- */
 .main-content {
-  grid-column: 2 / 3;
-  grid-row: 1 / 2;
-  padding: 16px 36px 110px 32px;
+  flex: 1;
+  height: 100vh;
+  padding: 24px 36px 116px 36px;
   overflow-y: auto;
   position: relative;
 }
@@ -364,6 +378,92 @@ body.ghibli-app-body {
 
 .tab-view-section.hidden {
   display: none !important;
+}
+
+/* Card demo kích hoạt thử nghiệm thanh Player Bar */
+.player-demo-trigger-card {
+  max-width: 520px;
+  margin: 60px auto 40px;
+  padding: 32px 36px;
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 20px;
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  text-align: center;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  animation: cardFloatIn 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes cardFloatIn {
+  0% { opacity: 0; transform: translateY(20px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.demo-card-badge {
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--ghibli-yellow-light);
+  background: rgba(43, 24, 16, 0.45);
+  padding: 5px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  letter-spacing: 0.02em;
+}
+
+.demo-card-title {
+  font-family: var(--font-ghibli-brand);
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 2px 6px rgba(43, 24, 16, 0.55);
+}
+
+.demo-card-desc {
+  font-family: var(--font-ghibli-meta);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #f0fdf4;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.demo-play-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #4a2c11 0%, #2b1810 100%);
+  color: var(--ghibli-yellow-light);
+  border: 1.5px solid rgba(255, 230, 180, 0.45);
+  border-radius: 30px;
+  font-family: var(--font-ghibli-nav);
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(35, 20, 10, 0.45);
+  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.25s ease, filter 0.25s ease;
+}
+
+.demo-play-trigger-btn:hover {
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 0 8px 24px rgba(35, 20, 10, 0.6);
+  filter: brightness(1.12);
+}
+
+.demo-play-trigger-btn:active {
+  transform: scale(0.97);
+}
+
+.demo-btn-icon {
+  font-size: 1.2rem;
+  color: #ffda79;
 }
 
 /* Top Navigation Bar */
@@ -1358,22 +1458,51 @@ body.ghibli-app-body {
 }
 
 /* --------------------------------------------------------------------------
-   4. BOTTOM PLAYER BAR (THANH PHÁT NHẠC KÍNH MỜ THEO GIAODIEN.PNG)
-   [SKILL: /image-to-code-skill & /impeccable]
+   2. BOTTOM PLAYER - HIỆU ỨNG GƯƠNG TRONG (CLEAR GLASS)
+   4. ANIMATION - ẨN / HIỆN THANH PHÁT NHẠC
+   [SKILL: /impeccable, /animate & /improve-animations]
+   Tham chiếu: Screenshot 2026-09-07 170442.png
+   - Cực kỳ trong trẻo: backdrop-filter: blur(2.5px) (thấp hơn 3px)
+   - Màu nền mỏng: rgba(255, 255, 255, 0.05)
+   - Nền phong cảnh phía dưới nhìn thấy rất rõ ràng
+   - MẶC ĐỊNH ẨN: opacity: 0; transform: translateY(100%); pointer-events: none;
+   - KHI CÓ CLASS .active: opacity: 1; transform: translateY(0); pointer-events: auto;
+   - HIỆU ỨNG: transition: opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1), transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
    -------------------------------------------------------------------------- */
 .bottom-player-glass {
-  grid-column: 1 / 3;
-  grid-row: 2 / 3;
-  background: var(--player-glass-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 2px solid var(--player-border);
-  box-shadow: 0 -6px 25px rgba(0, 0, 0, 0.14);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 96px;
+  background-color: var(--player-glass-bg);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(2.5px);
+  -webkit-backdrop-filter: blur(2.5px);
+  border-top: 1px solid var(--player-border);
+  box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.04);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 28px;
   z-index: 100;
+
+  /* [YÊU CẦU 4]: TRẠNG THÁI MẶC ĐỊNH LÀ ẨN KHI WEB MỚI LOAD */
+  opacity: 0;
+  transform: translateY(100%);
+  pointer-events: none;
+
+  /* [YÊU CẦU 4]: HIỆU ỨNG XUẤT HIỆN TRƯỢT MƯỢT MÀ TỪ DƯỚI LÊN VÀ RÕ DẦN */
+  transition: opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+              transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+  will-change: opacity, transform;
+}
+
+/* [YÊU CẦU 4]: KHI CÓ CLASS .active ĐƯỢC THÊM VÀO */
+.bottom-player-glass.active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 /* Left Group: Album Cover + Song Meta + Heart */

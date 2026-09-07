@@ -33,6 +33,8 @@
     tabViews: document.querySelectorAll('.tab-view-section'),
 
     // Bottom Player
+    bottomPlayer: document.getElementById('bottomPlayer'),
+    demoPlayTriggerBtn: document.getElementById('demoPlayTriggerBtn'),
     currentTrackCover: document.getElementById('currentTrackCover'),
     trackTitle: document.getElementById('trackTitle'),
     trackArtist: document.getElementById('trackArtist'),
@@ -190,11 +192,40 @@
   }
 
   // ==========================================================================
+  // 4. ANIMATION: ẨN / HIỆN THANH PHÁT NHẠC (BOTTOM PLAYER BAR)
+  // [SKILL: /animate & /improve-animations]
+  // - Khởi tạo mặc định: ẨN khi web mới load (chưa chọn bài hát nào)
+  // - Khi người dùng click vào bất kỳ bài nhạc/nút Play nào: Thêm class .active
+  // - Hiệu ứng xuất hiện: Trượt mượt mà từ dưới lên và rõ dần
+  // ==========================================================================
+  function activatePlayerBar() {
+    if (!dom.bottomPlayer) return;
+    if (!dom.bottomPlayer.classList.contains('active')) {
+      dom.bottomPlayer.classList.add('active');
+      showToast('🍃 Đã khởi động thanh phát nhạc!');
+    }
+  }
+
+  function hidePlayerBar() {
+    if (dom.bottomPlayer) {
+      dom.bottomPlayer.classList.remove('active');
+    }
+  }
+
+  // ==========================================================================
   // 5. PHÁT / TẠM DỪNG
   // ==========================================================================
   function togglePlayPause() {
+    // Luôn kích hoạt thanh Player trượt lên khi nhấn Play
+    activatePlayerBar();
+
     if (!dom.audio || !dom.audio.src) {
-      showToast('Chưa có bài hát nào.');
+      // Giả lập trạng thái phát nhạc demo khi chưa nạp file âm thanh
+      state.isPlaying = !state.isPlaying;
+      document.body.classList.toggle('music-playing', state.isPlaying);
+      if (dom.playIcon) dom.playIcon.classList.toggle('hidden', state.isPlaying);
+      if (dom.pauseIcon) dom.pauseIcon.classList.toggle('hidden', !state.isPlaying);
+      showToast(state.isPlaying ? '▶ Đang phát bản nhạc mẫu (Demo)' : '⏸ Đã tạm dừng');
       return;
     }
 
@@ -296,10 +327,36 @@
       dom.progressContainer.addEventListener('pointercancel', endScrub);
     }
 
-    // Spacebar to play/pause
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+    // Demo play button trigger (Giả lập kích hoạt thanh phát nhạc trượt lên)
+    if (dom.demoPlayTriggerBtn) {
+      dom.demoPlayTriggerBtn.addEventListener('click', (e) => {
         e.preventDefault();
+        activatePlayerBar();
+        if (dom.trackTitle) {
+          dom.trackTitle.textContent = 'Merry-Go-Round of Life';
+          if (dom.trackArtist) dom.trackArtist.textContent = 'Joe Hisaishi';
+          if (dom.trackAlbum) dom.trackAlbum.textContent = "Howl's Moving Castle";
+          if (dom.playIcon) dom.playIcon.classList.add('hidden');
+          if (dom.pauseIcon) dom.pauseIcon.classList.remove('hidden');
+          state.isPlaying = true;
+          document.body.classList.add('music-playing');
+        }
+      });
+    }
+
+    // Global listener: Khi người dùng click vào bất kỳ bài nhạc/nút Play nào trên màn hình
+    document.addEventListener('click', (e) => {
+      const playTrigger = e.target.closest('[data-play], .play-trigger, .track-card, .track-item, .btn-play, #playPauseBtn');
+      if (playTrigger) {
+        activatePlayerBar();
+      }
+    });
+
+    // Phím Space để phát / tạm dừng và kích hoạt thanh Player Bar
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        activatePlayerBar();
         togglePlayPause();
       }
     });
@@ -329,6 +386,10 @@
       }, { once: true });
     }
   }
+
+  // Expose hàm điều khiển ra window để tiện kiểm tra / gọi từ bên ngoài
+  window.activatePlayerBar = activatePlayerBar;
+  window.hidePlayerBar = hidePlayerBar;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
