@@ -19,12 +19,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@600;700;800;900&family=Fredoka:wght@500;600;700;800&family=Sniglet:wght@800&family=Quicksand:wght@600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="style.css">
-
-  <!-- 
-    [SKILL: /ponytail] SUPABASE CLOUD SYNC & AUTH SDK (CDN)
-    Thư viện BaaS gọn nhẹ xác thực tài khoản và đồng bộ Playlist lên Cloud
-  -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="ghibli-app-body">
 
@@ -87,9 +81,9 @@
           <!-- MỘT ELEMENT DUY NHẤT ĐÓNG VAI TRÒ LÀ THANH TRƯỢT GỖ (SLIDING TOGGLE SWITCH) -->
           <div class="wood-slider-switch" id="woodSliderSwitch" aria-hidden="true"></div>
 
-          <!-- 1. Home -->
-          <li class="sidebar-nav-item" data-tab="home" id="tabHome">
-            <a href="#home" class="nav-item-link" title="Trang chủ">
+          <!-- 1. Home (Active mặc định) -->
+          <li class="sidebar-nav-item active" data-tab="home" id="tabHome">
+            <a href="#home" class="nav-item-link" title="Home">
               <div class="nav-item-content">
                 <img src="icon-home.png" alt="Home" class="nav-icon">
                 <span class="nav-text">Home</span>
@@ -97,9 +91,9 @@
             </a>
           </li>
 
-          <!-- 2. Search (Active mặc định theo chuẩn Search.png) -->
-          <li class="sidebar-nav-item active" data-tab="search" id="tabSearch">
-            <a href="#search" class="nav-item-link" title="Tìm kiếm & Tải nhạc">
+          <!-- 2. Search -->
+          <li class="sidebar-nav-item" data-tab="search" id="tabSearch">
+            <a href="#search" class="nav-item-link" title="Search">
               <div class="nav-item-content">
                 <img src="icon-search.png" alt="Search" class="nav-icon">
                 <span class="nav-text">Search</span>
@@ -107,20 +101,19 @@
             </a>
           </li>
 
-          <!-- 3. Your Library (Mở thư mục nhạc cục bộ từ máy tính) -->
+          <!-- 3. Your Library -->
           <li class="sidebar-nav-item" data-tab="library" id="tabLibrary">
-            <label for="folderInput" class="nav-item-link cursor-pointer" title="Mở thư mục nhạc trên máy tính [Local Audio]">
+            <a href="#library" class="nav-item-link" title="Your Library">
               <div class="nav-item-content">
                 <img src="icon-library.png" alt="Your Library" class="nav-icon">
                 <span class="nav-text">Your Library</span>
-                <span class="spirit-mini-note" title="Kodama âm nhạc">🍃</span>
               </div>
-            </label>
+            </a>
           </li>
 
           <!-- 4. Playlists -->
           <li class="sidebar-nav-item" data-tab="playlists" id="tabPlaylists">
-            <a href="#playlists" class="nav-item-link" title="Danh sách phát">
+            <a href="#playlists" class="nav-item-link" title="Playlists">
               <div class="nav-item-content">
                 <img src="icon-playlists.png" alt="Playlists" class="nav-icon">
                 <span class="nav-text">Playlists</span>
@@ -130,7 +123,7 @@
 
           <!-- 5. Create Playlist -->
           <li class="sidebar-nav-item" data-tab="create" id="tabCreate">
-            <a href="#create" class="nav-item-link" title="Tạo danh sách phát mới">
+            <a href="#create" class="nav-item-link" title="Create Playlist">
               <div class="nav-item-content">
                 <img src="icon-create.png" alt="Create Playlist" class="nav-icon">
                 <span class="nav-text">Create Playlist</span>
@@ -172,280 +165,29 @@
 
     <!-- 
       ======================================================================
-      3. MAIN CONTENT (MÀN HÌNH TÌM KIẾM CHUẨN SEARCH.PNG)
-      [SKILL: /image-to-code-skill & /impeccable]
-      - Top Bar: Điều hướng + Thanh Search da cuộn gỗ lantern + Avatar
-      - Main: Header "Search", 4 Cards "Browse by Theme", 5 Cards "Explore Top Genres"
+      3. MAIN CONTENT (GIAO DIỆN ĐỂ TRỐNG TRONG CÁC MỤC THEO YÊU CẦU)
+      - Home: Để trống
+      - Search: Để trống
+      - Your Library: Để trống
+      - Playlists: Để trống
+      - Create Playlist: Để trống
       ======================================================================
     -->
     <main class="main-content" id="mainContent">
+      <!-- 1. Home (Giao diện để trống) -->
+      <section class="tab-view-section active" id="viewHome" data-tab="home"></section>
 
-      <!-- Top Bar: Nút điều hướng `<` `>` + Thanh tìm kiếm da cuộn gỗ + Nút Cloud Sync -->
-      <header class="top-nav-bar">
-        <div class="nav-history-btns">
-          <button class="history-circle-btn" id="historyBackBtn" title="Quay lại">&lt;</button>
-          <button class="history-circle-btn" id="historyForwardBtn" title="Tiến tới">&gt;</button>
-        </div>
+      <!-- 2. Search (Giao diện để trống) -->
+      <section class="tab-view-section hidden" id="viewSearch" data-tab="search"></section>
 
-        <!-- 
-          ====================================================================
-          [SKILL: /image-to-code-skill & /impeccable]
-          SMART SEARCH BAR: BỀ MẶT GIẤY DA CUỘN GỖ VỚI ĐÈN BÃO WARM LANTERN (SEARCHICON.PNG)
-          - Wrapper <div> gán background-image: url('searchicon.png')
-          - Thẻ <input> bên trong hoàn toàn trong suốt (transparent), viền không màu
-          - Người dùng gõ trực tiếp lên bề mặt cuộn giấy da
-          - Padding trái/phải đảm bảo chữ không chạm viền gỗ hoặc đè lên ngọn đèn lồng
-          ====================================================================
-        -->
-        <div class="search-parchment-wrapper" id="searchShell">
-          <input 
-            type="text" 
-            id="searchInput" 
-            class="search-parchment-input" 
-            placeholder="Search for Songs, Artists, or Podcasts..." 
-            autocomplete="off" 
-            spellcheck="false"
-          >
-          <span class="search-link-tag hidden" id="searchLinkTag">YouTube MP3</span>
-          <button id="clearSearchBtn" class="clear-search-btn hidden" title="Xóa">&times;</button>
-        </div>
+      <!-- 3. Your Library (Giao diện để trống) -->
+      <section class="tab-view-section hidden" id="viewLibrary" data-tab="library"></section>
 
-        <div class="top-actions-cluster">
-          <!-- Nút Lá Thư Ghibli: Đăng nhập & Đồng bộ Cloud Supabase -->
-          <button id="authModalTriggerBtn" class="top-action-pill btn-cloud-pill" title="Đăng nhập & Đồng bộ Playlist lên Cloud">
-            <span class="cloud-icon" id="syncStatusIcon">☁️</span>
-            <span id="userAuthBadgeText">Đăng Nhập</span>
-          </button>
+      <!-- 4. Playlists (Giao diện để trống) -->
+      <section class="tab-view-section hidden" id="viewPlaylists" data-tab="playlists"></section>
 
-          <!-- Avatar tròn phong cách Ghibli -->
-          <div class="user-avatar-circle" id="profileAvatarBtn" title="Thông tin người bạn rừng xanh">
-            <div class="avatar-face">🌱</div>
-          </div>
-        </div>
-      </header>
-
-      <!-- 
-        ======================================================================
-        // TODO: [SKILL: /animate & /animation-vocabulary]
-        HIỆU ỨNG CỤC THAN SUSUWATARI KÉO NỐT NHẠC (SUSUWATARI PULLING MUSIC NOTE)
-        Xuất hiện mượt mà khi isLoading === true trong lúc Cobalt API trích xuất âm thanh
-        ======================================================================
-      -->
-      <div class="susuwatari-leaf-loader hidden" id="leafLoader" aria-live="polite">
-        <div class="leaf-loader-box">
-          <div class="leaf-pull-stage">
-            <!-- Đội hình Susuwatari gắng sức kéo nốt nhạc (Tug-of-war heave & pull) -->
-            <div class="soot-sprite soot-1" title="Susuwatari 1">
-              <div class="soot-eyes"><span class="soot-pupil"></span><span class="soot-pupil"></span></div>
-              <span class="sweat-drop s1">💦</span>
-            </div>
-            <div class="soot-sprite soot-2" title="Susuwatari 2">
-              <div class="soot-eyes"><span class="soot-pupil"></span><span class="soot-pupil"></span></div>
-              <span class="sweat-drop s2">💦</span>
-            </div>
-            <div class="soot-sprite soot-3" title="Susuwatari 3">
-              <div class="soot-eyes"><span class="soot-pupil"></span><span class="soot-pupil"></span></div>
-            </div>
-
-            <!-- Dây thừng leo căng cứng rung bần bật -->
-            <div class="strained-vine-rope"></div>
-
-            <!-- Nốt nhạc vàng óng khổng lồ đang bị bầy Susuwatari gắng sức kéo về -->
-            <div class="heavy-musical-note" id="heavyMusicalNote">
-              <span class="note-giant-glyph">🎵</span>
-              <span class="note-label">COBALT AUDIO</span>
-            </div>
-          </div>
-
-          <div class="leaf-loader-text">
-            <div class="leaf-loader-title" id="loaderStatusTitle">Bầy Susuwatari đang kéo nốt nhạc từ Cobalt...</div>
-            <div class="leaf-loader-sub" id="loaderStatusSub">Đang kết nối bồ câu bưu chính & trích xuất MP3 về máy tính</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 
-        ======================================================================
-        [SKILL: /image-to-code-skill & /impeccable & /animate]
-        MÀN HÌNH TÌM KIẾM CHÍNH (SEARCH VIEW SECTION - CHUẨN SEARCH.PNG)
-        ======================================================================
-      -->
-      <section class="search-view-section" id="searchViewSection">
-        
-        <!-- Tinh linh cây Kodama bay lơ lửng bằng CSS Keyframes (lên xuống nhẹ nhàng) -->
-        <div class="kodama-spirit-floating kodama-float-top" aria-hidden="true">
-          <img src="icon-kodama.png" alt="Kodama" class="kodama-ghost-img">
-        </div>
-        <div class="kodama-spirit-floating kodama-float-mid" aria-hidden="true">
-          <img src="kodama-sitting.png" alt="Kodama" class="kodama-ghost-img">
-        </div>
-        <div class="kodama-spirit-floating kodama-float-right" aria-hidden="true">
-          <img src="kodama-rock.png" alt="Kodama" class="kodama-ghost-img">
-        </div>
-
-        <!-- Header: Search + Explore the World of Ghibli Soundscapes -->
-        <div class="search-hero-header">
-          <h1 class="search-hero-title">Search</h1>
-          <p class="search-hero-subtitle">Explore the World of Ghibli Soundscapes</p>
-        </div>
-
-        <!-- 1. BROWSE BY THEME (4 THẺ CARD HÌNH CHỮ NHẬT BO GÓC) -->
-        <div class="search-section-block">
-          <div class="search-section-header">
-            <h2 class="search-section-title">Browse by Theme</h2>
-            <span class="search-quill-glyph" title="Browse by Theme">🪶</span>
-          </div>
-
-          <div class="search-cards-grid theme-cards-grid">
-            <!-- 1. Quiet Mornings (Kiki Delivery Service) -->
-            <div class="ghibli-search-card" data-title="Quiet Mornings" data-theme="kiki" title="Quiet Mornings • Kiki's Delivery Service">
-              <div class="card-thumb-frame">
-                <img src="theme-quiet-mornings.png" alt="Quiet Mornings" class="card-thumb-img" loading="lazy">
-              </div>
-              <span class="card-title-text">Quiet Mornings</span>
-            </div>
-
-            <!-- 2. Wind & Wings (The Wind Rises) -->
-            <div class="ghibli-search-card" data-title="Wind & Wings" data-theme="wind" title="Wind & Wings • The Wind Rises">
-              <div class="card-thumb-frame">
-                <img src="theme-wind-wings.png" alt="Wind & Wings" class="card-thumb-img" loading="lazy">
-              </div>
-              <span class="card-title-text">Wind & Wings</span>
-            </div>
-
-            <!-- 3. Rainy Days (My Neighbor Totoro) -->
-            <div class="ghibli-search-card" data-title="Rainy Days" data-theme="totoro" title="Rainy Days • My Neighbor Totoro">
-              <div class="card-thumb-frame">
-                <img src="theme-rainy-days.png" alt="Rainy Days" class="card-thumb-img" loading="lazy">
-              </div>
-              <span class="card-title-text">Rainy Days</span>
-            </div>
-
-            <!-- 4. Forest Spirits (Princess Mononoke) -->
-            <div class="ghibli-search-card" data-title="Forest Spirits" data-theme="kodama" title="Forest Spirits • Princess Mononoke">
-              <div class="card-thumb-frame">
-                <img src="theme-forest-spirits.png" alt="Forest Spirits" class="card-thumb-img" loading="lazy">
-              </div>
-              <span class="card-title-text">Forest Spirits</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 2. EXPLORE TOP GENRES (5 THẺ CARD VUÔNG BO GÓC) -->
-        <div class="search-section-block">
-          <div class="search-section-header">
-            <h2 class="search-section-title">Explore Top Genres</h2>
-            <img src="icon-kodama.png" alt="Top Genres" class="search-kodama-header-icon" aria-hidden="true">
-          </div>
-
-          <div class="genres-row-container">
-            <div class="search-cards-grid genre-cards-grid">
-              <!-- 1. Mononoke Hime -->
-              <div class="ghibli-search-card" data-title="Mononoke Hime" data-genre="mononoke" title="Mononoke Hime • Princess Mononoke">
-                <div class="card-thumb-frame">
-                  <img src="genre-mononoke.png" alt="Mononoke Hime" class="card-thumb-img" loading="lazy">
-                </div>
-                <span class="card-title-text">Mononoke Hime</span>
-              </div>
-
-              <!-- 2. Ponyo -->
-              <div class="ghibli-search-card" data-title="Ponyo" data-genre="ponyo" title="Ponyo on the Cliff by the Sea">
-                <div class="card-thumb-frame">
-                  <img src="genre-ponyo.png" alt="Ponyo" class="card-thumb-img" loading="lazy">
-                </div>
-                <span class="card-title-text">Ponyo</span>
-              </div>
-
-              <!-- 3. Spirited Away -->
-              <div class="ghibli-search-card" data-title="Spirited Away" data-genre="spirited" title="Spirited Away • Bathhouse Aburaya">
-                <div class="card-thumb-frame">
-                  <img src="genre-spirited-away.png" alt="Spirited Away" class="card-thumb-img" loading="lazy">
-                </div>
-                <span class="card-title-text">Spirited Away</span>
-              </div>
-
-              <!-- 4. Grave of the Fireflies -->
-              <div class="ghibli-search-card" data-title="Grave of the Fireflies" data-genre="fireflies" title="Grave of the Fireflies">
-                <div class="card-thumb-frame">
-                  <img src="genre-fireflies.png" alt="Grave of the Fireflies" class="card-thumb-img" loading="lazy">
-                </div>
-                <span class="card-title-text">Grave of the Fireflies</span>
-              </div>
-
-              <!-- 5. Castle in the Sky -->
-              <div class="ghibli-search-card" data-title="Castle in the Sky" data-genre="laputa" title="Castle in the Sky • Laputa">
-                <div class="card-thumb-frame">
-                  <img src="genre-castle-sky.png" alt="Castle in the Sky" class="card-thumb-img" loading="lazy">
-                </div>
-                <span class="card-title-text">Castle in the Sky</span>
-              </div>
-            </div>
-
-            <!-- Minh họa Cậu bé nghe nhạc trên tảng đá & Lâu đài Laputa chuẩn Search.png -->
-            <div class="search-scene-boy-rock" aria-hidden="true" title="Boy listening to music on rock looking at Laputa">
-              <img src="ghibli-boy-rock.png" alt="Ghibli Scene" class="boy-rock-img">
-              <div class="kodama-standing-laputa">
-                <img src="kodama-sitting.png" alt="Kodama" class="kodama-mini-sprite">
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </section>
-
-      <!-- SECTION PLAYLISTS (ĐƯỢC ẨN MẶC ĐỊNH KHI Ở MÀN HÌNH TÌM KIẾM) -->
-      <section class="playlists-view-section hidden" id="playlistsViewSection">
-        <h1 class="view-main-title">Playlists</h1>
-
-        <!-- GRID CHỨA CÁC CARD BÀI HÁT (SẼ TỰ ĐỘNG HIỂN THỊ KHI NGƯỜI DÙNG THÊM NHẠC VÀO WEB) -->
-        <div class="playlists-grid" id="playlistsGrid"></div>
-
-        <!-- TRẠNG THÁI TRỐNG: KHI CHƯA CÓ BÀI HÁT NÀO ĐƯỢC THÊM VÀO WEB -->
-        <div class="playlists-empty-state" id="playlistsEmptyState">
-          <div class="empty-sprout-icon">🌱</div>
-          <h3 class="empty-title">Chưa có bài hát nào trong danh sách</h3>
-          <p class="empty-subtitle">Hãy mở thư mục nhạc trên máy tính hoặc dán liên kết YouTube / TikTok vào ô tìm kiếm để thưởng thức giai điệu trong ngôi nhà Ghibli.</p>
-          <label for="folderInput" class="empty-add-btn cursor-pointer" title="Mở thư mục nhạc trên máy tính">
-            <span>📂 Mở Thư Mục Nhạc</span>
-          </label>
-        </div>
-      </section>
-
-
-
-      <!-- 
-        DANH SÁCH BÀI HÁT CHI TIẾT (PLAYLIST QUEUE DRAWER)
-        Chứa các ô checkbox Hạt Dẻ 🌰 cho chế độ Custom Loop
-      -->
-      <section class="playlist-drawer-cottage hidden" id="playlistCottage">
-        <div class="drawer-header">
-          <div class="drawer-title-group">
-            <span class="moss-stamp">DANH SÁCH PHÁT</span>
-            <span class="counter-badge" id="playlistCount">0 Bài Hát</span>
-            <span class="custom-loop-chip hidden" id="customLoopChip">🌰 Đang Lặp Hạt Dẻ</span>
-          </div>
-          <div class="drawer-actions">
-            <span class="folder-pill" id="folderNameBadge">Thư viện nhạc</span>
-            <button id="manualSyncBtn" class="sync-tiny-btn" title="Đồng bộ ngay lên Cloud Supabase">
-              <span>🔄 Đồng bộ Cloud</span>
-            </button>
-            <button id="closeDrawerBtn" class="close-drawer-btn" title="Thu gọn danh sách">&times;</button>
-          </div>
-        </div>
-
-        <div class="drawer-scroll-box" id="playlistContainer">
-          <!-- Trạng thái trống -->
-          <div class="empty-nature-state" id="emptyState">
-            <div class="acorn-basket-art">🧺</div>
-            <h3>Giai Điệu Khu Rừng Đang Ngủ Yên</h3>
-            <p>Bấm <strong>"Your Library"</strong> để mở thư mục nhạc trên máy hoặc chọn các Playlist mẫu ở trên.</p>
-          </div>
-
-          <!-- Danh sách thẻ bài hát tích hợp ô Checkbox Hạt Dẻ -->
-          <ul class="nature-song-list" id="songList"></ul>
-        </div>
-      </section>
-
+      <!-- 5. Create Playlist (Giao diện để trống) -->
+      <section class="tab-view-section hidden" id="viewCreate" data-tab="create"></section>
     </main>
 
     <!-- 
@@ -595,85 +337,6 @@
 
     </footer>
 
-  </div>
-
-  <!-- 
-    ========================================================================
-    [SKILL: /animate & /impeccable] 
-    MODAL ĐĂNG NHẬP / ĐĂNG KÝ: LÁ THƯ TAY TỪ RỪNG XANH (GHIBLI HANDWRITTEN LETTER)
-    Rơi từ trên trời xuống nhẹ nhàng chao nghiêng như một chiếc lá (leafModalDrop)
-    ========================================================================
-  -->
-  <div class="auth-modal-overlay hidden" id="authModalOverlay">
-    <div class="ghibli-letter-modal" id="ghibliLetterModal">
-      
-      <!-- Dây thừng treo bảng lá thư -->
-      <div class="letter-ropes">
-        <span class="rope left"></span>
-        <span class="rope right"></span>
-      </div>
-
-      <!-- Nút đóng lá thư -->
-      <button id="closeAuthModalBtn" class="close-letter-btn" title="Đóng lá thư">&times;</button>
-
-      <!-- Nội dung lá thư da -->
-      <div class="letter-header">
-        <div class="wax-seal-icon">💌</div>
-        <h3 class="letter-title">Lá Thư Từ Rừng Xanh</h3>
-        <p class="letter-subtitle">Đồng bộ Playlist & Âm nhạc Ghibli đa thiết bị</p>
-      </div>
-
-      <!-- Tabs: Đăng Nhập / Đăng Ký / Cấu Hình Supabase -->
-      <div class="letter-tabs">
-        <button class="letter-tab active" data-tab="login">Đăng Nhập</button>
-        <button class="letter-tab" data-tab="register">Đăng Ký</button>
-        <button class="letter-tab" data-tab="config">Cấu Hình Cloud</button>
-      </div>
-
-      <!-- Form Đăng Nhập / Đăng Ký -->
-      <form id="authForm" class="letter-form">
-        <div class="form-group" id="emailGroup">
-          <label for="authEmail">Email người gửi:</label>
-          <input type="email" id="authEmail" placeholder="totoro@ghibli.forest" required>
-        </div>
-
-        <div class="form-group" id="passwordGroup">
-          <label for="authPassword">Mật mã khu rừng:</label>
-          <input type="password" id="authPassword" placeholder="••••••••" required>
-        </div>
-
-        <!-- Bảng Cấu Hình API Supabase Riêng (Tùy chọn) -->
-        <div class="config-fields-group hidden" id="configFieldsGroup">
-          <div class="form-group">
-            <label for="supabaseUrl">Supabase URL (Tùy chọn):</label>
-            <input type="text" id="supabaseUrl" placeholder="https://your-project.supabase.co">
-          </div>
-          <div class="form-group">
-            <label for="supabaseKey">Supabase Anon Key:</label>
-            <input type="text" id="supabaseKey" placeholder="eyJhbGciOi...">
-          </div>
-          <p class="config-tip">Mặc định ứng dụng đã có bộ nhớ Cloud Sync giả lập tức thì (LocalStorage Persistence). Bạn có thể dán Supabase API Key riêng nếu muốn kết nối Database thật.</p>
-        </div>
-
-        <div class="form-actions">
-          <button type="submit" id="authSubmitBtn" class="ghibli-action-btn btn-send-letter">
-            <span id="authSubmitText">🍃 Gửi Thư • Đăng Nhập</span>
-          </button>
-        </div>
-      </form>
-
-      <!-- Trạng thái tài khoản đã đăng nhập -->
-      <div class="logged-in-box hidden" id="loggedInBox">
-        <div class="acorn-avatar">🌰</div>
-        <div class="logged-info">
-          <span class="user-greeting">Xin chào người bạn của rừng!</span>
-          <strong class="user-email-display" id="userEmailDisplay">totoro@forest</strong>
-          <span class="sync-count-info" id="syncCountInfo">Đang đồng bộ 0 bài hát</span>
-        </div>
-        <button id="logoutBtn" class="ghibli-btn-subtle btn-logout">Đăng Xuất</button>
-      </div>
-
-    </div>
   </div>
 
   <!-- Thẻ Audio cốt lõi -->
