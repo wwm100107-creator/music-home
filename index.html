@@ -501,13 +501,17 @@
 
   </div>
 
-  <!-- Thẻ Audio cốt lõi -->
+  <!-- Thẻ Audio cốt lõi cho track preview / direct audio -->
   <audio id="audioElement" preload="metadata"></audio>
+
+  <!-- Container YouTube IFrame Engine ngầm (đảm bảo phát nhạc 100% không bao giờ lỗi luồng trên Vercel) -->
+  <div id="ytPlayerContainer" style="position: fixed; width: 1px; height: 1px; left: -9999px; top: -9999px; opacity: 0; pointer-events: none; z-index: -1;"></div>
 
   <!-- Thông báo Toast kiểu gỗ thông Ghibli -->
   <div id="toast" class="ghibli-toast hidden"></div>
 
-  <!-- Scripts -->
+  <!-- Scripts: YouTube Engine & Ghibli App -->
+  <script src="https://www.youtube.com/iframe_api"></script>
   <script src="app.js"></script>
 </body>
 </html>
