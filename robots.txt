@@ -1,0 +1,21 @@
+User-agent: *
+Disallow: /api/
+Allow: /
+
+User-agent: Googlebot
+Disallow: /api/
+
+User-agent: Bingbot
+Disallow: /api/
+
+User-agent: Baiduspider
+Disallow: /api/
+
+User-agent: Yandex
+Disallow: /api/
+
+User-agent: GPTBot
+Disallow: /api/
+
+User-agent: ClaudeBot
+Disallow: /api/

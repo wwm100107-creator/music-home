@@ -1,0 +1,20 @@
+{
+  "name": "music-home",
+  "version": "1.0.0",
+  "description": "Home Music • Studio Ghibli & Totoro Vibe with YouTube Music & VisionOS Audio Streaming Engine",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "build": "echo 'Build complete'"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "youtubei.js": "^18.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

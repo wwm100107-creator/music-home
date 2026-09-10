@@ -148,19 +148,211 @@
       ======================================================================
     -->
     <main class="main-content" id="mainContent">
-      <!-- 1. Home (Giao diện Home với card demo kích hoạt thanh Player) -->
+
+      <!-- ================================================================== -->
+      <!-- 1. TAB HOME: XU HƯỚNG ÂM NHẠC & BỘ CHỌN QUỐC GIA GEO-IP -->
+      <!-- ================================================================== -->
       <section class="tab-view-section active" id="viewHome" data-tab="home">
-        <div class="player-demo-trigger-card">
-          <div class="demo-card-badge">🍃 Ghibli Sound Station</div>
-          <h2 class="demo-card-title">Khởi động Trình phát nhạc</h2>
-          <p class="demo-card-desc">Nhấp nút dưới đây để trải nghiệm hiệu ứng thanh Player trượt mượt mà từ dưới lên với lớp gương trong suốt (Clear Glass).</p>
-          <button class="demo-play-trigger-btn" id="demoPlayTriggerBtn" data-play="demo" title="Nhấp để hiện thanh Player Bar">
-            <span class="demo-btn-icon">▶</span>
-            <span class="demo-btn-text">Phát nhạc mẫu & Mở thanh Player</span>
-          </button>
+        
+        <!-- Top Toolbar: Quick Search + Bộ Chọn Quốc Gia Ghibli -->
+        <div class="home-top-bar">
+          <div class="home-search-quickbox">
+            <span class="search-box-icon">🔍</span>
+            <input type="text" id="homeQuickSearchInput" placeholder="Tìm kiếm bài hát, nghệ sĩ hoặc dán link YouTube..." class="ghibli-quick-search-input">
+          </div>
+
+          <div class="country-selector-wrapper">
+            <label for="countrySelectDropdown" class="country-selector-label">
+              <span class="globe-icon">🌐</span>
+              <span class="label-text">Khu vực:</span>
+            </label>
+            <div class="custom-select-shell">
+              <select id="countrySelectDropdown" class="country-dropdown-select" title="Chọn quốc gia đề xuất âm nhạc">
+                <option value="VN" selected>🇻🇳 Việt Nam (VN)</option>
+                <option value="US">🇺🇸 United States (US)</option>
+                <option value="KR">🇰🇷 South Korea (KR)</option>
+                <option value="JP">🇯🇵 Japan (JP)</option>
+                <option value="GB">🇬🇧 United Kingdom (GB)</option>
+                <option value="GLOBAL">🌐 Global Hits</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero Greeting Banner Ghibli -->
+        <div class="ghibli-hero-banner" id="heroBanner">
+          <div class="hero-banner-content">
+            <div class="region-badge-pill" id="regionGreetingBadge">
+              <span class="region-badge-flag" id="heroFlag">🇻🇳</span>
+              <span class="region-badge-text" id="heroGreetingText">Việt Nam • Bảng Xếp Hạng & Xu Hướng Thịnh Hành Hôm Nay</span>
+            </div>
+            <h1 class="hero-main-title">Khu Vườn Giai Điệu Trong Trẻo</h1>
+            <p class="hero-sub-description">Thưởng thức âm nhạc chất lượng cao không quảng cáo, lấy cảm hứng từ thiên nhiên Studio Ghibli.</p>
+            
+            <!-- Dynamic Genre Filter Pills -->
+            <div class="genre-pills-row" id="genrePillContainer">
+              <button class="genre-pill-btn active" data-genre="all">Tất cả</button>
+              <button class="genre-pill-btn" data-genre="V-Pop">V-Pop</button>
+              <button class="genre-pill-btn" data-genre="Nhạc Trẻ Thịnh Hành">Nhạc Trẻ</button>
+              <button class="genre-pill-btn" data-genre="Indie Việt">Indie Việt</button>
+              <button class="genre-pill-btn" data-genre="Vinahouse">Vinahouse</button>
+              <button class="genre-pill-btn" data-genre="Ballad Buồn">Ballad</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trending Section -->
+        <div class="section-heading-row">
+          <div class="heading-left">
+            <span class="heading-icon">🍃</span>
+            <h2 class="heading-title" id="trendingSectionTitle">Bảng Xếp Hạng Thịnh Hành</h2>
+          </div>
+          <span class="heading-badge-counter" id="trendingCounter">20 bài hát</span>
+        </div>
+
+        <!-- Trending Tracks Grid -->
+        <div class="nature-songs-grid" id="trendingTracksGrid">
+          <div class="ghibli-loading-placeholder">
+            <div class="loading-leaf-spinner">🌿</div>
+            <p class="loading-text">Đang lắng nghe giai điệu từ thiên nhiên...</p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- 2. TAB SEARCH: TÌM KIẾM YOUTUBE MUSIC & DÁN ĐƯỜNG DẪN -->
+      <!-- ================================================================== -->
+      <section class="tab-view-section hidden" id="viewSearch" data-tab="search">
+        <div class="search-view-header">
+          <div class="search-huge-box">
+            <span class="search-huge-icon" id="searchTypeIcon">🔍</span>
+            <input type="text" id="mainSearchInput" placeholder="Nhập tên bài hát, nghệ sĩ hoặc dán đường dẫn YouTube..." class="ghibli-search-huge-input" autocomplete="off">
+            <button id="clearSearchBtn" class="search-clear-btn hidden" title="Xóa tìm kiếm">✕</button>
+          </div>
+          <p class="search-tip-note">💡 Nhập từ khóa để tìm trên YouTube Music hoặc dán link YouTube để phát ngay.</p>
+        </div>
+
+        <div class="search-results-wrapper">
+          <div id="searchLoadingState" class="ghibli-loading-placeholder hidden">
+            <div class="loading-leaf-spinner">🕊️</div>
+            <p class="loading-text">Chim bồ câu đang mang bài hát về...</p>
+          </div>
+          <div id="searchEmptyState" class="search-empty-prompt">
+            <span class="empty-icon">🎵</span>
+            <h3>Hãy nhập tên bài hát bạn muốn nghe</h3>
+            <p>Khám phá kho tàng hàng triệu bài hát từ YouTube Music</p>
+          </div>
+          <div class="nature-songs-grid hidden" id="searchResultsGrid"></div>
         </div>
       </section>
+
+      <!-- ================================================================== -->
+      <!-- 3. TAB YOUR LIBRARY: BÀI HÁT YÊU THÍCH -->
+      <!-- ================================================================== -->
+      <section class="tab-view-section hidden" id="viewLibrary" data-tab="library">
+        <div class="section-heading-row">
+          <div class="heading-left">
+            <span class="heading-icon">💚</span>
+            <h2 class="heading-title">Khu Vườn Yêu Thích Của Bạn</h2>
+          </div>
+          <span class="heading-badge-counter" id="favCounter">0 bài</span>
+        </div>
+        <div class="nature-songs-grid" id="favoriteTracksGrid">
+          <div class="search-empty-prompt">
+            <span class="empty-icon">🌱</span>
+            <h3>Chưa có bài hát yêu thích nào</h3>
+            <p>Bấm biểu tượng trái tim 💚 ở thanh phát nhạc để lưu vào đây nhé!</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- 4. TAB PLAYLISTS: DANH SÁCH PHÁT GHIBLI TUYỂN CHỌN -->
+      <!-- ================================================================== -->
+      <section class="tab-view-section hidden" id="viewPlaylists" data-tab="playlists">
+        <div class="section-heading-row">
+          <div class="heading-left">
+            <span class="heading-icon">🪵</span>
+            <h2 class="heading-title">Bộ Sưu Tập Ghibli Tuyển Chọn</h2>
+          </div>
+        </div>
+        <div class="ghibli-curated-grid" id="curatedPlaylistsGrid">
+          <div class="curated-card" data-query="Joe Hisaishi Studio Ghibli Best">
+            <div class="curated-cover-wrap">
+              <img src="wood_2.jpg" alt="Howl" class="curated-cover">
+              <button class="curated-play-btn" title="Phát bộ sưu tập">▶</button>
+            </div>
+            <h3 class="curated-title">Joe Hisaishi Masterpieces</h3>
+            <p class="curated-subtitle">Những tuyệt phẩm nhạc nền bất hủ</p>
+          </div>
+
+          <div class="curated-card" data-query="Howl's Moving Castle Merry Go Round of Life">
+            <div class="curated-cover-wrap">
+              <img src="bg.jpg" alt="Howl Castle" class="curated-cover">
+              <button class="curated-play-btn" title="Phát bộ sưu tập">▶</button>
+            </div>
+            <h3 class="curated-title">Howl's Moving Castle</h3>
+            <p class="curated-subtitle">Merry-Go-Round of Life & Piano</p>
+          </div>
+
+          <div class="curated-card" data-query="Spirited Away Soundtrack Joe Hisaishi">
+            <div class="curated-cover-wrap">
+              <img src="wood_2.png" alt="Spirited Away" class="curated-cover">
+              <button class="curated-play-btn" title="Phát bộ sưu tập">▶</button>
+            </div>
+            <h3 class="curated-title">Spirited Away (Chihiro)</h3>
+            <p class="curated-subtitle">Hành trình vùng đất linh hồn</p>
+          </div>
+
+          <div class="curated-card" data-query="My Neighbor Totoro Wind Path Joe Hisaishi">
+            <div class="curated-cover-wrap">
+              <img src="icon-home-music.png" alt="Totoro" class="curated-cover">
+              <button class="curated-play-btn" title="Phát bộ sưu tập">▶</button>
+            </div>
+            <h3 class="curated-title">My Neighbor Totoro</h3>
+            <p class="curated-subtitle">Tiếng sáo trong cánh rừng xanh</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- 5. TAB CREATE: TẠO DANH SÁCH MỚI -->
+      <!-- ================================================================== -->
+      <section class="tab-view-section hidden" id="viewCreate" data-tab="create">
+        <div class="create-playlist-cottage">
+          <span class="create-icon">🌿</span>
+          <h2>Gieo Mầm Danh Sách Mới</h2>
+          <p>Tự tay gom nhặt những khúc ca dịu êm vào bộ sưu tập riêng của bạn.</p>
+          <div class="create-input-group">
+            <input type="text" id="newPlaylistName" placeholder="Đặt tên cho danh sách phát..." class="ghibli-text-input">
+            <button id="createPlaylistConfirmBtn" class="ghibli-primary-btn">Tạo Ngay</button>
+          </div>
+        </div>
+      </section>
+
     </main>
+
+    <!-- NGĂN KÉO HÀNG ĐỢI PHÁT NHẠC (QUEUE DRAWER) & CHẾ ĐỘ HẠT DẺ -->
+    <div class="playlist-drawer-cottage hidden" id="playlistDrawer">
+      <div class="drawer-header">
+        <div class="drawer-header-title">
+          <span class="moss-stamp">Hàng Đợi</span>
+          <span class="counter-badge" id="queueCounterBadge">0 bài</span>
+          <span class="custom-loop-chip" id="acornLoopActiveBadge">🌰 Hạt dẻ</span>
+        </div>
+        <div class="drawer-actions">
+          <button id="clearQueueBtn" class="sync-tiny-btn" title="Xóa hàng đợi">Xóa hết</button>
+          <button id="closeDrawerBtn" class="close-drawer-btn" title="Đóng">✕</button>
+        </div>
+      </div>
+      <div class="drawer-scroll-box">
+        <ul class="nature-song-list" id="queueListContainer">
+          <!-- Queue items will be rendered dynamically -->
+        </ul>
+      </div>
+    </div>
+
 
     <!-- 
       ======================================================================
