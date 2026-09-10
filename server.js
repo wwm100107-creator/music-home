@@ -504,8 +504,9 @@ const FALLBACK_TRENDING_TRACKS = [
 app.use(cors());
 app.use(express.json());
 
-// Phục vụ file tĩnh trực tiếp từ thư mục gốc
+// Phục vụ file tĩnh trực tiếp từ thư mục gốc và thư mục public
 app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================================================
 // 10. DUAL-MOUNT API ROUTER (Mounts on both /api and / for maximum compatibility)
@@ -895,9 +896,21 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('[UNHANDLED REJECTION]:', reason);
 });
 
-// Khởi chạy server nếu chạy cục bộ
-const isVercel = process.env.VERCEL === '1' || process.env.NOW_REGION != null;
-if (!isVercel) {
+// Khởi chạy server nếu chạy cục bộ trực tiếp (node server.js)
+const isDirectExecution = Boolean(
+  process.argv[1] && (
+    process.argv[1].endsWith('server.js') || 
+    process.argv[1].endsWith('server')
+  )
+);
+const isVercel = Boolean(
+  process.env.VERCEL || 
+  process.env.VERCEL_ENV || 
+  process.env.NOW_REGION || 
+  process.env.AWS_LAMBDA_FUNCTION_NAME
+);
+
+if (isDirectExecution && !isVercel) {
   app.listen(PORT, () => {
     console.log(`
       🌿 ===================================================
