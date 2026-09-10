@@ -6,7 +6,7 @@
  * Các mục: Home, Your Library, Search, Playlists, Create Playlist được để trống giao diện.
  * Bố cục giữ lại:
  * 1. Sidebar Kính Mờ + Segmented Control Thanh Trượt Tấm Gỗ (wood_2.jpg)
- * 2. Bottom Player + Wavy Vine Progress Bar + Cục chạy Ngọn lửa Calcifer (fire.mp4)
+ * 2. Bottom Player + Wavy Vine Progress Bar + Cục chạy Ngọn lửa Calcifer (fire.gif)
  */
 
 (() => {
@@ -132,7 +132,7 @@
   }
 
   // ==========================================================================
-  // 3. TIẾN TRÌNH DÂY LEO VÀ CỤC CHẠY CALCIFER (FIRE.MP4)
+  // 3. TIẾN TRÌNH DÂY LEO VÀ CỤC CHẠY CALCIFER (FIRE.GIF)
   // ==========================================================================
   function updateProgressUI(percent) {
     const clamped = Math.max(0, Math.min(100, percent));
@@ -376,14 +376,9 @@
       setTimeout(() => moveWoodSliderToItem(defaultTab, false), 250);
     }
 
-    // Autoplay Calcifer flame video (fire.mp4)
+    // Calcifer flame tự động lặp vô hạn qua fire.gif (hoặc fallback video nếu có)
     if (dom.calciferFlame && typeof dom.calciferFlame.play === 'function') {
       dom.calciferFlame.play().catch(() => {});
-      document.addEventListener('pointerdown', () => {
-        if (dom.calciferFlame && dom.calciferFlame.paused && typeof dom.calciferFlame.play === 'function') {
-          dom.calciferFlame.play().catch(() => {});
-        }
-      }, { once: true });
     }
   }
 
