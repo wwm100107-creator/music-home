@@ -1,8 +1,5 @@
 {
   "version": 2,
-  "framework": null,
-  "buildCommand": "echo 'No build step required'",
-  "outputDirectory": ".",
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -10,4 +7,5 @@
     }
   ]
 }
+
 
