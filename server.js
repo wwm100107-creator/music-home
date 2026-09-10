@@ -220,7 +220,7 @@ const circuitBreaker = new CircuitBreaker(4, 60000);
 let ytSearchInstance = null;
 let ytStreamInstance = null;
 
-async function getClients() {
+async function getSearchClient() {
   if (!ytSearchInstance) {
     ytSearchInstance = await Innertube.create({
       cache: new UniversalCache(false),
@@ -228,7 +228,10 @@ async function getClients() {
     });
     console.log('✅ YouTube Search client initialized (WEB/MUSIC)');
   }
+  return ytSearchInstance;
+}
 
+async function getStreamClient() {
   if (!ytStreamInstance) {
     ytStreamInstance = await Innertube.create({
       client_type: ClientType.VISIONOS,
@@ -237,12 +240,14 @@ async function getClients() {
     });
     console.log('✅ YouTube Stream client initialized (VISIONOS Unthrottled Engine)');
   }
-
-  return { ytSearch: ytSearchInstance, ytStream: ytStreamInstance };
+  return ytStreamInstance;
 }
 
-// Khởi tạo ngầm
-getClients().catch(e => console.warn('[Innertube] Đang khởi động nền:', e.message));
+async function getClients() {
+  const ytSearch = await getSearchClient();
+  const ytStream = await getStreamClient();
+  return { ytSearch, ytStream };
+}
 
 // Helper resolve audio stream URL qua VisionOS
 async function resolveAudioStream(videoId, forceRefresh = false) {
@@ -251,7 +256,7 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
     if (cached) return cached;
   }
 
-  const { ytStream } = await getClients();
+  const ytStream = await getStreamClient();
   const info = await ytStream.getBasicInfo(videoId);
   const formats = info.streaming_data?.adaptive_formats || [];
 
@@ -388,7 +393,113 @@ function extractThumbnail(thumbnails) {
 }
 
 // ============================================================================
-// 8. MIDDLEWARES & STATIC ASSETS
+// 8. CURATED HIGH-QUALITY FALLBACK TRACKS (Always available & resilient)
+// ============================================================================
+const FALLBACK_TRENDING_TRACKS = [
+  {
+    id: 'CLSUxac0F9Q',
+    title: 'MVP (MƯA VỘI PHÓNG) (feat. Wren Evans, Ali Hoàng Dương, CODY NAM VÕ & HYO)',
+    artist: 'Anh Trai Say Hi',
+    artists: ['Anh Trai Say Hi', 'Wren Evans'],
+    album: 'TẬP 4 ANH TRAI SAY HI',
+    duration: '3:42',
+    durationSec: 222,
+    thumbnail: 'https://yt3.googleusercontent.com/IF6xrt6-1gtyN9mugQylNTAePWYdQmwsNEtFQqfswgpsKXvDGaQCRVR2vrLGgY6rv2_NWdIiHiElKJ2y=w120-h120-l90-rj'
+  },
+  {
+    id: '6Hv80f1-9UQ',
+    title: 'Cảm Ơn Người Đã Thức Cùng Tôi',
+    artist: 'Phùng Khánh Linh',
+    artists: ['Phùng Khánh Linh'],
+    album: 'Cảm Ơn Người Đã Thức Cùng Tôi',
+    duration: '4:54',
+    durationSec: 294,
+    thumbnail: 'https://yt3.googleusercontent.com/XYvvkDk8QH7On9v6f-BvbVYm_gWPkB91_BCqnlS2kXbVQY_8tw_Gz3NcltF8CfFMoyDLuaj_QXGvMUqs=w120-h120-l90-rj'
+  },
+  {
+    id: 'HK2eoCbiBPg',
+    title: 'Vạn Sự Như Ý',
+    artist: 'Trúc Nhân',
+    artists: ['Trúc Nhân'],
+    album: 'Vạn Sự Như Ý',
+    duration: '4:06',
+    durationSec: 246,
+    thumbnail: 'https://yt3.googleusercontent.com/C4JZMM3eX4wGoEl3HeyYuhwJnQDoxkkSzpZGdC5ouXug5wK28x02-rcgw9JUic5dD-EbwCS5VOVnhnKL=w120-h120-l90-rj'
+  },
+  {
+    id: 'FZZBvg_D-Z0',
+    title: 'Dạo Bước HongKong 1999',
+    artist: 'NHONHO',
+    artists: ['NHONHO'],
+    album: 'Dạo Bước HongKong 1999',
+    duration: '3:30',
+    durationSec: 210,
+    thumbnail: 'https://yt3.googleusercontent.com/gFTAr9PoP3GLk0c4D9g0Pe_Ra8zpcqH4T3Pi6ezyMjxbwGJmrKH2GlTsVpUnw4RuR0D6373dkl0Trbg8=w120-h120-l90-rj'
+  },
+  {
+    id: 'Pv8urr9RH6Y',
+    title: 'Come My Way',
+    artist: 'Sơn Tùng M-TP',
+    artists: ['Sơn Tùng M-TP'],
+    album: 'Come My Way',
+    duration: '3:13',
+    durationSec: 193,
+    thumbnail: 'https://yt3.googleusercontent.com/yvAlf00RoCCR-z9kzE173fBrZhKgLwL29ZXfuIv5hHlkGiAjYK8hAxS9PFARQBom9MrTOtYe3Mt7D5Kp=w120-h120-l90-rj'
+  },
+  {
+    id: 'qHpE45b4INk',
+    title: 'Nơi Này Có Anh',
+    artist: 'Sơn Tùng M-TP',
+    artists: ['Sơn Tùng M-TP'],
+    album: 'Nơi Này Có Anh',
+    duration: '4:21',
+    durationSec: 261,
+    thumbnail: 'https://yt3.googleusercontent.com/guPkUMfq6XoStEBVJwwWMD5dttVFgi0OXpzHZ0hvPD0kWxdVkrMbMCBNRDZlUy_N953vMI_r-6x1X_IEWQ=w120-h120-l90-rj'
+  },
+  {
+    id: 'emMR03tG2CE',
+    title: 'Hãy Trao Cho Anh (feat. Snoop Dogg)',
+    artist: 'Sơn Tùng M-TP',
+    artists: ['Sơn Tùng M-TP', 'Snoop Dogg'],
+    album: 'Hãy Trao Cho Anh',
+    duration: '4:06',
+    durationSec: 246,
+    thumbnail: 'https://yt3.googleusercontent.com/XUL3o2EPMtfAppLw5fDHBPqB8CmWLfsWQTalYQmhQAkAdlsWsVIdUgnT6lYfpYE_dBFdOYiWLlo70tgR=w120-h120-l90-rj'
+  },
+  {
+    id: 'GZ3zL7De6ug',
+    title: "One Summer's Day (Spirited Away)",
+    artist: 'Joe Hisaishi',
+    artists: ['Joe Hisaishi', 'Studio Ghibli'],
+    album: 'Spirited Away Soundtrack',
+    duration: '3:09',
+    durationSec: 189,
+    thumbnail: 'wood_2.jpg'
+  },
+  {
+    id: '1-S4pC1b1lM',
+    title: 'The Path of the Wind (My Neighbor Totoro)',
+    artist: 'Joe Hisaishi',
+    artists: ['Joe Hisaishi', 'Studio Ghibli'],
+    album: 'My Neighbor Totoro Soundtrack',
+    duration: '3:16',
+    durationSec: 196,
+    thumbnail: 'wood_2.jpg'
+  },
+  {
+    id: 'yY8pIe0a8Zk',
+    title: 'Merry-Go-Round of Life (Howl\'s Moving Castle)',
+    artist: 'Joe Hisaishi',
+    artists: ['Joe Hisaishi', 'Studio Ghibli'],
+    album: 'Howl\'s Moving Castle Soundtrack',
+    duration: '5:10',
+    durationSec: 310,
+    thumbnail: 'wood_2.jpg'
+  }
+];
+
+// ============================================================================
+// 9. MIDDLEWARES & STATIC ASSETS
 // ============================================================================
 app.use(cors());
 app.use(express.json());
@@ -397,11 +508,12 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 // ============================================================================
-// 9. API ROUTES
+// 10. DUAL-MOUNT API ROUTER (Mounts on both /api and / for maximum compatibility)
 // ============================================================================
+const apiRouter = express.Router();
 
-// 9.1. Health Check
-app.get('/api/health', (req, res) => {
+// 10.1. Health Check
+apiRouter.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     uptime: Math.floor(process.uptime()),
@@ -414,8 +526,8 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// 9.2. Location & Supported Countries
-app.get('/api/location', (req, res) => {
+// 10.2. Location & Supported Countries
+apiRouter.get('/location', (req, res) => {
   const detectedCode = detectCountry(req);
   const hub = COUNTRY_HUBS[detectedCode] || COUNTRY_HUBS.VN;
 
@@ -434,29 +546,26 @@ app.get('/api/location', (req, res) => {
   });
 });
 
-// 9.3. Trending Tracks by Region
-app.get('/api/trending', rateLimit({ maxRequests: 40, windowMs: 60000, endpointName: 'trending' }), async (req, res) => {
+// 10.3. Trending Tracks by Region
+apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpointName: 'trending' }), async (req, res) => {
+  const countryCode = detectCountry(req);
+  const hub = COUNTRY_HUBS[countryCode] || COUNTRY_HUBS.VN;
+  const cacheKey = `trending:${hub.code}`;
+  const cachedData = trendingCache.get(cacheKey);
+
+  if (cachedData) {
+    return res.json({
+      ...cachedData,
+      cached: true
+    });
+  }
+
   try {
-    const countryCode = detectCountry(req);
-    const hub = COUNTRY_HUBS[countryCode] || COUNTRY_HUBS.VN;
-
-    const cacheKey = `trending:${hub.code}`;
-    const cachedData = trendingCache.get(cacheKey);
-    if (cachedData) {
-      return res.json({
-        ...cachedData,
-        cached: true
-      });
-    }
-
     if (!circuitBreaker.canRequest()) {
-      return res.status(503).json({
-        error: 'Circuit Breaker Active',
-        message: 'Hệ thống đang tạm nghỉ bảo vệ IP khỏi YouTube. Vui lòng thử lại sau 30s.'
-      });
+      throw new Error('Circuit Breaker Active');
     }
 
-    const { ytSearch } = await getClients();
+    const ytSearch = await getSearchClient();
     let tracks = [];
 
     for (const query of hub.queries) {
@@ -502,6 +611,10 @@ app.get('/api/trending', rateLimit({ maxRequests: 40, windowMs: 60000, endpointN
       if (tracks.length >= 20) break;
     }
 
+    if (tracks.length === 0) {
+      tracks = FALLBACK_TRENDING_TRACKS;
+    }
+
     const responsePayload = {
       success: true,
       countryCode: hub.code,
@@ -521,17 +634,26 @@ app.get('/api/trending', rateLimit({ maxRequests: 40, windowMs: 60000, endpointN
       cached: false
     });
   } catch (error) {
-    circuitBreaker.recordFailure(error.status || 500);
-    console.error('[Trending Error]:', error);
-    res.status(500).json({
-      error: 'Failed to fetch trending songs',
-      message: error.message
-    });
+    console.warn('[Trending Fallback Activated]:', error.message);
+    const fallbackPayload = {
+      success: true,
+      countryCode: hub.code,
+      countryName: hub.name,
+      flag: hub.flag,
+      greeting: hub.greeting,
+      genres: hub.genres,
+      results: FALLBACK_TRENDING_TRACKS,
+      tracks: FALLBACK_TRENDING_TRACKS,
+      cached: false,
+      fallback: true
+    };
+    trendingCache.set(cacheKey, fallbackPayload);
+    res.json(fallbackPayload);
   }
 });
 
-// 9.4. Search Tracks
-app.get('/api/search', rateLimit({ maxRequests: 30, windowMs: 60000, endpointName: 'search' }), async (req, res) => {
+// 10.4. Search Tracks (With YouTube live search and iTunes fallback)
+apiRouter.get('/search', rateLimit({ maxRequests: 50, windowMs: 60000, endpointName: 'search' }), async (req, res) => {
   const query = req.query.q?.trim();
   if (!query) {
     return res.status(400).json({ error: 'Missing search query (q)' });
@@ -543,73 +665,108 @@ app.get('/api/search', rateLimit({ maxRequests: 30, windowMs: 60000, endpointNam
     return res.json({ ...cached, cached: true });
   }
 
-  if (!circuitBreaker.canRequest()) {
-    return res.status(503).json({
-      error: 'Circuit Breaker Active',
-      message: 'Hệ thống đang tạm nghỉ bảo vệ IP khỏi YouTube. Vui lòng thử lại sau 30s.'
-    });
-  }
+  let tracks = [];
 
+  // Try YouTube Innertube
   try {
-    const { ytSearch } = await getClients();
-    let searchResult;
-    try {
-      searchResult = await ytSearch.music.search(query, { type: 'song' });
-    } catch {
-      searchResult = await ytSearch.search(query);
+    if (circuitBreaker.canRequest()) {
+      const ytSearch = await getSearchClient();
+      let searchResult;
+      try {
+        searchResult = await ytSearch.music.search(query, { type: 'song' });
+      } catch {
+        searchResult = await ytSearch.search(query);
+      }
+
+      const contents = searchResult.songs?.contents || searchResult.results || [];
+      for (const item of contents) {
+        const id = item.id || item.videoId || item.video_id;
+        if (!id) continue;
+
+        const title = item.title?.text || item.title || 'Unknown Title';
+        const artist = item.artists?.[0]?.name || item.author?.name || '';
+        const album = item.album?.name || '';
+        const duration = item.duration?.text || (item.duration ? String(item.duration) : '3:30');
+        const durationSec = item.duration?.seconds || 210;
+        const thumbnail = extractThumbnail(item.thumbnails || item.thumbnail);
+
+        tracks.push({
+          id,
+          title,
+          artist,
+          artists: artist ? [artist] : [],
+          album,
+          duration,
+          durationSec,
+          thumbnail
+        });
+
+        if (tracks.length >= 25) break;
+      }
     }
-
-    let tracks = [];
-    const contents = searchResult.songs?.contents || searchResult.results || [];
-
-    for (const item of contents) {
-      const id = item.id || item.videoId || item.video_id;
-      if (!id) continue;
-
-      const title = item.title?.text || item.title || 'Unknown Title';
-      const artist = item.artists?.[0]?.name || item.author?.name || '';
-      const album = item.album?.name || '';
-      const duration = item.duration?.text || (item.duration ? String(item.duration) : '3:30');
-      const durationSec = item.duration?.seconds || 210;
-      const thumbnail = extractThumbnail(item.thumbnails || item.thumbnail);
-
-      tracks.push({
-        id,
-        title,
-        artist,
-        artists: artist ? [artist] : [],
-        album,
-        duration,
-        durationSec,
-        thumbnail
-      });
-
-      if (tracks.length >= 25) break;
-    }
-
-    const payload = {
-      success: true,
-      query,
-      results: tracks,
-      tracks
-    };
-
-    searchCache.set(cacheKey, payload);
-    circuitBreaker.recordSuccess();
-
-    res.json({ ...payload, cached: false });
   } catch (err) {
-    circuitBreaker.recordFailure(err.status || 500);
-    console.error('[Search Error]:', err);
-    res.status(500).json({ error: 'Search failed', message: err.message });
+    console.warn('[YouTube Search Warning]:', err.message);
   }
+
+  // Fallback: Nếu YouTube không có kết quả hoặc gặp lỗi, tìm kiếm qua iTunes Search API (100% resilient)
+  if (tracks.length === 0) {
+    try {
+      const itunesRes = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=25`);
+      if (itunesRes.ok) {
+        const itunesData = await itunesRes.json();
+        for (const item of (itunesData.results || [])) {
+          const durationSec = Math.floor((item.trackTimeMillis || 0) / 1000);
+          const m = Math.floor(durationSec / 60);
+          const s = durationSec % 60;
+          tracks.push({
+            id: `itunes_${item.trackId}`,
+            title: item.trackName || 'Unknown Title',
+            artist: item.artistName || '',
+            artists: item.artistName ? [item.artistName] : [],
+            album: item.collectionName || '',
+            duration: `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`,
+            durationSec,
+            thumbnail: item.artworkUrl100?.replace('100x100bb', '300x300bb') || 'wood_2.jpg',
+            previewUrl: item.previewUrl
+          });
+        }
+      }
+    } catch (itunesErr) {
+      console.warn('[iTunes Fallback Search Warning]:', itunesErr.message);
+    }
+  }
+
+  // Fallback 2: Lọc từ danh sách bài hát có sẵn
+  if (tracks.length === 0) {
+    const qLower = query.toLowerCase();
+    tracks = FALLBACK_TRENDING_TRACKS.filter(t =>
+      t.title.toLowerCase().includes(qLower) ||
+      t.artist.toLowerCase().includes(qLower)
+    );
+  }
+
+  const payload = {
+    success: true,
+    query,
+    results: tracks,
+    tracks
+  };
+
+  searchCache.set(cacheKey, payload);
+  circuitBreaker.recordSuccess();
+
+  res.json({ ...payload, cached: false });
 });
 
-// 9.5. Audio Stream Proxy (VisionOS Unthrottled Audio Stream)
+// 10.5. Audio Stream Proxy (VisionOS Unthrottled Audio Stream)
 const VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{10,12}$/;
 
-app.get('/api/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000, endpointName: 'stream' }), async (req, res) => {
+apiRouter.get('/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000, endpointName: 'stream' }), async (req, res) => {
   const { videoId } = req.params;
+
+  if (videoId.startsWith('itunes_')) {
+    return res.status(400).json({ error: 'iTunes track previews are played directly' });
+  }
 
   if (!VIDEO_ID_REGEX.test(videoId)) {
     return res.status(400).json({ error: 'Invalid YouTube Video ID format' });
@@ -622,6 +779,10 @@ app.get('/api/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000, e
     } catch (resolveErr) {
       console.warn(`[Stream] Cache refresh for ${videoId}:`, resolveErr.message);
       streamData = await resolveAudioStream(videoId, true);
+    }
+
+    if (req.query.redirect === '1') {
+      return res.redirect(302, streamData.url);
     }
 
     const rangeHeader = req.headers.range || 'bytes=0-';
@@ -651,9 +812,8 @@ app.get('/api/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000, e
     }
 
     if (!upstreamResponse.ok && upstreamResponse.status !== 206) {
-      console.error(`[Stream Error] Upstream returned status ${upstreamResponse.status}`);
-      if (upstreamResponse.status === 429) circuitBreaker.recordFailure(429);
-      return res.status(upstreamResponse.status).send('Upstream stream error');
+      console.warn(`[Stream Proxy Fail] Status ${upstreamResponse.status}. Attempting 302 redirect fallback...`);
+      return res.redirect(302, streamData.url);
     }
 
     circuitBreaker.recordSuccess();
@@ -698,15 +858,15 @@ app.get('/api/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000, e
   }
 });
 
-// 9.6. Video Info
-app.get('/api/info/:videoId', async (req, res) => {
+// 10.6. Video Info
+apiRouter.get('/info/:videoId', async (req, res) => {
   const { videoId } = req.params;
   if (!VIDEO_ID_REGEX.test(videoId)) {
     return res.status(400).json({ error: 'Invalid YouTube Video ID format' });
   }
 
   try {
-    const { ytSearch } = await getClients();
+    const ytSearch = await getSearchClient();
     const info = await ytSearch.getBasicInfo(videoId);
     res.json({
       id: videoId,
@@ -720,8 +880,12 @@ app.get('/api/info/:videoId', async (req, res) => {
   }
 });
 
+// Gắn router vào cả 2 đường dẫn /api và / để tương thích tuyệt đối mọi môi trường
+app.use('/api', apiRouter);
+app.use('/', apiRouter);
+
 // ============================================================================
-// 10. GLOBAL UNHANDLED ERROR HANDLERS
+// 11. GLOBAL UNHANDLED ERROR HANDLERS
 // ============================================================================
 process.on('uncaughtException', err => {
   console.error('[UNCAUGHT EXCEPTION]:', err);
@@ -732,7 +896,8 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Khởi chạy server nếu chạy cục bộ
-if (process.env.VERCEL !== '1') {
+const isVercel = process.env.VERCEL === '1' || process.env.NOW_REGION != null;
+if (!isVercel) {
   app.listen(PORT, () => {
     console.log(`
       🌿 ===================================================

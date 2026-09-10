@@ -223,8 +223,12 @@
       renderQueueDrawer();
     }
 
-    // Nạp VisionOS stream URL
-    dom.audio.src = `/api/stream/${track.id}`;
+    // Nạp audio stream URL
+    if (track.previewUrl) {
+      dom.audio.src = track.previewUrl;
+    } else {
+      dom.audio.src = `/api/stream/${track.id}`;
+    }
     dom.audio.load();
 
     const playPromise = dom.audio.play();
@@ -897,6 +901,18 @@
         } else {
           playNextTrack();
         }
+      });
+
+      dom.audio.addEventListener('error', () => {
+        console.warn('[Audio Playback Error]:', dom.audio.error);
+        state.isPlaying = false;
+        document.body.classList.remove('music-playing');
+        if (dom.playIcon) dom.playIcon.classList.remove('hidden');
+        if (dom.pauseIcon) dom.pauseIcon.classList.add('hidden');
+        showToast('🍂 Bài hát này tạm thời gặp sự cố luồng. Đang tự động chuyển bài tiếp theo...');
+        setTimeout(() => {
+          playNextTrack();
+        }, 1500);
       });
     }
 
