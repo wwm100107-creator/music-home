@@ -1877,6 +1877,10 @@ body.music-playing .calcifer-flame {
 }
 
 .queue-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
   background: #faedcd;
   border: 1.5px solid #d4a373;
   color: #7f5539;
