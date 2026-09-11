@@ -125,12 +125,12 @@
             </a>
           </li>
 
-          <!-- 5. Create Playlist -->
+          <!-- 5. Drop Your Music -->
           <li class="sidebar-nav-item" data-tab="create" id="tabCreate">
-            <a href="#create" class="nav-item-link" title="Create Playlist">
+            <a href="#create" class="nav-item-link" title="Drop Your Music">
               <div class="nav-item-content">
-                <img src="icon-create.png" alt="Create Playlist" class="nav-icon">
-                <span class="nav-text">Create Playlist</span>
+                <img src="icon-create.png" alt="Drop Your Music" class="nav-icon">
+                <span class="nav-text">Drop Your Music</span>
               </div>
               <span class="nav-item-suffix" aria-hidden="true"></span>
             </a>
@@ -371,16 +371,137 @@
       </section>
 
       <!-- ================================================================== -->
-      <!-- 5. TAB CREATE: TẠO DANH SÁCH MỚI -->
+      <!-- 5. TAB DROP YOUR MUSIC: TỰ TẢI NHẠC & CHIA SẺ VỚI CỘNG ĐỒNG       -->
       <!-- ================================================================== -->
       <section class="tab-view-section hidden" id="viewCreate" data-tab="create">
-        <div class="create-playlist-cottage">
-          <span class="create-icon">🌿</span>
-          <h2>Gieo Mầm Danh Sách Mới</h2>
-          <p>Tự tay gom nhặt những khúc ca dịu êm vào bộ sưu tập riêng của bạn.</p>
-          <div class="create-input-group">
-            <input type="text" id="newPlaylistName" placeholder="Đặt tên cho danh sách phát..." class="ghibli-text-input">
-            <button id="createPlaylistConfirmBtn" class="ghibli-primary-btn">Tạo Ngay</button>
+        <!-- Header phần Drop Your Music -->
+        <div class="drop-header-cottage">
+          <div class="drop-header-titles">
+            <h1 class="drop-main-title">Drop Your Music 🍃</h1>
+            <p class="drop-sub-title">Gửi gắm giai điệu mộc mạc của bạn và chia sẻ trực tiếp với mọi người trên mọi thiết bị.</p>
+          </div>
+          <div class="drop-counter-pill" id="dropCommunityCounterPill">
+            Đang nạp đĩa cộng đồng...
+          </div>
+        </div>
+
+        <!-- Khung Studio Tải Nhạc Lên -->
+        <div class="drop-studio-card">
+          <!-- 1. Dropzone kéo & thả file MP3 -->
+          <div class="dropzone-area" id="audioDropZone">
+            <div class="dropzone-vinyl-disc"></div>
+            <div class="dropzone-content">
+              <span class="dropzone-icon">💿</span>
+              <h3 class="dropzone-title">Kéo & Thả File Nhạc Vào Đây</h3>
+              <p class="dropzone-desc">Hỗ trợ các định dạng <strong>.mp3, .wav, .m4a, .ogg, .flac</strong> hoặc bấm để chọn từ máy</p>
+              <button type="button" class="dropzone-browse-btn" id="browseAudioFileBtn">📁 Chọn File Nhạc Từ Máy</button>
+              <input type="file" id="dropAudioFileInput" accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac" class="hidden">
+            </div>
+          </div>
+
+          <!-- Banner hiển thị file đã chọn kèm trình nghe thử (Audio Preview) -->
+          <div class="drop-selected-banner hidden" id="dropSelectedBanner">
+            <div class="selected-audio-info">
+              <span class="selected-icon">🎵</span>
+              <div class="selected-meta">
+                <div class="selected-filename" id="selectedFileName">filename.mp3</div>
+                <div class="selected-details" id="selectedFileDetails">0.0 MB • 00:00</div>
+              </div>
+            </div>
+            <div class="selected-audio-preview">
+              <audio id="dropAudioPreviewElement" controls class="ghibli-mini-audio-preview"></audio>
+            </div>
+            <button type="button" class="remove-selected-file-btn" id="removeSelectedFileBtn" title="Hủy chọn file này">✕</button>
+          </div>
+
+          <!-- 2. Form điền thông tin bài hát & nghệ sĩ -->
+          <div class="drop-form-row">
+            <div class="drop-form-field">
+              <label for="dropSongTitle" class="drop-field-label">Tên Bài Hát <span class="required-star">*</span></label>
+              <input type="text" id="dropSongTitle" class="ghibli-text-input drop-input" placeholder="Ví dụ: Gió Đồng Ngát Hương, Khúc Ca Chiều Mưa..." autocomplete="off">
+            </div>
+            <div class="drop-form-field">
+              <label for="dropSongArtist" class="drop-field-label">Nghệ Sĩ / Người Gửi</label>
+              <input type="text" id="dropSongArtist" class="ghibli-text-input drop-input" placeholder="Tên nghệ sĩ hoặc biệt danh của bạn (Mặc định: Cộng đồng Home Music)" autocomplete="off">
+            </div>
+          </div>
+
+          <!-- 3. Bộ chọn Theme / Ảnh Bìa -->
+          <div class="drop-theme-section">
+            <label class="drop-field-label">Chọn Theme & Ảnh Bìa Cho Bài Hát:</label>
+            
+            <div class="theme-picker-grid">
+              <!-- Preset 1: Totoro Forest -->
+              <div class="theme-preset-option active" data-preset="totoro" data-img="wood_2.jpg">
+                <img src="wood_2.jpg" alt="Rừng Totoro" class="theme-preset-thumb">
+                <span class="theme-preset-name">Rừng Totoro</span>
+              </div>
+              
+              <!-- Preset 2: Howl's Castle -->
+              <div class="theme-preset-option" data-preset="howl" data-img="bg.jpg">
+                <img src="bg.jpg" alt="Lâu Đài Bay" class="theme-preset-thumb">
+                <span class="theme-preset-name">Lâu Đài Bay</span>
+              </div>
+
+              <!-- Preset 3: Spirited Away -->
+              <div class="theme-preset-option" data-preset="spirited" data-img="wood_2.png">
+                <img src="wood_2.png" alt="Vùng Đất Linh Hồn" class="theme-preset-thumb">
+                <span class="theme-preset-name">Vùng Đất Linh Hồn</span>
+              </div>
+
+              <!-- Preset 4: Kiki's Cottage -->
+              <div class="theme-preset-option" data-preset="kiki" data-img="icon-home-music.png">
+                <img src="icon-home-music.png" alt="Tiệm Bánh Kiki" class="theme-preset-thumb">
+                <span class="theme-preset-name">Tiệm Bánh Kiki</span>
+              </div>
+
+              <!-- Preset 5: Tự tải ảnh bìa riêng từ máy -->
+              <div class="theme-preset-option theme-custom-upload" id="customThemeUploadOption" data-preset="custom">
+                <div class="custom-theme-empty" id="customThemeEmpty">
+                  <span class="custom-icon">📷</span>
+                  <span class="theme-preset-name">Tải Ảnh Bìa Riêng</span>
+                </div>
+                <img src="" alt="Custom Cover" class="theme-preset-thumb hidden" id="customCoverPreviewImg">
+                <input type="file" id="dropThemeFileInput" accept="image/*,.jpg,.jpeg,.png,.webp" class="hidden">
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Nút bấm Chia Sẻ Lên Ngôi Nhà Âm Nhạc -->
+          <div class="drop-actions-bar">
+            <button id="dropSubmitBtn" class="drop-submit-action-btn">
+              <span class="btn-sparkle">✨</span>
+              <span class="btn-text">Chia Sẻ Lên Ngôi Nhà Âm Nhạc</span>
+            </button>
+            <div class="drop-submit-loading hidden" id="dropSubmitLoading">
+              <div class="ghibli-loader-spinner">🍃</div>
+              <span>Đang tải lên và kết nối với cộng đồng...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Triển lãm Nhạc Cộng Đồng (Community Music Showcase) -->
+        <div class="drop-community-section">
+          <div class="community-section-header">
+            <div class="community-header-left">
+              <h2 class="community-title">Giai Điệu Cộng Đồng Đã Chia Sẻ 🌰</h2>
+              <p class="community-desc">Tất cả bài hát do người dùng tải lên và chia sẻ trên mọi thiết bị.</p>
+            </div>
+            <button id="refreshCommunityTracksBtn" class="refresh-community-btn" title="Làm mới danh sách bài hát cộng đồng">
+              <span class="refresh-icon">🔄</span> Làm Mới
+            </button>
+          </div>
+
+          <!-- Lưới bài hát cộng đồng -->
+          <div class="community-tracks-grid" id="communityTracksGrid">
+            <!-- Rendered dynamically by JavaScript -->
+          </div>
+
+          <!-- Trạng thái trống -->
+          <div class="community-empty-state hidden" id="communityEmptyState">
+            <span class="empty-icon">🍃</span>
+            <h3>Chưa có bài hát nào được chia sẻ</h3>
+            <p>Hãy là người đầu tiên gửi giai điệu của bạn vào Ngôi Nhà Âm Nhạc nhé!</p>
           </div>
         </div>
       </section>

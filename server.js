@@ -23,6 +23,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Cho phép xử lý JSON payload lớn cho tính năng Drop Your Music (tải nhạc và ảnh bìa)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
 // Chặn truy cập trực tiếp vào các file hệ thống / bảo mật
 app.use((req, res, next) => {
   const reqPath = req.path.toLowerCase();
@@ -1444,6 +1448,199 @@ apiRouter.get('/info/:videoId', async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch video info', message: err.message });
+  }
+});
+
+// ============================================================================
+// 10. DROP YOUR MUSIC: MULTI-DEVICE COMMUNITY AUDIO STORAGE & SHARING
+// ============================================================================
+const COMMUNITY_CONTAINER_ID = 'ff808181a067127101a08f3e7e897286';
+let inMemoryCommunityTracks = null;
+let lastCommunityFetch = 0;
+
+async function uploadToCatbox(buffer, filename, mimeType = 'application/octet-stream') {
+  try {
+    const blob = new Blob([buffer], { type: mimeType });
+    const form = new FormData();
+    form.append('reqtype', 'fileupload');
+    form.append('fileToUpload', blob, filename || 'file');
+
+    const res = await fetch('https://catbox.moe/user/api.php', {
+      method: 'POST',
+      body: form
+    });
+    const resultUrl = (await res.text()).trim();
+    if (resultUrl && resultUrl.startsWith('http')) {
+      return resultUrl;
+    }
+    throw new Error('Catbox returned invalid response: ' + resultUrl);
+  } catch (err) {
+    console.error('[Catbox Upload Error]:', err.message);
+    throw err;
+  }
+}
+
+async function fetchCommunityTracks() {
+  const now = Date.now();
+  if (inMemoryCommunityTracks && (now - lastCommunityFetch < 10000)) {
+    return inMemoryCommunityTracks;
+  }
+
+  try {
+    const res = await fetch(`https://api.restful-api.dev/objects/${COMMUNITY_CONTAINER_ID}`, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(5000)
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.data && Array.isArray(json.data.tracks)) {
+        inMemoryCommunityTracks = json.data.tracks;
+        lastCommunityFetch = now;
+        return inMemoryCommunityTracks;
+      }
+    }
+  } catch (err) {
+    console.warn('[Fetch Remote Community Tracks]:', err.message);
+  }
+
+  if (!inMemoryCommunityTracks) {
+    try {
+      const fs = await import('fs');
+      const localFilePath = path.join(__dirname, 'data', 'community_tracks.json');
+      if (fs.existsSync(localFilePath)) {
+        const raw = fs.readFileSync(localFilePath, 'utf8');
+        inMemoryCommunityTracks = JSON.parse(raw);
+        lastCommunityFetch = now;
+      }
+    } catch {
+      inMemoryCommunityTracks = [];
+    }
+  }
+
+  return inMemoryCommunityTracks || [];
+}
+
+async function saveCommunityTracks(tracks) {
+  inMemoryCommunityTracks = tracks;
+  lastCommunityFetch = Date.now();
+
+  try {
+    await fetch(`https://api.restful-api.dev/objects/${COMMUNITY_CONTAINER_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'musichome_shared_community_tracks_v1',
+        data: {
+          tracks,
+          lastUpdated: new Date().toISOString()
+        }
+      }),
+      signal: AbortSignal.timeout(6000)
+    });
+  } catch (err) {
+    console.warn('[Save Remote Community Tracks Failed]:', err.message);
+  }
+
+  try {
+    const fs = await import('fs');
+    const dataDir = path.join(__dirname, 'data');
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(path.join(dataDir, 'community_tracks.json'), JSON.stringify(tracks, null, 2), 'utf8');
+  } catch {
+    // Read-only serverless environment ignore
+  }
+}
+
+// Lấy danh sách bài hát cộng đồng cho mọi thiết bị
+apiRouter.get('/drop/tracks', async (req, res) => {
+  try {
+    const tracks = await fetchCommunityTracks();
+    res.json({ success: true, count: tracks.length, tracks });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message, tracks: [] });
+  }
+});
+
+// Người dùng tải file MP3 & ảnh bìa lên và chia sẻ tức thì
+apiRouter.post('/drop/upload', async (req, res) => {
+  try {
+    const {
+      title,
+      artist,
+      duration,
+      themePreset,
+      audioBase64,
+      audioName,
+      audioMime,
+      imageBase64,
+      imageName,
+      imageMime,
+      directAudioUrl
+    } = req.body || {};
+
+    if (!directAudioUrl && !audioBase64) {
+      return res.status(400).json({ success: false, error: 'Vui lòng chọn file nhạc MP3 hoặc cung cấp link audio' });
+    }
+
+    const cleanTitle = (title || audioName || 'Khúc Ca Mộc Mạc').replace(/\.[^/.]+$/, '').trim();
+    const cleanArtist = (artist || 'Cộng đồng Home Music').trim();
+
+    let finalAudioUrl = directAudioUrl || '';
+    if (!finalAudioUrl && audioBase64) {
+      const audioBuffer = Buffer.from(audioBase64, 'base64');
+      const safeAudioName = (audioName || 'track.mp3').replace(/[^a-zA-Z0-9._-]/g, '_');
+      finalAudioUrl = await uploadToCatbox(audioBuffer, safeAudioName, audioMime || 'audio/mpeg');
+    }
+
+    let finalThumbnail = 'wood_2.jpg';
+    if (imageBase64) {
+      try {
+        const imageBuffer = Buffer.from(imageBase64, 'base64');
+        const safeImageName = (imageName || 'cover.jpg').replace(/[^a-zA-Z0-9._-]/g, '_');
+        finalThumbnail = await uploadToCatbox(imageBuffer, safeImageName, imageMime || 'image/jpeg');
+      } catch (e) {
+        console.warn('Image upload failed, fallback to preset:', e.message);
+        finalThumbnail = 'wood_2.jpg';
+      }
+    } else if (themePreset) {
+      const presets = {
+        totoro: 'wood_2.jpg',
+        howl: 'bg.jpg',
+        spirited: 'wood_2.png',
+        kiki: 'icon-home-music.png',
+        rain: 'wood_2.jpg'
+      };
+      finalThumbnail = presets[themePreset] || 'wood_2.jpg';
+    }
+
+    const newTrack = {
+      id: 'drop_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      title: cleanTitle,
+      artist: cleanArtist,
+      album: 'Drop Your Music',
+      duration: duration || '03:30',
+      thumbnail: finalThumbnail,
+      audioUrl: finalAudioUrl,
+      streamUrl: finalAudioUrl,
+      source: 'drop',
+      themePreset: themePreset || 'custom',
+      createdAt: new Date().toISOString()
+    };
+
+    const currentTracks = await fetchCommunityTracks();
+    const updatedTracks = [newTrack, ...currentTracks.filter(t => t.id !== newTrack.id)];
+
+    await saveCommunityTracks(updatedTracks);
+
+    res.json({
+      success: true,
+      message: 'Bài hát đã được tải lên và chia sẻ thành công!',
+      track: newTrack,
+      totalTracks: updatedTracks.length
+    });
+  } catch (err) {
+    console.error('[Drop Upload Error]:', err);
+    res.status(500).json({ success: false, error: 'Không thể tải lên lúc này: ' + err.message });
   }
 });
 

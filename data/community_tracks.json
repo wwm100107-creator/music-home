@@ -1,0 +1,15 @@
+﻿[
+  {
+    "id": "drop_preset_1",
+    "title": "A Town with an Ocean View (Cottage Lofi)",
+    "artist": "Joe Hisaishi / Ghibli Vibes",
+    "album": "Drop Your Music",
+    "duration": "03:15",
+    "thumbnail": "wood_2.jpg",
+    "audioUrl": "https://files.catbox.moe/zjqhhe.mp3",
+    "streamUrl": "https://files.catbox.moe/zjqhhe.mp3",
+    "source": "drop",
+    "themePreset": "totoro",
+    "createdAt": "2026-09-11T06:00:00.000Z"
+  }
+]

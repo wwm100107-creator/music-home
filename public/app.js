@@ -29,7 +29,9 @@
     searchResults: [],
     favorites: [],
     regionalAlbums: [],
-    albumsLoadedCountry: null
+    albumsLoadedCountry: null,
+    communityTracks: [],
+    communityLoaded: false
   };
 
   // Cache DOM
@@ -129,8 +131,27 @@
     closeDrawerBtn: document.getElementById('closeDrawerBtn'),
     clearQueueBtn: document.getElementById('clearQueueBtn'),
     queueListContainer: document.getElementById('queueListContainer'),
-    queueCounterBadge: document.getElementById('queueCounterBadge'),
-    acornLoopActiveBadge: document.getElementById('acornLoopActiveBadge'),
+    // Drop Your Music View & Controls
+    audioDropZone: document.getElementById('audioDropZone'),
+    dropAudioFileInput: document.getElementById('dropAudioFileInput'),
+    browseAudioFileBtn: document.getElementById('browseAudioFileBtn'),
+    dropSelectedBanner: document.getElementById('dropSelectedBanner'),
+    selectedFileName: document.getElementById('selectedFileName'),
+    selectedFileDetails: document.getElementById('selectedFileDetails'),
+    dropAudioPreviewElement: document.getElementById('dropAudioPreviewElement'),
+    removeSelectedFileBtn: document.getElementById('removeSelectedFileBtn'),
+    dropSongTitle: document.getElementById('dropSongTitle'),
+    dropSongArtist: document.getElementById('dropSongArtist'),
+    dropThemeFileInput: document.getElementById('dropThemeFileInput'),
+    customThemeUploadOption: document.getElementById('customThemeUploadOption'),
+    customCoverPreviewImg: document.getElementById('customCoverPreviewImg'),
+    customThemeEmpty: document.getElementById('customThemeEmpty'),
+    dropSubmitBtn: document.getElementById('dropSubmitBtn'),
+    dropSubmitLoading: document.getElementById('dropSubmitLoading'),
+    dropCommunityCounterPill: document.getElementById('dropCommunityCounterPill'),
+    refreshCommunityTracksBtn: document.getElementById('refreshCommunityTracksBtn'),
+    communityTracksGrid: document.getElementById('communityTracksGrid'),
+    communityEmptyState: document.getElementById('communityEmptyState'),
 
     toast: document.getElementById('toast')
   };
@@ -218,6 +239,12 @@
     if (tabKey === 'playlists') {
       if (state.albumsLoadedCountry !== state.selectedCountry || !state.regionalAlbums || state.regionalAlbums.length === 0) {
         loadAlbumsByRegion(state.selectedCountry);
+      }
+    }
+
+    if (tabKey === 'create') {
+      if (!state.communityLoaded || !state.communityTracks || state.communityTracks.length === 0) {
+        loadCommunityTracks();
       }
     }
   }
@@ -390,13 +417,13 @@
 
     showToast(`🎵 Đang phát: ${track.title}`);
 
-    // Track có direct audio preview (ví dụ từ iTunes API)
-    if (track.previewUrl) {
+    // Track có direct audio URL (từ Drop Your Music, Catbox, hoặc iTunes preview)
+    if (track.audioUrl || track.streamUrl || track.previewUrl) {
       state.activeEngine = 'audio';
       if (ytPlayer && isYtReady && typeof ytPlayer.stopVideo === 'function') {
         ytPlayer.stopVideo();
       }
-      dom.audio.src = track.previewUrl;
+      dom.audio.src = track.audioUrl || track.streamUrl || track.previewUrl;
       dom.audio.load();
       dom.audio.play().then(() => {
         state.isPlaying = true;
@@ -1156,6 +1183,388 @@
   }
 
   // ==========================================================================
+  // 8.2. DROP YOUR MUSIC: MULTI-DEVICE COMMUNITY AUDIO & THEME STUDIO
+  // ==========================================================================
+  let selectedAudioFile = null;
+  let selectedThemeFile = null;
+  let selectedThemePreset = 'totoro';
+  let selectedAudioDuration = '03:30';
+
+  // Chuyển đổi File sang Base64
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64String = reader.result.split(',')[1];
+        resolve(base64String);
+      };
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Tải danh sách bài hát cộng đồng
+  async function loadCommunityTracks(forceToast = false) {
+    if (!dom.communityTracksGrid) return;
+
+    if (forceToast) {
+      showToast('🍃 Đang cập nhật đĩa nhạc cộng đồng...');
+    }
+
+    try {
+      const res = await fetch('/api/drop/tracks');
+      const data = await res.json();
+
+      if (data && data.tracks) {
+        state.communityTracks = data.tracks;
+        state.communityLoaded = true;
+
+        if (dom.dropCommunityCounterPill) {
+          dom.dropCommunityCounterPill.textContent = `${data.tracks.length} Giai Điệu Cộng Đồng`;
+        }
+
+        renderCommunityTracksGrid(data.tracks);
+        if (forceToast) {
+          showToast(`✨ Đã nạp ${data.tracks.length} bài hát cộng đồng!`);
+        }
+      }
+    } catch (err) {
+      console.error('[Load Community Tracks Error]:', err);
+      try {
+        const localSaved = JSON.parse(localStorage.getItem('my_dropped_music') || '[]');
+        if (localSaved.length > 0) {
+          renderCommunityTracksGrid(localSaved);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+
+  // Hiển thị lưới bài hát cộng đồng
+  function renderCommunityTracksGrid(tracks) {
+    if (!dom.communityTracksGrid) return;
+    dom.communityTracksGrid.innerHTML = '';
+
+    if (!tracks || tracks.length === 0) {
+      if (dom.communityEmptyState) dom.communityEmptyState.classList.remove('hidden');
+      return;
+    }
+
+    if (dom.communityEmptyState) dom.communityEmptyState.classList.add('hidden');
+
+    tracks.forEach((track) => {
+      const card = document.createElement('div');
+      card.className = 'community-track-card';
+      card.dataset.trackId = track.id;
+
+      card.innerHTML = `
+        <div class="community-card-sleeve">
+          <div class="community-card-vinyl"></div>
+          <img src="${upgradeThumbnailUrl(track.thumbnail)}" alt="${track.title}" class="community-card-img" loading="lazy" onerror="this.src='wood_2.jpg'">
+          <button class="community-card-play-btn" title="Phát bài này">▶</button>
+        </div>
+        <h3 class="community-card-title" title="${track.title}">${track.title}</h3>
+        <p class="community-card-artist" title="${track.artist}">${track.artist}</p>
+        <div class="community-card-footer">
+          <span class="community-card-badge">Community Drop</span>
+          <span class="community-card-dur">${track.duration || '03:30'}</span>
+        </div>
+      `;
+
+      // Nút play tròn
+      const playBtn = card.querySelector('.community-card-play-btn');
+      if (playBtn) {
+        playBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          playTrack(track);
+        });
+      }
+
+      // Bấm vào thân card
+      card.addEventListener('click', () => {
+        playTrack(track);
+      });
+
+      dom.communityTracksGrid.appendChild(card);
+    });
+  }
+
+  // Xử lý khi chọn file audio
+  function handleSelectedAudioFile(file) {
+    if (!file) return;
+
+    const validTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave', 'audio/x-wav', 'audio/ogg', 'audio/flac', 'audio/x-m4a', 'audio/m4a'];
+    const isAudio = validTypes.some(t => file.type.includes(t)) || /\.(mp3|wav|ogg|flac|m4a)$/i.test(file.name);
+    
+    if (!isAudio) {
+      showToast('⚠️ Vui lòng chọn file âm thanh chuẩn (.mp3, .wav, .m4a, .ogg, .flac)!');
+      return;
+    }
+
+    selectedAudioFile = file;
+
+    // Tự động điền tên bài hát nếu người dùng chưa nhập
+    if (dom.dropSongTitle && !dom.dropSongTitle.value.trim()) {
+      const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+      dom.dropSongTitle.value = cleanName;
+    }
+
+    // Hiển thị Banner đã chọn
+    if (dom.dropSelectedBanner) {
+      dom.dropSelectedBanner.classList.remove('hidden');
+    }
+    if (dom.selectedFileName) {
+      dom.selectedFileName.textContent = file.name;
+    }
+
+    const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+    if (dom.selectedFileDetails) {
+      dom.selectedFileDetails.textContent = `${sizeMb} MB • Đang tính thời lượng...`;
+    }
+
+    // Gán vào trình nghe thử audio preview
+    const objectUrl = URL.createObjectURL(file);
+    if (dom.dropAudioPreviewElement) {
+      dom.dropAudioPreviewElement.src = objectUrl;
+      dom.dropAudioPreviewElement.onloadedmetadata = () => {
+        const dur = dom.dropAudioPreviewElement.duration;
+        if (dur && !isNaN(dur)) {
+          selectedAudioDuration = formatTime(dur);
+          if (dom.selectedFileDetails) {
+            dom.selectedFileDetails.textContent = `${sizeMb} MB • ${selectedAudioDuration}`;
+          }
+        }
+      };
+    }
+  }
+
+  function resetDropStudioForm() {
+    selectedAudioFile = null;
+    selectedThemeFile = null;
+    selectedThemePreset = 'totoro';
+    selectedAudioDuration = '03:30';
+
+    if (dom.dropAudioFileInput) dom.dropAudioFileInput.value = '';
+    if (dom.dropThemeFileInput) dom.dropThemeFileInput.value = '';
+    if (dom.dropSongTitle) dom.dropSongTitle.value = '';
+    if (dom.dropSongArtist) dom.dropSongArtist.value = '';
+
+    if (dom.dropSelectedBanner) dom.dropSelectedBanner.classList.add('hidden');
+    if (dom.dropAudioPreviewElement) {
+      dom.dropAudioPreviewElement.pause();
+      dom.dropAudioPreviewElement.removeAttribute('src');
+      dom.dropAudioPreviewElement.load();
+    }
+
+    // Reset theme presets
+    document.querySelectorAll('.theme-preset-option').forEach(opt => {
+      opt.classList.toggle('active', opt.dataset.preset === 'totoro');
+    });
+    if (dom.customCoverPreviewImg) dom.customCoverPreviewImg.classList.add('hidden');
+    if (dom.customThemeEmpty) dom.customThemeEmpty.classList.remove('hidden');
+  }
+
+  // Khởi tạo các sự kiện cho Drop Your Music Studio
+  function initDropYourMusicEvents() {
+    // 1. Kéo thả file audio
+    if (dom.audioDropZone) {
+      dom.audioDropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dom.audioDropZone.classList.add('dragover');
+      });
+
+      dom.audioDropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dom.audioDropZone.classList.remove('dragover');
+      });
+
+      dom.audioDropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dom.audioDropZone.classList.remove('dragover');
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          handleSelectedAudioFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      dom.audioDropZone.addEventListener('click', (e) => {
+        if (e.target.id !== 'browseAudioFileBtn') {
+          if (dom.dropAudioFileInput) dom.dropAudioFileInput.click();
+        }
+      });
+    }
+
+    if (dom.browseAudioFileBtn && dom.dropAudioFileInput) {
+      dom.browseAudioFileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dom.dropAudioFileInput.click();
+      });
+    }
+
+    if (dom.dropAudioFileInput) {
+      dom.dropAudioFileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+          handleSelectedAudioFile(e.target.files[0]);
+        }
+      });
+    }
+
+    if (dom.removeSelectedFileBtn) {
+      dom.removeSelectedFileBtn.addEventListener('click', () => {
+        selectedAudioFile = null;
+        if (dom.dropAudioFileInput) dom.dropAudioFileInput.value = '';
+        if (dom.dropSelectedBanner) dom.dropSelectedBanner.classList.add('hidden');
+        if (dom.dropAudioPreviewElement) {
+          dom.dropAudioPreviewElement.pause();
+          dom.dropAudioPreviewElement.removeAttribute('src');
+          dom.dropAudioPreviewElement.load();
+        }
+      });
+    }
+
+    // 2. Bộ chọn Theme Presets
+    const themeOptions = document.querySelectorAll('.theme-preset-option');
+    themeOptions.forEach(opt => {
+      opt.addEventListener('click', () => {
+        themeOptions.forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+
+        const preset = opt.dataset.preset;
+        if (preset === 'custom') {
+          if (dom.dropThemeFileInput) dom.dropThemeFileInput.click();
+        } else {
+          selectedThemePreset = preset;
+          selectedThemeFile = null;
+        }
+      });
+    });
+
+    if (dom.dropThemeFileInput) {
+      dom.dropThemeFileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+          const file = e.target.files[0];
+          selectedThemeFile = file;
+          selectedThemePreset = 'custom';
+
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            if (dom.customCoverPreviewImg) {
+              dom.customCoverPreviewImg.src = event.target.result;
+              dom.customCoverPreviewImg.classList.remove('hidden');
+            }
+            if (dom.customThemeEmpty) {
+              dom.customThemeEmpty.classList.add('hidden');
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+
+    // 3. Nút Gửi Bài Hát
+    if (dom.dropSubmitBtn) {
+      dom.dropSubmitBtn.addEventListener('click', async () => {
+        if (!selectedAudioFile) {
+          showToast('⚠️ Vui lòng chọn hoặc kéo thả file nhạc MP3 trước nhé!');
+          return;
+        }
+
+        const title = (dom.dropSongTitle?.value || '').trim() || selectedAudioFile.name.replace(/\.[^/.]+$/, '');
+        const artist = (dom.dropSongArtist?.value || '').trim() || 'Cộng đồng Home Music';
+
+        // Khóa nút & bật loading
+        dom.dropSubmitBtn.disabled = true;
+        if (dom.dropSubmitLoading) dom.dropSubmitLoading.classList.remove('hidden');
+
+        try {
+          showToast('🍃 Đang chuẩn bị và tải bài hát lên...');
+
+          // Chuyển audio sang Base64
+          const audioBase64 = await fileToBase64(selectedAudioFile);
+          let imageBase64 = null;
+          let imageName = null;
+          let imageMime = null;
+
+          if (selectedThemeFile) {
+            imageBase64 = await fileToBase64(selectedThemeFile);
+            imageName = selectedThemeFile.name;
+            imageMime = selectedThemeFile.type;
+          }
+
+          const payload = {
+            title,
+            artist,
+            duration: selectedAudioDuration,
+            themePreset: selectedThemePreset,
+            audioBase64,
+            audioName: selectedAudioFile.name,
+            audioMime: selectedAudioFile.type,
+            imageBase64,
+            imageName,
+            imageMime
+          };
+
+          const res = await fetch('/api/drop/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          const data = await res.json();
+
+          if (data && data.success && data.track) {
+            showToast(`🎉 Giai điệu "${data.track.title}" đã được chia sẻ với mọi người!`);
+
+            // Thêm vào danh sách hiện tại
+            state.communityTracks = [data.track, ...(state.communityTracks || []).filter(t => t.id !== data.track.id)];
+            renderCommunityTracksGrid(state.communityTracks);
+
+            if (dom.dropCommunityCounterPill) {
+              dom.dropCommunityCounterPill.textContent = `${state.communityTracks.length} Giai Điệu Cộng Đồng`;
+            }
+
+            // Lưu vào localStorage dự phòng
+            try {
+              const mySaved = JSON.parse(localStorage.getItem('my_dropped_music') || '[]');
+              mySaved.unshift(data.track);
+              localStorage.setItem('my_dropped_music', JSON.stringify(mySaved));
+            } catch (e) {
+              // ignore
+            }
+
+            // Tự động phát ngay bài vừa đăng
+            playTrack(data.track);
+
+            // Reset form
+            resetDropStudioForm();
+
+            // Cuộn xuống khu vực cộng đồng
+            const showcaseEl = document.querySelector('.drop-community-section');
+            if (showcaseEl) {
+              showcaseEl.scrollIntoView({ behavior: 'smooth' });
+            }
+          } else {
+            showToast('⚠️ ' + (data?.error || 'Không thể tải lên bài hát lúc này.'));
+          }
+        } catch (err) {
+          console.error('[Upload error]:', err);
+          showToast('⚠️ Quá trình tải lên gặp sự cố. Vui lòng kiểm tra dung lượng file.');
+        } finally {
+          dom.dropSubmitBtn.disabled = false;
+          if (dom.dropSubmitLoading) dom.dropSubmitLoading.classList.add('hidden');
+        }
+      });
+    }
+
+    // 4. Nút Làm Mới Bài Hát Cộng Đồng
+    if (dom.refreshCommunityTracksBtn) {
+      dom.refreshCommunityTracksBtn.addEventListener('click', () => {
+        loadCommunityTracks(true);
+      });
+    }
+  }
+
+  // ==========================================================================
   // 9. QUEUE DRAWER & ACORN CUSTOM LOOP
   // ==========================================================================
   function renderQueueDrawer() {
@@ -1608,7 +2017,9 @@
   function init() {
     setVolume(0.8);
     setupEvents();
+    initDropYourMusicEvents();
     loadFavorites();
+    loadCommunityTracks();
 
     // Khởi tạo tab Home
     const defaultTab = document.getElementById('tabHome') || dom.sidebarNavItems[0];
