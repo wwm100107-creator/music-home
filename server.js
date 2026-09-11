@@ -645,11 +645,11 @@ FALLBACK_ALBUMS.GLOBAL = FALLBACK_ALBUMS.US;
 // Fallback tracks map for offline/fallback albums
 const FALLBACK_ALBUM_TRACKS = {
   default: [
-    { id: 'JQwLF3fsGY0', title: 'Cơn Mưa Ngang Qua', artist: 'Sơn Tùng M-TP', duration: '3:55', durationSec: 235, thumbnail: 'wood_2.jpg' },
-    { id: '9PUfFR1PDG0', title: 'Anh Sai Rồi', artist: 'Sơn Tùng M-TP', duration: '4:13', durationSec: 253, thumbnail: 'wood_2.jpg' },
-    { id: '488ceQWoGGw', title: 'Nắng Ấm Xa Dần', artist: 'Sơn Tùng M-TP', duration: '3:12', durationSec: 192, thumbnail: 'wood_2.jpg' },
-    { id: 'emMR03tG2CE', title: 'Hãy Trao Cho Anh', artist: 'Sơn Tùng M-TP', duration: '4:06', durationSec: 246, thumbnail: 'wood_2.jpg' },
-    { id: 'qHpE45b4INk', title: 'Nơi Này Có Anh', artist: 'Sơn Tùng M-TP', duration: '4:21', durationSec: 261, thumbnail: 'wood_2.jpg' }
+    { id: 'hO4X_mJSqPI', title: 'Cơn Mưa Ngang Qua', artist: 'Sơn Tùng M-TP', duration: '3:51', durationSec: 231, thumbnail: 'bg.jpg' },
+    { id: '9PUfFR1PDG0', title: 'Anh Sai Rồi', artist: 'Sơn Tùng M-TP', duration: '4:13', durationSec: 253, thumbnail: 'bg.jpg' },
+    { id: '488ceQWoGGw', title: 'Nắng Ấm Xa Dần', artist: 'Sơn Tùng M-TP', duration: '3:12', durationSec: 192, thumbnail: 'bg.jpg' },
+    { id: 'knW7-x7Y7Rg', title: 'Hãy Trao Cho Anh', artist: 'Sơn Tùng M-TP', duration: '4:06', durationSec: 246, thumbnail: 'bg.jpg' },
+    { id: 'FN7ALfpGxiI', title: 'Nơi Này Có Anh', artist: 'Sơn Tùng M-TP', duration: '4:39', durationSec: 279, thumbnail: 'bg.jpg' }
   ],
   MPREb_JH_SpiritedAway: [
     { id: 'GZ3zL7De6ug', title: 'One Summer\'s Day', artist: 'Joe Hisaishi', duration: '3:09', durationSec: 189, thumbnail: 'wood_2.png' },
@@ -1250,27 +1250,46 @@ apiRouter.get('/album/:albumId', rateLimit({ maxRequests: 80, windowMs: 60000, e
     }
 
     const rawContents = albumData.contents || [];
-    const tracks = [];
 
-    for (const item of rawContents) {
-      const id = item.id || item.videoId;
-      if (!id) continue;
+    // Tối ưu và chuẩn hóa: Lấy thông tin chính xác từ video thực tế để đảm bảo Official Music Video chuẩn và thời lượng khớp 100%
+    const resolvedTracks = await Promise.all(
+      rawContents.map(async (item) => {
+        const id = item.id || item.videoId;
+        if (!id) return null;
 
-      const trackTitle = item.title?.text || item.title?.toString() || 'Unknown Track';
-      const trackArtist = item.author?.name || item.artists?.[0]?.name || artist;
-      const duration = item.duration?.text || (item.duration ? String(item.duration) : '3:30');
-      const durationSec = item.duration?.seconds || 210;
+        const trackTitle = item.title?.text || item.title?.toString() || 'Unknown Track';
+        const trackArtist = item.author?.name || item.artists?.[0]?.name || artist;
+        let duration = item.duration?.text || (item.duration ? String(item.duration) : '3:30');
+        let durationSec = item.duration?.seconds || 210;
 
-      tracks.push({
-        id,
-        title: trackTitle,
-        artist: trackArtist,
-        album: title,
-        duration,
-        durationSec,
-        thumbnail
-      });
-    }
+        try {
+          const basicInfo = await ytSearch.getBasicInfo(id);
+          if (basicInfo && basicInfo.basic_info) {
+            const sec = basicInfo.basic_info.duration;
+            if (sec && sec > 0) {
+              durationSec = sec;
+              const m = Math.floor(sec / 60);
+              const s = sec % 60;
+              duration = `${m}:${String(s).padStart(2, '0')}`;
+            }
+          }
+        } catch {
+          // Fallback giữ nguyên thời lượng ban đầu nếu request basicInfo gặp sự cố
+        }
+
+        return {
+          id,
+          title: trackTitle,
+          artist: trackArtist,
+          album: title,
+          duration,
+          durationSec,
+          thumbnail
+        };
+      })
+    );
+
+    const tracks = resolvedTracks.filter(Boolean);
 
     const lowerTitle = title.toLowerCase();
     const isEP = lowerTitle.includes('ep') || lowerTitle.includes('single') || (subtitle || '').toLowerCase().includes('ep');

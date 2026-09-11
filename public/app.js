@@ -395,6 +395,19 @@
           updateProgressUI(percent);
           if (dom.currentTime) dom.currentTime.textContent = formatTime(cur);
           if (dom.totalDuration) dom.totalDuration.textContent = formatTime(dur);
+
+          // Tự động đồng bộ thời lượng thực tế của Official Music Video với danh sách bài hát
+          if (state.currentTrack && state.currentTrack.durationSec !== Math.round(dur)) {
+            state.currentTrack.durationSec = Math.round(dur);
+            state.currentTrack.duration = formatTime(dur);
+            if (dom.albumDetailTracksList) {
+              const matchedRow = dom.albumDetailTracksList.querySelector(`.album-detail-track-row[data-track-id="${state.currentTrack.id}"]`);
+              if (matchedRow) {
+                const durCol = matchedRow.querySelector('.col-duration');
+                if (durCol) durCol.textContent = formatTime(dur);
+              }
+            }
+          }
         }
       }
     }
@@ -1132,6 +1145,7 @@
     tracks.forEach((track, idx) => {
       const row = document.createElement('div');
       row.className = 'album-detail-track-row';
+      row.dataset.trackId = track.id;
       if (state.currentTrack && state.currentTrack.id === track.id) {
         row.classList.add('is-active');
       }
