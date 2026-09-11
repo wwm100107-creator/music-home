@@ -745,9 +745,22 @@
   }
 
   async function filterOrSearchGenre(genreName) {
+    if (!genreName || genreName === 'Tất cả' || genreName === 'All' || genreName === '전체' || genreName === 'すべて') {
+      renderTrendingGrid(state.trendingTracks);
+      return;
+    }
+
     try {
-      showToast(`🍃 Đang khám phá thể loại: ${genreName}...`);
-      const res = await fetch(`/api/search?q=${encodeURIComponent(genreName + ' hot music')}`);
+      showToast(`🍃 Đang khám phá: ${genreName}...`);
+      const genreQueries = {
+        'V-Pop': 'nhạc trẻ vpop hay nhất',
+        'Nhạc Trẻ Thịnh Hành': 'nhạc trẻ thịnh hành official',
+        'Indie Việt': 'indie việt chill hay nhất',
+        'Vinahouse': 'vinahouse remix hot tik tok',
+        'Ballad Buồn': 'nhạc ballad việt buồn tâm trạng'
+      };
+      const query = genreQueries[genreName] || `${genreName} hits`;
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
       const data = await res.json();
       if (data && data.results) {
         renderTrendingGrid(data.results);

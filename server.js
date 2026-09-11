@@ -302,7 +302,7 @@ const COUNTRY_HUBS = {
     name: 'Vietnam',
     flag: '🇻🇳',
     greeting: 'Bảng Xếp Hạng & Xu Hướng Thịnh Hành Hôm Nay',
-    queries: ['vpop hot 2026', 'nhạc trẻ thịnh hành', 'nhạc việt hay nhất'],
+    queries: ['nhạc trẻ vpop thịnh hành', 'top bài hát việt nam', 'hit vpop hay nhất hiện nay'],
     genres: ['Tất cả', 'V-Pop', 'Nhạc Trẻ Thịnh Hành', 'Indie Việt', 'Vinahouse', 'Ballad Buồn']
   },
   US: {
@@ -390,6 +390,51 @@ function extractThumbnail(thumbnails) {
   }
   if (typeof thumbnails === 'string') return thumbnails;
   return 'wood_2.jpg';
+}
+
+// ============================================================================
+// 7.1. SPAM / AI CONTENT FARM / NONSTOP MIXTAPE FILTER
+// ============================================================================
+const BLOCKED_SPAM_PATTERNS = [
+  /vpop\s*rising/i,
+  /vpop\s*plus/i,
+  /\bsuno\b/i,
+  /\budio\b/i,
+  /\bai\s*cover\b/i,
+  /\bai\s*version\b/i,
+  /\bai\s*music\b/i,
+  /\bai\s*song\b/i,
+  /\bkaraoke\b/i,
+  /\bbeats?\s*chuẩn\b/i,
+  /\bplay\s*along\b/i,
+  /\btuyển\s*tập\b/i,
+  /\bliên\s*khúc\b/i,
+  /\bmixtape\b/i,
+  /\bnonstop\b/i,
+  /\bfull\s*album\b/i,
+  /\b1\s*hour\b/i,
+  /\b2\s*hour\b/i,
+  /\b1\s*tiếng\b/i,
+  /\b2\s*tiếng\b/i
+];
+
+function isSpamTrack(title, artist, durationSec) {
+  const t = (title || '').toLowerCase();
+  const a = (artist || '').toLowerCase();
+
+  // Lọc bài hát đơn lẻ chuẩn: loại bỏ các bản mix quá dài (> 9 phút) hoặc quá ngắn (< 75s)
+  if (durationSec > 0 && (durationSec < 75 || durationSec > 540)) {
+    return true;
+  }
+
+  // Lọc từ khóa spam / kênh bot nhạc AI / mixtape
+  for (const regex of BLOCKED_SPAM_PATTERNS) {
+    if (regex.test(t) || regex.test(a)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // ============================================================================
@@ -589,6 +634,17 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
             const album = item.album?.name || '';
             const duration = item.duration?.text || (item.duration ? String(item.duration) : '3:30');
             const durationSec = item.duration?.seconds || 210;
+
+            // Bỏ qua nhạc spam bot AI, tuyển tập, mixtape
+            if (isSpamTrack(title, artist, durationSec)) continue;
+
+            // Chống một kênh/nghệ sĩ spam tràn màn hình (tối đa 2 bài/nghệ sĩ)
+            const artistKey = (artist || 'unknown').toLowerCase().trim();
+            if (artistKey && artistKey !== 'unknown') {
+              const currentCount = tracks.filter(t => (t.artist || '').toLowerCase().trim() === artistKey).length;
+              if (currentCount >= 2) continue;
+            }
+
             const thumbnail = extractThumbnail(item.thumbnails || item.thumbnail);
 
             tracks.push({
@@ -689,6 +745,10 @@ apiRouter.get('/search', rateLimit({ maxRequests: 50, windowMs: 60000, endpointN
         const album = item.album?.name || '';
         const duration = item.duration?.text || (item.duration ? String(item.duration) : '3:30');
         const durationSec = item.duration?.seconds || 210;
+
+        // Bỏ qua nhạc spam bot AI, tuyển tập, mixtape
+        if (isSpamTrack(title, artist, durationSec)) continue;
+
         const thumbnail = extractThumbnail(item.thumbnails || item.thumbnail);
 
         tracks.push({
