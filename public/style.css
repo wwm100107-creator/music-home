@@ -17,11 +17,24 @@
  * - [SKILL: /ponytail & /ponytail-help] : CSS gọn gàng, hiệu năng GPU cao (transform/opacity), không thừa thãi.
  */
 
+/* --- CUSTOM FONT: 1FTV-Austie-Bost-Happy-Holly --- */
+@font-face {
+  font-family: 'AustieBostHappyHolly';
+  src: url('1FTV-Austie-Bost-Happy-Holly.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* --- RESET & TOKENS --- */
 *, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
 }
 
 :root {
@@ -41,10 +54,10 @@
   --ghibli-vine-bright: #7fc95e;
   --ghibli-leaf-green: #52b788;
   
-  --font-ghibli-brand: 'Sniglet', 'Fredoka', cursive, sans-serif;
-  --font-ghibli-nav: 'Fredoka', 'Comfortaa', cursive, sans-serif;
-  --font-ghibli-title: 'Comfortaa', 'Fredoka', cursive, sans-serif;
-  --font-ghibli-meta: 'Quicksand', 'Fredoka', sans-serif;
+  --font-ghibli-brand: 'AustieBostHappyHolly', 'Sniglet', 'Fredoka', cursive, sans-serif;
+  --font-ghibli-nav: 'AustieBostHappyHolly', 'Fredoka', 'Comfortaa', cursive, sans-serif;
+  --font-ghibli-title: 'AustieBostHappyHolly', 'Comfortaa', 'Fredoka', cursive, sans-serif;
+  --font-ghibli-meta: 'AustieBostHappyHolly', 'Quicksand', 'Fredoka', sans-serif;
 
   /* [SKILL: /animate] Easing curves chuẩn */
   --ease-out-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
