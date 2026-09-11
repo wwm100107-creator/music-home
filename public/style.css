@@ -2922,55 +2922,225 @@ body.music-playing .calcifer-flame {
   color: #7f5539;
 }
 
-/* --- CURATED PLAYLISTS --- */
-.ghibli-curated-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 20px;
+/* --- EP & ALBUM SCANNER & VINYL RECORD STYLING --- */
+.album-counter-pill {
+  font-family: var(--font-ghibli-meta);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #2d6a4f;
+  background: rgba(82, 183, 136, 0.2);
+  border: 1.5px solid #52b788;
+  padding: 5px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
 }
 
-.curated-card {
-  background: rgba(255, 253, 245, 0.85);
+.album-search-cottage {
+  margin-bottom: 22px;
+}
+
+.album-search-bar-wrap {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 253, 245, 0.88);
+  backdrop-filter: blur(12px);
+  border: 2px solid #b58957;
+  border-radius: 22px;
+  padding: 6px 18px;
+  box-shadow: 0 4px 14px rgba(45, 25, 10, 0.08);
+  transition: all 0.25s ease;
+  max-width: 520px;
+}
+
+.album-search-bar-wrap:focus-within {
+  border-color: #2d6a4f;
+  box-shadow: 0 6px 18px rgba(45, 106, 79, 0.22);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.album-search-icon {
+  font-size: 1.15rem;
+  margin-right: 10px;
+  user-select: none;
+}
+
+.album-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-ghibli-brand);
+  font-size: 1.05rem;
+  color: #2b1810;
+}
+
+.album-search-input::placeholder {
+  color: #9c6644;
+  opacity: 0.75;
+}
+
+.clear-album-search-btn {
+  background: rgba(140, 93, 47, 0.15);
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  color: #5c3d2e;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.clear-album-search-btn:hover {
+  background: #2d6a4f;
+  color: #fff;
+}
+
+/* Loading & Empty States */
+.albums-loading-state,
+.albums-empty-state {
+  text-align: center;
+  padding: 50px 20px;
+  background: rgba(255, 253, 245, 0.75);
+  border: 2px dashed #b58957;
+  border-radius: 24px;
+  margin: 20px 0;
+}
+
+.albums-loading-state .ghibli-loader-spinner {
+  font-size: 2.5rem;
+  animation: leafSpin 2s infinite ease-in-out;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
+.albums-loading-state p {
+  font-family: var(--font-ghibli-brand);
+  font-size: 1.1rem;
+  color: #6f4518;
+}
+
+.albums-empty-state .empty-icon {
+  font-size: 2.8rem;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.albums-empty-state h3 {
+  font-family: var(--font-ghibli-brand);
+  font-size: 1.35rem;
+  color: #2b1810;
+  margin-bottom: 6px;
+}
+
+.albums-empty-state p {
+  font-family: var(--font-ghibli-meta);
+  font-size: 0.9rem;
+  color: #7f5539;
+}
+
+/* Albums Grid & Vinyl Disc Hover */
+.albums-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 24px;
+}
+
+.album-card {
+  position: relative;
+  background: rgba(255, 253, 245, 0.88);
   backdrop-filter: blur(12px);
   border: 2px solid #b58957;
   border-radius: 20px;
   padding: 14px;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgba(45, 25, 10, 0.1);
-  transition: all 0.22s cubic-bezier(0.25, 1, 0.5, 1);
+  box-shadow: 0 6px 16px rgba(45, 25, 10, 0.09);
+  transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+  display: flex;
+  flex-direction: column;
 }
 
-.curated-card:hover {
-  transform: translateY(-5px);
+.album-card:hover {
+  transform: translateY(-6px);
   border-color: #52b788;
-  box-shadow: 0 10px 24px rgba(45, 106, 79, 0.25);
+  box-shadow: 0 12px 28px rgba(45, 106, 79, 0.22);
 }
 
-.curated-cover-wrap {
+.album-sleeve-wrap {
   position: relative;
   width: 100%;
   aspect-ratio: 1;
   border-radius: 14px;
-  overflow: hidden;
-  border: 1.5px solid #8c5d2f;
   margin-bottom: 12px;
 }
 
-.curated-cover {
+/* Đĩa than Vinyl hé lộ tinh tế khi hover */
+.album-vinyl-disc {
+  position: absolute;
+  top: 3%;
+  right: 0%;
+  width: 94%;
+  height: 94%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #222 0%, #151515 50%, #050505 100%);
+  border: 3px solid #111;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+  z-index: 1;
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+}
+
+.album-vinyl-disc::before {
+  content: '';
+  width: 32%;
+  height: 32%;
+  border-radius: 50%;
+  background: #d4a373;
+  border: 2px solid #fff;
+  box-shadow: inset 0 0 4px rgba(0,0,0,0.4);
+}
+
+.album-vinyl-disc::after {
+  content: '';
+  position: absolute;
+  width: 10%;
+  height: 10%;
+  border-radius: 50%;
+  background: #111;
+}
+
+.album-card:hover .album-vinyl-disc {
+  transform: translateX(24px) rotate(45deg);
+  opacity: 1;
+}
+
+.album-cover-img {
+  position: relative;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s;
+  border-radius: 14px;
+  border: 1.5px solid #8c5d2f;
+  z-index: 2;
+  box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.15);
+  transition: transform 0.25s ease;
+  background: #dfd2be;
 }
 
-.curated-card:hover .curated-cover {
-  transform: scale(1.05);
+.album-card:hover .album-cover-img {
+  transform: scale(0.98);
 }
 
-.curated-play-btn {
+.album-play-overlay-btn {
   position: absolute;
-  right: 12px;
-  bottom: 12px;
+  right: 10px;
+  bottom: 10px;
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -2982,29 +3152,337 @@ body.music-playing .calcifer-flame {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-  transform: scale(0.85);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  transform: scale(0.8);
   opacity: 0;
+  z-index: 3;
   transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-.curated-card:hover .curated-play-btn {
+.album-card:hover .album-play-overlay-btn {
   transform: scale(1);
   opacity: 1;
 }
 
-.curated-title {
-  font-family: var(--font-ghibli-nav);
+.album-play-overlay-btn:hover {
+  background: #40916c;
+  transform: scale(1.12);
+}
+
+.album-card-title {
+  font-family: var(--font-ghibli-brand);
   font-size: 1.05rem;
-  font-weight: 800;
   color: #2b1810;
+  margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.25;
+}
+
+.album-card-artist {
+  font-family: var(--font-ghibli-meta);
+  font-size: 0.85rem;
+  color: #2d6a4f;
+  font-weight: 700;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.album-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.album-card-badge {
+  font-family: var(--font-ghibli-meta);
+  font-size: 0.72rem;
+  background: rgba(140, 93, 47, 0.12);
+  color: #7f5539;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.album-card-year {
+  font-family: var(--font-ghibli-meta);
+  font-size: 0.78rem;
+  color: #9c6644;
+  font-weight: 600;
+}
+
+/* ========================================================================== */
+/* MODAL CHI TIẾT ALBUM / EP TRACKLIST                                        */
+/* ========================================================================== */
+.album-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 10, 5, 0.78);
+  backdrop-filter: blur(10px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 1;
+  transition: opacity 0.25s ease;
+}
+
+.album-modal-backdrop.hidden {
+  display: none !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.album-modal-card {
+  position: relative;
+  background: #fdfbf7;
+  border: 3px solid #8c5d2f;
+  border-radius: 28px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 85vh;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalPopIn 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@keyframes modalPopIn {
+  0% { transform: scale(0.92) translateY(20px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.album-modal-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(140, 93, 47, 0.15);
+  border: none;
+  font-size: 1.1rem;
+  color: #5c3d2e;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.album-modal-close-btn:hover {
+  background: #2d6a4f;
+  color: #fff;
+  transform: rotate(90deg);
+}
+
+.album-modal-header {
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  background: linear-gradient(135deg, rgba(235, 222, 203, 0.65) 0%, rgba(254, 250, 224, 0.9) 100%);
+  border-bottom: 2px solid #e0d0b8;
+}
+
+.album-modal-cover-wrapper {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  flex-shrink: 0;
+}
+
+.album-modal-cover {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  object-fit: cover;
+  border: 2px solid #8c5d2f;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 2;
+  background: #dfd2be;
+}
+
+.album-modal-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.album-modal-badge {
+  display: inline-block;
+  font-family: var(--font-ghibli-meta);
+  font-size: 0.75rem;
+  background: #52b788;
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.album-modal-title {
+  font-family: var(--font-ghibli-brand);
+  font-size: 1.5rem;
+  color: #2b1810;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.album-modal-artist {
+  font-family: var(--font-ghibli-meta);
+  font-size: 1rem;
+  color: #7f5539;
+  font-weight: 600;
   margin-bottom: 4px;
 }
 
-.curated-subtitle {
+.album-modal-info {
+  font-family: var(--font-ghibli-meta);
+  font-size: 0.85rem;
+  color: #9c6644;
+  margin-bottom: 12px;
+}
+
+.album-modal-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.album-modal-play-all-btn,
+.album-modal-queue-all-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 16px;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.album-modal-play-all-btn {
+  background: #2d6a4f;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(45, 106, 79, 0.3);
+}
+
+.album-modal-play-all-btn:hover {
+  background: #40916c;
+  transform: translateY(-2px);
+}
+
+.album-modal-queue-all-btn {
+  background: rgba(140, 93, 47, 0.15);
+  color: #5c3d2e;
+  border: 1.5px solid #b58957;
+}
+
+.album-modal-queue-all-btn:hover {
+  background: rgba(140, 93, 47, 0.25);
+  transform: translateY(-2px);
+}
+
+.album-tracklist-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+}
+
+.album-tracklist-header-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 70px 44px;
+  padding: 6px 12px;
+  font-family: var(--font-ghibli-meta);
+  font-size: 0.8rem;
+  color: #9c6644;
+  border-bottom: 1px solid #ebd0b8;
+  margin-bottom: 8px;
+}
+
+.album-track-item {
+  display: grid;
+  grid-template-columns: 36px 1fr 70px 44px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  transition: background 0.18s ease;
+  cursor: pointer;
+}
+
+.album-track-item:hover {
+  background: rgba(82, 183, 136, 0.15);
+}
+
+.album-track-num {
+  font-family: var(--font-ghibli-meta);
+  font-size: 0.85rem;
+  color: #9c6644;
+  font-weight: 600;
+}
+
+.album-track-main {
+  min-width: 0;
+}
+
+.album-track-title {
+  font-family: var(--font-ghibli-brand);
+  font-size: 0.98rem;
+  color: #2b1810;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.album-track-artist {
   font-family: var(--font-ghibli-meta);
   font-size: 0.8rem;
   color: #7f5539;
+}
+
+.album-track-dur {
+  font-family: var(--font-ghibli-meta);
+  font-size: 0.82rem;
+  color: #9c6644;
+}
+
+.album-track-play-btn {
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  color: #2d6a4f;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.album-track-play-btn:hover {
+  background: #2d6a4f;
+  color: #fff;
+  transform: scale(1.15);
 }
 
 /* --- CREATE PLAYLIST COTTAGE --- */

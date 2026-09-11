@@ -268,51 +268,45 @@
       </section>
 
       <!-- ================================================================== -->
-      <!-- 4. TAB PLAYLISTS: DANH SÁCH PHÁT GHIBLI TUYỂN CHỌN -->
+      <!-- 4. TAB PLAYLISTS: DANH SÁCH PHÁT EP & ALBUM NGHỆ SĨ -->
       <!-- ================================================================== -->
       <section class="tab-view-section hidden" id="viewPlaylists" data-tab="playlists">
         <div class="section-heading-row">
           <div class="heading-left">
-            <span class="heading-icon">🪵</span>
-            <h2 class="heading-title">Bộ Sưu Tập Ghibli Tuyển Chọn</h2>
+            <span class="heading-icon">💿</span>
+            <div>
+              <h2 class="heading-title" id="albumSectionTitle">Tuyển Tập EP & Album Nghệ Sĩ</h2>
+              <p class="heading-subtitle" id="albumRegionSubtitle">Quét các EP & Album chính thức phát hành theo vùng quốc gia bạn chọn</p>
+            </div>
+          </div>
+          <div class="album-counter-pill" id="albumCounterPill">10 Tuyển Tập</div>
+        </div>
+
+        <!-- Thanh Tìm kiếm EP / Album chuyên dụng trong tab -->
+        <div class="album-search-cottage">
+          <div class="album-search-bar-wrap">
+            <span class="album-search-icon">🔍</span>
+            <input type="text" id="albumSearchInput" class="album-search-input" placeholder="Tìm tên EP, Album hoặc Nghệ sĩ..." autocomplete="off">
+            <button id="clearAlbumSearchBtn" class="clear-album-search-btn hidden" title="Xóa tìm kiếm">✕</button>
           </div>
         </div>
-        <div class="ghibli-curated-grid" id="curatedPlaylistsGrid">
-          <div class="curated-card" data-query="Joe Hisaishi Studio Ghibli Best">
-            <div class="curated-cover-wrap">
-              <img src="wood_2.jpg" alt="Howl" class="curated-cover">
-              <button class="curated-play-btn" title="Phát bộ sưu tập">▶</button>
-            </div>
-            <h3 class="curated-title">Joe Hisaishi Masterpieces</h3>
-            <p class="curated-subtitle">Những tuyệt phẩm nhạc nền bất hủ</p>
-          </div>
 
-          <div class="curated-card" data-query="Howl's Moving Castle Merry Go Round of Life">
-            <div class="curated-cover-wrap">
-              <img src="bg.jpg" alt="Howl Castle" class="curated-cover">
-              <button class="curated-play-btn" title="Phát bộ sưu tập">▶</button>
-            </div>
-            <h3 class="curated-title">Howl's Moving Castle</h3>
-            <p class="curated-subtitle">Merry-Go-Round of Life & Piano</p>
-          </div>
+        <!-- Trạng thái Đang Tải EP & Album -->
+        <div class="albums-loading-state hidden" id="albumsLoadingState">
+          <div class="ghibli-loader-spinner">🍃</div>
+          <p>Đang quét các đĩa EP & Album tuyển chọn...</p>
+        </div>
 
-          <div class="curated-card" data-query="Spirited Away Soundtrack Joe Hisaishi">
-            <div class="curated-cover-wrap">
-              <img src="wood_2.png" alt="Spirited Away" class="curated-cover">
-              <button class="curated-play-btn" title="Phát bộ sưu tập">▶</button>
-            </div>
-            <h3 class="curated-title">Spirited Away (Chihiro)</h3>
-            <p class="curated-subtitle">Hành trình vùng đất linh hồn</p>
-          </div>
+        <!-- Lưới Hiển thị 10 EP / Album (Hiệu ứng đĩa than Vinyl) -->
+        <div class="albums-grid" id="albumsGrid">
+          <!-- Rendered dynamically by JavaScript -->
+        </div>
 
-          <div class="curated-card" data-query="My Neighbor Totoro Wind Path Joe Hisaishi">
-            <div class="curated-cover-wrap">
-              <img src="icon-home-music.png" alt="Totoro" class="curated-cover">
-              <button class="curated-play-btn" title="Phát bộ sưu tập">▶</button>
-            </div>
-            <h3 class="curated-title">My Neighbor Totoro</h3>
-            <p class="curated-subtitle">Tiếng sáo trong cánh rừng xanh</p>
-          </div>
+        <!-- Trạng thái Trống khi Không Tìm Thấy Kết Quả -->
+        <div class="albums-empty-state hidden" id="albumsEmptyState">
+          <span class="empty-icon">💿</span>
+          <h3>Không tìm thấy EP hay Album nào phù hợp</h3>
+          <p>Hãy thử tìm kiếm với tên nghệ sĩ khác hoặc chọn lại vùng quốc gia nhé!</p>
         </div>
       </section>
 
@@ -344,12 +338,54 @@
         <div class="drawer-actions">
           <button id="clearQueueBtn" class="sync-tiny-btn" title="Xóa hàng đợi">Xóa hết</button>
           <button id="closeDrawerBtn" class="close-drawer-btn" title="Đóng">✕</button>
-        </div>
       </div>
       <div class="drawer-scroll-box">
         <ul class="nature-song-list" id="queueListContainer">
           <!-- Queue items will be rendered dynamically -->
         </ul>
+      </div>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- MODAL CHI TIẾT ALBUM / EP TRACKLIST -->
+    <!-- ================================================================== -->
+    <div class="album-modal-backdrop hidden" id="albumModal">
+      <div class="album-modal-card">
+        <button class="album-modal-close-btn" id="closeAlbumModalBtn" title="Đóng">✕</button>
+        
+        <div class="album-modal-header">
+          <div class="album-modal-cover-wrapper">
+            <img src="wood_2.jpg" alt="Album Cover" class="album-modal-cover" id="albumModalCover">
+            <div class="album-modal-vinyl-disc"></div>
+          </div>
+          <div class="album-modal-meta">
+            <span class="album-modal-badge" id="albumModalBadge">EP / Album</span>
+            <h2 class="album-modal-title" id="albumModalTitle">Tên Album</h2>
+            <p class="album-modal-artist" id="albumModalArtist">Nghệ sĩ</p>
+            <p class="album-modal-info" id="albumModalInfo">0 bài hát • 2024</p>
+            <div class="album-modal-actions">
+              <button class="album-modal-play-all-btn" id="playAlbumAllBtn">
+                <span>▶</span> Phát Toàn Bộ Album
+              </button>
+              <button class="album-modal-queue-all-btn" id="queueAlbumAllBtn">
+                <span>🌰</span> Thêm Vào Danh Sách Chờ
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Danh sách bài hát trong Album -->
+        <div class="album-tracklist-container">
+          <div class="album-tracklist-header-row">
+            <span class="col-num">#</span>
+            <span class="col-title">Tiêu Đề</span>
+            <span class="col-duration">Thời Lượng</span>
+            <span class="col-action"></span>
+          </div>
+          <div class="album-tracklist-items" id="albumTrackList">
+            <!-- Rendered dynamically by JavaScript -->
+          </div>
+        </div>
       </div>
     </div>
 
