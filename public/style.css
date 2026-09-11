@@ -21,7 +21,7 @@
 @font-face {
   font-family: 'AustieBostHappyHolly';
   src: url('1FTV-Austie-Bost-Happy-Holly.otf') format('opentype');
-  font-weight: normal;
+  font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
@@ -194,12 +194,13 @@ body.ghibli-app-body {
 
 .brand-text {
   font-family: var(--font-ghibli-brand);
-  font-size: 1.45rem;
-  font-weight: 900;
-  color: var(--ghibli-yellow-light);
-  -webkit-text-stroke: 1px var(--ghibli-brown-dark);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
-  letter-spacing: 0.02em;
+  font-size: 2.15rem;
+  font-weight: normal;
+  color: #fffbe6;
+  -webkit-text-stroke: 0 !important;
+  text-shadow: 0 2px 8px rgba(35, 20, 10, 0.75), 0 1px 3px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 /* --------------------------------------------------------------------------
@@ -1050,13 +1051,13 @@ body.ghibli-app-body {
 
 .search-hero-title {
   font-family: var(--font-ghibli-title);
-  font-size: 2.2rem;
-  font-weight: 900;
+  font-size: 2.3rem;
+  font-weight: normal;
   color: #2c1a0e;
-  -webkit-text-stroke: 0.5px rgba(44, 26, 14, 0.4);
-  text-shadow: 0 2px 4px rgba(255, 255, 255, 0.45);
+  -webkit-text-stroke: 0 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
   margin: 0 0 2px 0;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
 }
 
 .search-hero-subtitle {
@@ -1237,10 +1238,10 @@ body.ghibli-app-body {
 .view-main-title {
   font-family: var(--font-ghibli-title);
   font-size: 2.35rem;
-  font-weight: 900;
-  color: #ffffff;
-  -webkit-text-stroke: 1.6px var(--ghibli-brown-dark);
-  text-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+  font-weight: normal;
+  color: #2b1810;
+  -webkit-text-stroke: 0 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
   margin: 12px 0 16px 2px;
   letter-spacing: 0.02em;
 }
@@ -2569,12 +2570,13 @@ body.music-playing .calcifer-flame {
 
 .hero-main-title {
   font-family: var(--font-ghibli-brand);
-  font-size: 2.1rem;
-  font-weight: 900;
+  font-size: 2.45rem;
+  font-weight: normal;
   color: #2b1810;
-  -webkit-text-stroke: 0.5px #fefae0;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  -webkit-text-stroke: 0 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.75);
   margin-bottom: 8px;
+  letter-spacing: 0.02em;
 }
 
 .hero-sub-description {
@@ -2646,10 +2648,12 @@ body.music-playing .calcifer-flame {
 
 .heading-title {
   font-family: var(--font-ghibli-brand);
-  font-size: 1.5rem;
-  font-weight: 900;
+  font-size: 1.7rem;
+  font-weight: normal;
   color: #2b1810;
+  -webkit-text-stroke: 0 !important;
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.02em;
 }
 
 .heading-badge-counter {
