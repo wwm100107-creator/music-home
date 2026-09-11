@@ -1219,14 +1219,28 @@ apiRouter.get('/albums', rateLimit({ maxRequests: 60, windowMs: 60000, endpointN
   }
 });
 
-// 10.4.2. Album Detail & Tracklist
+// Map chuẩn hóa các bài hát có MV bị dài lê thê về đúng bản Official Lyric Video & thời lượng thực tế
+const KNOWN_LYRIC_TRACKS = {
+  // Call Me - Wren Evans (Bản Official Lyric Video LOI CHOI chuẩn 3:35 thay vì MV 6:15)
+  'wrcorytidddq': { id: 'DlION6FK-Yc', duration: '3:35', durationSec: 215 },
+  'wrcorytidddq_call me': { id: 'DlION6FK-Yc', duration: '3:35', durationSec: 215 },
+  'call me_wren evans': { id: 'DlION6FK-Yc', duration: '3:35', durationSec: 215 },
+  // Đừng Làm Trái Tim Anh Đau - Sơn Tùng M-TP (Bản Lyric Video chuẩn 4:42 thay vì MV 5:26)
+  'abpmzczzrfa': { id: 'NItL-whRVFo', duration: '4:42', durationSec: 282 },
+  'đừng làm trái tim anh đau_sơn tùng m-tp': { id: 'NItL-whRVFo', duration: '4:42', durationSec: 282 },
+  // Em Của Ngày Hôm Qua - Sơn Tùng M-TP (Bản audio chuẩn 4:24)
+  'c3xo9fkoudg': { id: 'I_U4mU7Dq_4', duration: '4:24', durationSec: 264 },
+  'vt4kau-ziry': { id: 'I_U4mU7Dq_4', duration: '4:24', durationSec: 264 }
+};
+
+// 10.4.2. Album Detail & Tracklist (Ưu tiên Official Lyrics Video & Chuẩn hóa thời lượng)
 apiRouter.get('/album/:albumId', rateLimit({ maxRequests: 80, windowMs: 60000, endpointName: 'album-details' }), async (req, res) => {
   const { albumId } = req.params;
   if (!albumId) {
     return res.status(400).json({ error: 'Missing albumId' });
   }
 
-  const cacheKey = `album_detail:${albumId}`;
+  const cacheKey = `album_detail_v3_lyric:${albumId}`;
   const cached = albumCache.get(cacheKey);
   if (cached) {
     return res.json({ ...cached, cached: true });
@@ -1251,10 +1265,10 @@ apiRouter.get('/album/:albumId', rateLimit({ maxRequests: 80, windowMs: 60000, e
 
     const rawContents = albumData.contents || [];
 
-    // Tối ưu và chuẩn hóa: Lấy thông tin chính xác từ video thực tế để đảm bảo Official Music Video chuẩn và thời lượng khớp 100%
+    // Tối ưu và chuẩn hóa: Lấy đúng bản Official Lyrics Video & thời lượng thực tế
     const resolvedTracks = await Promise.all(
       rawContents.map(async (item) => {
-        const id = item.id || item.videoId;
+        let id = item.id || item.videoId;
         if (!id) return null;
 
         const trackTitle = item.title?.text || item.title?.toString() || 'Unknown Track';
@@ -1262,11 +1276,43 @@ apiRouter.get('/album/:albumId', rateLimit({ maxRequests: 80, windowMs: 60000, e
         let duration = item.duration?.text || (item.duration ? String(item.duration) : '3:30');
         let durationSec = item.duration?.seconds || 210;
 
+        // 1. Kiểm tra bảng map các bài hát có Official Lyric Video chuẩn
+        const mapKey = (id || '').toLowerCase();
+        const artistKey = `${trackTitle}_${trackArtist}`.toLowerCase();
+        if (KNOWN_LYRIC_TRACKS[mapKey]) {
+          id = KNOWN_LYRIC_TRACKS[mapKey].id;
+          duration = KNOWN_LYRIC_TRACKS[mapKey].duration;
+          durationSec = KNOWN_LYRIC_TRACKS[mapKey].durationSec;
+          return { id, title: trackTitle, artist: trackArtist, album: title, duration, durationSec, thumbnail };
+        }
+        if (KNOWN_LYRIC_TRACKS[artistKey]) {
+          id = KNOWN_LYRIC_TRACKS[artistKey].id;
+          duration = KNOWN_LYRIC_TRACKS[artistKey].duration;
+          durationSec = KNOWN_LYRIC_TRACKS[artistKey].durationSec;
+          return { id, title: trackTitle, artist: trackArtist, album: title, duration, durationSec, thumbnail };
+        }
+
+        // 2. Kiểm tra nếu video bị gắn nhầm sang Official Music Video bị phình thời lượng (> 20s so với bản thu chuẩn)
         try {
           const basicInfo = await ytSearch.getBasicInfo(id);
           if (basicInfo && basicInfo.basic_info) {
             const sec = basicInfo.basic_info.duration;
-            if (sec && sec > 0) {
+            const rawTitle = (basicInfo.basic_info.title || '').toLowerCase();
+            const isBloatedMV = (sec && durationSec && sec > durationSec + 25) || 
+              ((rawTitle.includes('official music video') || rawTitle.includes('official mv')) && (sec > durationSec + 15));
+
+            if (isBloatedMV) {
+              // Tìm kiếm nhanh bản Official Lyric Video hoặc Song Audio chuẩn của YouTube Music
+              try {
+                const songRes = await ytSearch.music.search(`${trackArtist} ${trackTitle}`, { type: 'song' });
+                const cleanSong = songRes.songs?.contents?.[0];
+                if (cleanSong && cleanSong.id && cleanSong.id !== id) {
+                  id = cleanSong.id;
+                  duration = cleanSong.duration?.text || duration;
+                  durationSec = cleanSong.duration?.seconds || durationSec;
+                }
+              } catch (_) {}
+            } else if (sec && sec > 0) {
               durationSec = sec;
               const m = Math.floor(sec / 60);
               const s = sec % 60;
@@ -1274,7 +1320,7 @@ apiRouter.get('/album/:albumId', rateLimit({ maxRequests: 80, windowMs: 60000, e
             }
           }
         } catch {
-          // Fallback giữ nguyên thời lượng ban đầu nếu request basicInfo gặp sự cố
+          // Fallback giữ nguyên thời lượng ban đầu
         }
 
         return {
