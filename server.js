@@ -1592,25 +1592,16 @@ apiRouter.post('/drop/upload', async (req, res) => {
       finalAudioUrl = await uploadToCatbox(audioBuffer, safeAudioName, audioMime || 'audio/mpeg');
     }
 
-    let finalThumbnail = 'wood_2.jpg';
+    let finalThumbnail = 'bg.jpg';
     if (imageBase64) {
       try {
         const imageBuffer = Buffer.from(imageBase64, 'base64');
         const safeImageName = (imageName || 'cover.jpg').replace(/[^a-zA-Z0-9._-]/g, '_');
         finalThumbnail = await uploadToCatbox(imageBuffer, safeImageName, imageMime || 'image/jpeg');
       } catch (e) {
-        console.warn('Image upload failed, fallback to preset:', e.message);
-        finalThumbnail = 'wood_2.jpg';
+        console.warn('Image upload failed, fallback to default:', e.message);
+        finalThumbnail = 'bg.jpg';
       }
-    } else if (themePreset) {
-      const presets = {
-        totoro: 'wood_2.jpg',
-        howl: 'bg.jpg',
-        spirited: 'wood_2.png',
-        kiki: 'icon-home-music.png',
-        rain: 'wood_2.jpg'
-      };
-      finalThumbnail = presets[themePreset] || 'wood_2.jpg';
     }
 
     const newTrack = {

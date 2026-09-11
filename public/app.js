@@ -143,9 +143,12 @@
     dropSongTitle: document.getElementById('dropSongTitle'),
     dropSongArtist: document.getElementById('dropSongArtist'),
     dropThemeFileInput: document.getElementById('dropThemeFileInput'),
-    customThemeUploadOption: document.getElementById('customThemeUploadOption'),
+    customThemeDropZone: document.getElementById('customThemeDropZone'),
+    themePreviewWrap: document.getElementById('themePreviewWrap'),
     customCoverPreviewImg: document.getElementById('customCoverPreviewImg'),
+    customThemeFileName: document.getElementById('customThemeFileName'),
     customThemeEmpty: document.getElementById('customThemeEmpty'),
+    removeCustomThemeBtn: document.getElementById('removeCustomThemeBtn'),
     dropSubmitBtn: document.getElementById('dropSubmitBtn'),
     dropSubmitLoading: document.getElementById('dropSubmitLoading'),
     dropCommunityCounterPill: document.getElementById('dropCommunityCounterPill'),
@@ -1187,7 +1190,6 @@
   // ==========================================================================
   let selectedAudioFile = null;
   let selectedThemeFile = null;
-  let selectedThemePreset = 'totoro';
   let selectedAudioDuration = '03:30';
 
   // Chuyển đổi File sang Base64
@@ -1216,22 +1218,23 @@
       const data = await res.json();
 
       if (data && data.tracks) {
-        state.communityTracks = data.tracks;
+        state.communityTracks = (data.tracks || []).filter(t => t.id !== 'drop_preset_1');
         state.communityLoaded = true;
 
         if (dom.dropCommunityCounterPill) {
-          dom.dropCommunityCounterPill.textContent = `${data.tracks.length} Giai Điệu Cộng Đồng`;
+          dom.dropCommunityCounterPill.textContent = `${state.communityTracks.length} Giai Điệu Cộng Đồng`;
         }
 
-        renderCommunityTracksGrid(data.tracks);
+        renderCommunityTracksGrid(state.communityTracks);
         if (forceToast) {
-          showToast(`✨ Đã nạp ${data.tracks.length} bài hát cộng đồng!`);
+          showToast(`✨ Đã nạp ${state.communityTracks.length} bài hát cộng đồng!`);
         }
       }
     } catch (err) {
       console.error('[Load Community Tracks Error]:', err);
       try {
-        const localSaved = JSON.parse(localStorage.getItem('my_dropped_music') || '[]');
+        const localSaved = JSON.parse(localStorage.getItem('my_dropped_music') || '[]').filter(t => t.id !== 'drop_preset_1');
+        localStorage.setItem('my_dropped_music', JSON.stringify(localSaved));
         if (localSaved.length > 0) {
           renderCommunityTracksGrid(localSaved);
         }
@@ -1246,14 +1249,16 @@
     if (!dom.communityTracksGrid) return;
     dom.communityTracksGrid.innerHTML = '';
 
-    if (!tracks || tracks.length === 0) {
+    const validTracks = (tracks || []).filter(t => t && t.id !== 'drop_preset_1');
+
+    if (!validTracks || validTracks.length === 0) {
       if (dom.communityEmptyState) dom.communityEmptyState.classList.remove('hidden');
       return;
     }
 
     if (dom.communityEmptyState) dom.communityEmptyState.classList.add('hidden');
 
-    tracks.forEach((track) => {
+    validTracks.forEach((track) => {
       const card = document.createElement('div');
       card.className = 'community-track-card';
       card.dataset.trackId = track.id;
@@ -1261,7 +1266,7 @@
       card.innerHTML = `
         <div class="community-card-sleeve">
           <div class="community-card-vinyl"></div>
-          <img src="${upgradeThumbnailUrl(track.thumbnail)}" alt="${track.title}" class="community-card-img" loading="lazy" onerror="this.src='wood_2.jpg'">
+          <img src="${upgradeThumbnailUrl(track.thumbnail)}" alt="${track.title}" class="community-card-img" loading="lazy" onerror="this.src='bg.jpg'">
           <button class="community-card-play-btn" title="Phát bài này">▶</button>
         </div>
         <h3 class="community-card-title" title="${track.title}">${track.title}</h3>
@@ -1339,10 +1344,36 @@
     }
   }
 
+  // Xử lý khi chọn file ảnh bìa (Custom Theme)
+  function handleSelectedThemeFile(file) {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('⚠️ Vui lòng chọn file hình ảnh (.jpg, .png, .webp)!');
+      return;
+    }
+    selectedThemeFile = file;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (dom.customCoverPreviewImg) {
+        dom.customCoverPreviewImg.src = event.target.result;
+      }
+      if (dom.customThemeFileName) {
+        dom.customThemeFileName.textContent = file.name;
+      }
+      if (dom.themePreviewWrap) {
+        dom.themePreviewWrap.classList.remove('hidden');
+      }
+      if (dom.customThemeEmpty) {
+        dom.customThemeEmpty.classList.add('hidden');
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
   function resetDropStudioForm() {
     selectedAudioFile = null;
     selectedThemeFile = null;
-    selectedThemePreset = 'totoro';
     selectedAudioDuration = '03:30';
 
     if (dom.dropAudioFileInput) dom.dropAudioFileInput.value = '';
@@ -1357,12 +1388,11 @@
       dom.dropAudioPreviewElement.load();
     }
 
-    // Reset theme presets
-    document.querySelectorAll('.theme-preset-option').forEach(opt => {
-      opt.classList.toggle('active', opt.dataset.preset === 'totoro');
-    });
-    if (dom.customCoverPreviewImg) dom.customCoverPreviewImg.classList.add('hidden');
+    // Reset theme preview
+    if (dom.themePreviewWrap) dom.themePreviewWrap.classList.add('hidden');
     if (dom.customThemeEmpty) dom.customThemeEmpty.classList.remove('hidden');
+    if (dom.customCoverPreviewImg) dom.customCoverPreviewImg.removeAttribute('src');
+    if (dom.customThemeFileName) dom.customThemeFileName.textContent = '';
   }
 
   // Khởi tạo các sự kiện cho Drop Your Music Studio
@@ -1422,42 +1452,49 @@
       });
     }
 
-    // 2. Bộ chọn Theme Presets
-    const themeOptions = document.querySelectorAll('.theme-preset-option');
-    themeOptions.forEach(opt => {
-      opt.addEventListener('click', () => {
-        themeOptions.forEach(o => o.classList.remove('active'));
-        opt.classList.add('active');
+    // 2. Kéo thả & Tải ảnh bìa tùy chỉnh (Custom Theme)
+    if (dom.customThemeDropZone) {
+      dom.customThemeDropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dom.customThemeDropZone.classList.add('dragover');
+      });
 
-        const preset = opt.dataset.preset;
-        if (preset === 'custom') {
-          if (dom.dropThemeFileInput) dom.dropThemeFileInput.click();
-        } else {
-          selectedThemePreset = preset;
-          selectedThemeFile = null;
+      dom.customThemeDropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dom.customThemeDropZone.classList.remove('dragover');
+      });
+
+      dom.customThemeDropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dom.customThemeDropZone.classList.remove('dragover');
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          handleSelectedThemeFile(e.dataTransfer.files[0]);
         }
       });
-    });
+
+      dom.customThemeDropZone.addEventListener('click', (e) => {
+        if (e.target.closest('#removeCustomThemeBtn')) return;
+        if (dom.dropThemeFileInput) dom.dropThemeFileInput.click();
+      });
+    }
 
     if (dom.dropThemeFileInput) {
       dom.dropThemeFileInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files.length > 0) {
-          const file = e.target.files[0];
-          selectedThemeFile = file;
-          selectedThemePreset = 'custom';
-
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            if (dom.customCoverPreviewImg) {
-              dom.customCoverPreviewImg.src = event.target.result;
-              dom.customCoverPreviewImg.classList.remove('hidden');
-            }
-            if (dom.customThemeEmpty) {
-              dom.customThemeEmpty.classList.add('hidden');
-            }
-          };
-          reader.readAsDataURL(file);
+          handleSelectedThemeFile(e.target.files[0]);
         }
+      });
+    }
+
+    if (dom.removeCustomThemeBtn) {
+      dom.removeCustomThemeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectedThemeFile = null;
+        if (dom.dropThemeFileInput) dom.dropThemeFileInput.value = '';
+        if (dom.themePreviewWrap) dom.themePreviewWrap.classList.add('hidden');
+        if (dom.customThemeEmpty) dom.customThemeEmpty.classList.remove('hidden');
+        if (dom.customCoverPreviewImg) dom.customCoverPreviewImg.removeAttribute('src');
+        if (dom.customThemeFileName) dom.customThemeFileName.textContent = '';
       });
     }
 
@@ -1495,7 +1532,6 @@
             title,
             artist,
             duration: selectedAudioDuration,
-            themePreset: selectedThemePreset,
             audioBase64,
             audioName: selectedAudioFile.name,
             audioMime: selectedAudioFile.type,
@@ -1516,7 +1552,7 @@
             showToast(`🎉 Giai điệu "${data.track.title}" đã được chia sẻ với mọi người!`);
 
             // Thêm vào danh sách hiện tại
-            state.communityTracks = [data.track, ...(state.communityTracks || []).filter(t => t.id !== data.track.id)];
+            state.communityTracks = [data.track, ...(state.communityTracks || []).filter(t => t.id !== data.track.id && t.id !== 'drop_preset_1')];
             renderCommunityTracksGrid(state.communityTracks);
 
             if (dom.dropCommunityCounterPill) {
@@ -1525,7 +1561,7 @@
 
             // Lưu vào localStorage dự phòng
             try {
-              const mySaved = JSON.parse(localStorage.getItem('my_dropped_music') || '[]');
+              const mySaved = JSON.parse(localStorage.getItem('my_dropped_music') || '[]').filter(t => t.id !== 'drop_preset_1');
               mySaved.unshift(data.track);
               localStorage.setItem('my_dropped_music', JSON.stringify(mySaved));
             } catch (e) {

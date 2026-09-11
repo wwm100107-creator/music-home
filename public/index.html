@@ -426,44 +426,26 @@
             </div>
           </div>
 
-          <!-- 3. Bộ chọn Theme / Ảnh Bìa -->
+          <!-- 3. Tự Đặt Theme / Ảnh Bìa Cho Bài Hát -->
           <div class="drop-theme-section">
-            <label class="drop-field-label">Chọn Theme & Ảnh Bìa Cho Bài Hát:</label>
-            
-            <div class="theme-picker-grid">
-              <!-- Preset 1: Totoro Forest -->
-              <div class="theme-preset-option active" data-preset="totoro" data-img="wood_2.jpg">
-                <img src="wood_2.jpg" alt="Rừng Totoro" class="theme-preset-thumb">
-                <span class="theme-preset-name">Rừng Totoro</span>
+            <label class="drop-field-label">Đặt Theme & Ảnh Bìa Cho Bài Hát (Tùy Chọn):</label>
+            <div class="custom-theme-dropzone" id="customThemeDropZone">
+              <div class="theme-upload-placeholder" id="customThemeEmpty">
+                <span class="theme-upload-icon">🎨</span>
+                <span class="theme-upload-title">Nhấp hoặc kéo thả ảnh bìa từ máy vào đây</span>
+                <span class="theme-upload-sub">Hỗ trợ ảnh .jpg, .png, .webp (Tự động canh vuông chuẩn bìa đĩa)</span>
               </div>
-              
-              <!-- Preset 2: Howl's Castle -->
-              <div class="theme-preset-option" data-preset="howl" data-img="bg.jpg">
-                <img src="bg.jpg" alt="Lâu Đài Bay" class="theme-preset-thumb">
-                <span class="theme-preset-name">Lâu Đài Bay</span>
-              </div>
-
-              <!-- Preset 3: Spirited Away -->
-              <div class="theme-preset-option" data-preset="spirited" data-img="wood_2.png">
-                <img src="wood_2.png" alt="Vùng Đất Linh Hồn" class="theme-preset-thumb">
-                <span class="theme-preset-name">Vùng Đất Linh Hồn</span>
-              </div>
-
-              <!-- Preset 4: Kiki's Cottage -->
-              <div class="theme-preset-option" data-preset="kiki" data-img="icon-home-music.png">
-                <img src="icon-home-music.png" alt="Tiệm Bánh Kiki" class="theme-preset-thumb">
-                <span class="theme-preset-name">Tiệm Bánh Kiki</span>
-              </div>
-
-              <!-- Preset 5: Tự tải ảnh bìa riêng từ máy -->
-              <div class="theme-preset-option theme-custom-upload" id="customThemeUploadOption" data-preset="custom">
-                <div class="custom-theme-empty" id="customThemeEmpty">
-                  <span class="custom-icon">📷</span>
-                  <span class="theme-preset-name">Tải Ảnh Bìa Riêng</span>
+              <div class="theme-upload-preview-wrap hidden" id="themePreviewWrap">
+                <div class="theme-preview-sleeve">
+                  <div class="theme-preview-vinyl"></div>
+                  <img src="" alt="Custom Theme Preview" class="theme-preview-img" id="customCoverPreviewImg">
                 </div>
-                <img src="" alt="Custom Cover" class="theme-preset-thumb hidden" id="customCoverPreviewImg">
-                <input type="file" id="dropThemeFileInput" accept="image/*,.jpg,.jpeg,.png,.webp" class="hidden">
+                <div class="theme-preview-meta">
+                  <div class="theme-preview-name" id="customThemeFileName">cover.jpg</div>
+                  <button type="button" class="remove-theme-btn" id="removeCustomThemeBtn">✕ Xóa & chọn ảnh khác</button>
+                </div>
               </div>
+              <input type="file" id="dropThemeFileInput" accept="image/*,.jpg,.jpeg,.png,.webp" class="hidden">
             </div>
           </div>
 
