@@ -74,17 +74,21 @@
     albumsEmptyState: document.getElementById('albumsEmptyState'),
     albumsGrid: document.getElementById('albumsGrid'),
 
-    // Album Tracklist Modal
-    albumModal: document.getElementById('albumModal'),
-    closeAlbumModalBtn: document.getElementById('closeAlbumModalBtn'),
-    albumModalCover: document.getElementById('albumModalCover'),
-    albumModalBadge: document.getElementById('albumModalBadge'),
-    albumModalTitle: document.getElementById('albumModalTitle'),
-    albumModalArtist: document.getElementById('albumModalArtist'),
-    albumModalInfo: document.getElementById('albumModalInfo'),
-    playAlbumAllBtn: document.getElementById('playAlbumAllBtn'),
-    queueAlbumAllBtn: document.getElementById('queueAlbumAllBtn'),
-    albumTrackList: document.getElementById('albumTrackList'),
+    // Album In-Page Detail View & Controls
+    albumsMainView: document.getElementById('albumsMainView'),
+    albumDetailView: document.getElementById('albumDetailView'),
+    albumBackToGridBtn: document.getElementById('albumBackToGridBtn'),
+    albumDetailCover: document.getElementById('albumDetailCover'),
+    albumDetailBadge: document.getElementById('albumDetailBadge'),
+    albumDetailYear: document.getElementById('albumDetailYear'),
+    albumDetailTitle: document.getElementById('albumDetailTitle'),
+    albumDetailArtist: document.getElementById('albumDetailArtist'),
+    albumDetailDesc: document.getElementById('albumDetailDesc'),
+    albumDetailPlayAllBtn: document.getElementById('albumDetailPlayAllBtn'),
+    albumDetailQueueAllBtn: document.getElementById('albumDetailQueueAllBtn'),
+    albumDetailLoading: document.getElementById('albumDetailLoading'),
+    albumDetailTracksList: document.getElementById('albumDetailTracksList'),
+    albumHeroVinylDisc: document.getElementById('albumHeroVinylDisc'),
 
     // Bottom Player
     bottomPlayer: document.getElementById('bottomPlayer'),
@@ -149,6 +153,24 @@
     const m = Math.floor(sec / 60);
     const s = Math.floor(sec % 60);
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+
+  // Nâng cấp độ phân giải hình ảnh sắc nét cao (High-Res 800x800)
+  function upgradeThumbnailUrl(url) {
+    if (!url || typeof url !== 'string') return 'wood_2.jpg';
+    if (url.includes('googleusercontent.com')) {
+      if (/=w\d+-h\d+[^"']*/.test(url)) {
+        return url.replace(/=w\d+-h\d+[^"']*/, '=w800-h800-l90-rj');
+      }
+      if (/=s\d+[^"']*/.test(url)) {
+        return url.replace(/=s\d+[^"']*/, '=s800-l90-rj');
+      }
+      return url + '=w800-h800-l90-rj';
+    }
+    if (url.includes('i.ytimg.com/vi/')) {
+      return url.replace(/\/(default|mqdefault|sddefault)\.jpg/, '/hqdefault.jpg');
+    }
+    return url;
   }
 
   // ==========================================================================
@@ -220,7 +242,7 @@
     if (dom.trackAlbum) dom.trackAlbum.textContent = track.album || 'Home Music Session';
 
     if (dom.currentTrackCover) {
-      dom.currentTrackCover.src = track.thumbnail || 'wood_2.jpg';
+      dom.currentTrackCover.src = upgradeThumbnailUrl(track.thumbnail);
       dom.currentTrackCover.classList.remove('cover-fade-in');
       void dom.currentTrackCover.offsetWidth;
       dom.currentTrackCover.classList.add('cover-fade-in');
@@ -901,7 +923,6 @@
   // 8.1. REGIONAL EP / ALBUM SCANNER & ALBUM TRACKLIST MODAL (TAB PLAYLISTS)
   // ==========================================================================
   let albumSearchDebounceTimer = null;
-  let currentModalAlbum = null;
 
   async function loadAlbumsByRegion(country = state.selectedCountry, query = '') {
     if (!dom.albumsGrid) return;
@@ -970,7 +991,7 @@
       card.innerHTML = `
         <div class="album-sleeve-wrap">
           <div class="album-vinyl-disc"></div>
-          <img src="${album.thumbnail || 'wood_2.jpg'}" alt="${album.title}" class="album-cover-img" loading="lazy" onerror="this.src='wood_2.jpg'">
+          <img src="${upgradeThumbnailUrl(album.thumbnail)}" alt="${album.title}" class="album-cover-img" loading="lazy" onerror="this.src='wood_2.jpg'">
           <button class="album-play-overlay-btn" title="Phát toàn bộ album">▶</button>
         </div>
         <h3 class="album-card-title" title="${album.title}">${album.title}</h3>
@@ -991,74 +1012,110 @@
         });
       }
 
-      // Bấm vào thân thẻ để mở Modal xem chi tiết tracklist
+      // Bấm vào thân thẻ để chuyển sang chế độ Xem Chi Tiết EP / Album (in-page view)
       card.addEventListener('click', () => {
-        openAlbumModal(album.id);
+        openAlbumDetailView(album.id, album);
       });
 
       dom.albumsGrid.appendChild(card);
     });
   }
 
-  async function openAlbumModal(albumId) {
-    if (!dom.albumModal) return;
-    dom.albumModal.classList.remove('hidden');
+  let currentAlbumDetail = null;
 
-    if (dom.albumModalTitle) dom.albumModalTitle.textContent = 'Đang đọc đĩa than...';
-    if (dom.albumModalArtist) dom.albumModalArtist.textContent = 'Xin chờ một chút...';
-    if (dom.albumModalInfo) dom.albumModalInfo.textContent = '🍃 Đang kết nối thư viện...';
-    if (dom.albumTrackList) {
-      dom.albumTrackList.innerHTML = '<div style="text-align:center; padding: 30px; color: #7f5539; font-family: var(--font-ghibli-brand);">🍃 Đang nạp danh sách bài hát...</div>';
+  async function openAlbumDetailView(albumId, initialData = null) {
+    if (!dom.albumDetailView || !dom.albumsMainView) return;
+
+    // Chuyển mượt mà giữa Grid và Detail View
+    dom.albumsMainView.classList.add('hidden');
+    dom.albumDetailView.classList.remove('hidden');
+
+    // Cuộn lên đầu trang
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Hiển thị trước metadata đã có từ card để giao diện phản hồi tức thì
+    if (initialData) {
+      if (dom.albumDetailCover) dom.albumDetailCover.src = upgradeThumbnailUrl(initialData.thumbnail);
+      if (dom.albumDetailTitle) dom.albumDetailTitle.textContent = initialData.title || 'Đang tải...';
+      if (dom.albumDetailArtist) dom.albumDetailArtist.textContent = initialData.artist || 'Nghệ sĩ';
+      if (dom.albumDetailBadge) dom.albumDetailBadge.textContent = initialData.type || 'Album';
+      if (dom.albumDetailYear) dom.albumDetailYear.textContent = initialData.year || '';
+      if (dom.albumDetailDesc) dom.albumDetailDesc.textContent = 'Toàn bộ danh sách bài hát chính thức theo thứ tự đĩa phát hành';
+    } else {
+      if (dom.albumDetailTitle) dom.albumDetailTitle.textContent = 'Đang đọc đĩa than...';
+      if (dom.albumDetailArtist) dom.albumDetailArtist.textContent = 'Xin chờ một chút...';
     }
+
+    if (dom.albumDetailLoading) dom.albumDetailLoading.classList.remove('hidden');
+    if (dom.albumDetailTracksList) dom.albumDetailTracksList.innerHTML = '';
 
     try {
       const res = await fetch(`/api/album/${encodeURIComponent(albumId)}`);
       const data = await res.json();
 
+      if (dom.albumDetailLoading) dom.albumDetailLoading.classList.add('hidden');
+
       if (data && data.album) {
         const album = data.album;
-        currentModalAlbum = album;
+        currentAlbumDetail = album;
 
-        if (dom.albumModalCover) dom.albumModalCover.src = album.thumbnail || 'wood_2.jpg';
-        if (dom.albumModalTitle) dom.albumModalTitle.textContent = album.title || 'Tên Album';
-        if (dom.albumModalArtist) dom.albumModalArtist.textContent = album.artist || 'Nghệ sĩ';
-        if (dom.albumModalBadge) dom.albumModalBadge.textContent = album.subtitle?.includes('EP') ? 'EP' : 'Album';
-        if (dom.albumModalInfo) {
-          dom.albumModalInfo.textContent = `${album.tracks?.length || 0} bài hát • ${album.subtitle || ''}`;
+        if (dom.albumDetailCover) dom.albumDetailCover.src = upgradeThumbnailUrl(album.thumbnail);
+        if (dom.albumDetailTitle) dom.albumDetailTitle.textContent = album.title || 'Tên Album';
+        if (dom.albumDetailArtist) dom.albumDetailArtist.textContent = album.artist || 'Nghệ sĩ';
+        if (dom.albumDetailBadge) dom.albumDetailBadge.textContent = album.type || (album.subtitle?.includes('EP') ? 'EP' : 'Album');
+        if (dom.albumDetailYear) dom.albumDetailYear.textContent = album.year || '';
+        if (dom.albumDetailDesc) {
+          dom.albumDetailDesc.textContent = `${album.tracks?.length || 0} bài hát theo thứ tự chuẩn • ${album.subtitle || 'Chính thức'}`;
         }
 
-        renderAlbumTracklist(album.tracks || []);
+        renderAlbumDetailTracks(album.tracks || []);
+      } else {
+        if (dom.albumDetailTracksList) {
+          dom.albumDetailTracksList.innerHTML = '<div style="text-align:center; padding: 30px; color: #b7094c;">Không tìm thấy thông tin bài hát trong album này.</div>';
+        }
       }
     } catch (err) {
-      console.error('[Open Album Error]:', err);
-      if (dom.albumModalTitle) dom.albumModalTitle.textContent = 'Không thể nạp Album';
-      if (dom.albumTrackList) {
-        dom.albumTrackList.innerHTML = '<div style="text-align:center; padding: 20px; color: #b7094c;">Gặp lỗi khi lấy danh sách bài hát.</div>';
+      console.error('[Open Album Detail Error]:', err);
+      if (dom.albumDetailLoading) dom.albumDetailLoading.classList.add('hidden');
+      if (dom.albumDetailTracksList) {
+        dom.albumDetailTracksList.innerHTML = '<div style="text-align:center; padding: 30px; color: #b7094c;">Gặp lỗi khi lấy danh sách bài hát. Vui lòng thử lại!</div>';
       }
     }
   }
 
-  function renderAlbumTracklist(tracks) {
-    if (!dom.albumTrackList) return;
-    dom.albumTrackList.innerHTML = '';
+  function closeAlbumDetailView() {
+    if (dom.albumDetailView && dom.albumsMainView) {
+      dom.albumDetailView.classList.add('hidden');
+      dom.albumsMainView.classList.remove('hidden');
+    }
+  }
 
-    if (tracks.length === 0) {
-      dom.albumTrackList.innerHTML = '<div style="text-align:center; padding: 20px; color: #7f5539;">Chưa có danh sách bài hát</div>';
+  function renderAlbumDetailTracks(tracks) {
+    if (!dom.albumDetailTracksList) return;
+    dom.albumDetailTracksList.innerHTML = '';
+
+    if (!tracks || tracks.length === 0) {
+      dom.albumDetailTracksList.innerHTML = '<div style="text-align:center; padding: 30px; color: #7f5539;">Đĩa này chưa có bài hát nào được liệt kê</div>';
       return;
     }
 
     tracks.forEach((track, idx) => {
       const row = document.createElement('div');
-      row.className = 'album-track-item';
+      row.className = 'album-detail-track-row';
+      if (state.currentTrack && state.currentTrack.id === track.id) {
+        row.classList.add('is-active');
+      }
 
       row.innerHTML = `
-        <span class="album-track-num">${idx + 1}</span>
-        <div class="album-track-main">
-          <div class="album-track-title">${track.title}</div>
-          <div class="album-track-artist">${track.artist || ''}</div>
+        <span class="col-num">${idx + 1}</span>
+        <div class="col-main">
+          <div class="col-title" title="${track.title}">${track.title}</div>
+          <div class="col-artist" title="${track.artist || ''}">${track.artist || ''}</div>
         </div>
-        <span class="album-track-dur">${track.duration || '3:30'}</span>
-        <button class="album-track-play-btn" title="Phát bài này">▶</button>
+        <span class="col-duration">${track.duration || '3:30'}</span>
+        <div class="col-action">
+          <button class="album-detail-track-play-btn" title="Phát bài này">▶</button>
+        </div>
       `;
 
       row.addEventListener('click', () => {
@@ -1066,16 +1123,13 @@
         state.queueIndex = idx;
         renderQueueDrawer();
         playTrack(track, false);
+
+        document.querySelectorAll('.album-detail-track-row').forEach(r => r.classList.remove('is-active'));
+        row.classList.add('is-active');
       });
 
-      dom.albumTrackList.appendChild(row);
+      dom.albumDetailTracksList.appendChild(row);
     });
-  }
-
-  function closeAlbumModal() {
-    if (dom.albumModal) {
-      dom.albumModal.classList.add('hidden');
-    }
   }
 
   function playEntireAlbum(tracks) {
@@ -1328,41 +1382,33 @@
       });
     }
 
-    // Album Tracklist Modal Events
-    if (dom.closeAlbumModalBtn) {
-      dom.closeAlbumModalBtn.addEventListener('click', closeAlbumModal);
+    // Album In-Page Detail View Events
+    if (dom.albumBackToGridBtn) {
+      dom.albumBackToGridBtn.addEventListener('click', closeAlbumDetailView);
     }
 
-    if (dom.albumModal) {
-      dom.albumModal.addEventListener('click', (e) => {
-        if (e.target === dom.albumModal) {
-          closeAlbumModal();
-        }
-      });
-    }
-
-    if (dom.playAlbumAllBtn) {
-      dom.playAlbumAllBtn.addEventListener('click', () => {
-        if (currentModalAlbum && currentModalAlbum.tracks && currentModalAlbum.tracks.length > 0) {
-          playEntireAlbum(currentModalAlbum.tracks);
-          closeAlbumModal();
+    if (dom.albumDetailPlayAllBtn) {
+      dom.albumDetailPlayAllBtn.addEventListener('click', () => {
+        if (currentAlbumDetail && currentAlbumDetail.tracks && currentAlbumDetail.tracks.length > 0) {
+          playEntireAlbum(currentAlbumDetail.tracks);
         } else {
           showToast('🍃 Không có bài hát để phát.');
         }
       });
     }
 
-    if (dom.queueAlbumAllBtn) {
-      dom.queueAlbumAllBtn.addEventListener('click', () => {
-        if (currentModalAlbum && currentModalAlbum.tracks && currentModalAlbum.tracks.length > 0) {
-          currentModalAlbum.tracks.forEach(t => {
+    if (dom.albumDetailQueueAllBtn) {
+      dom.albumDetailQueueAllBtn.addEventListener('click', () => {
+        if (currentAlbumDetail && currentAlbumDetail.tracks && currentAlbumDetail.tracks.length > 0) {
+          let count = 0;
+          currentAlbumDetail.tracks.forEach(t => {
             if (!state.queue.some(q => q.id === t.id)) {
               state.queue.push(t);
+              count++;
             }
           });
           renderQueueDrawer();
-          showToast(`🌰 Đã thêm ${currentModalAlbum.tracks.length} bài hát vào danh sách chờ!`);
-          closeAlbumModal();
+          showToast(`🌰 Đã thêm ${currentAlbumDetail.tracks.length} bài hát của album vào danh sách chờ!`);
         } else {
           showToast('🍃 Không có bài hát để thêm vào danh sách chờ.');
         }

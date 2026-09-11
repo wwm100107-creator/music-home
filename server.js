@@ -392,17 +392,38 @@ function detectCountry(req) {
   return 'VN';
 }
 
+// Helper nâng cấp độ phân giải hình ảnh sắc nét cao (High-Res 800x800)
+function upgradeThumbnailUrl(url) {
+  if (!url || typeof url !== 'string') return 'wood_2.jpg';
+  // Google User Content (YouTube Music, artists, albums, etc.)
+  if (url.includes('googleusercontent.com')) {
+    if (/=w\d+-h\d+[^"']*/.test(url)) {
+      return url.replace(/=w\d+-h\d+[^"']*/, '=w800-h800-l90-rj');
+    }
+    if (/=s\d+[^"']*/.test(url)) {
+      return url.replace(/=s\d+[^"']*/, '=s800-l90-rj');
+    }
+    return url + '=w800-h800-l90-rj';
+  }
+  // YouTube standard thumbnails
+  if (url.includes('i.ytimg.com/vi/')) {
+    return url.replace(/\/(default|mqdefault|sddefault)\.jpg/, '/hqdefault.jpg');
+  }
+  return url;
+}
+
 // Helper trích xuất thumbnail
 function extractThumbnail(thumbnails) {
   if (!thumbnails) return 'wood_2.jpg';
+  let rawUrl = 'wood_2.jpg';
   if (Array.isArray(thumbnails) && thumbnails.length > 0) {
-    return thumbnails[thumbnails.length - 1].url;
+    rawUrl = thumbnails[thumbnails.length - 1].url;
+  } else if (thumbnails.contents && Array.isArray(thumbnails.contents) && thumbnails.contents.length > 0) {
+    rawUrl = thumbnails.contents[thumbnails.contents.length - 1].url;
+  } else if (typeof thumbnails === 'string') {
+    rawUrl = thumbnails;
   }
-  if (thumbnails.contents && Array.isArray(thumbnails.contents) && thumbnails.contents.length > 0) {
-    return thumbnails.contents[thumbnails.contents.length - 1].url;
-  }
-  if (typeof thumbnails === 'string') return thumbnails;
-  return 'wood_2.jpg';
+  return upgradeThumbnailUrl(rawUrl);
 }
 
 // ============================================================================
@@ -1053,6 +1074,9 @@ apiRouter.get('/albums', rateLimit({ maxRequests: 60, windowMs: 60000, endpointN
 
         const thumbnail = extractThumbnail(item.thumbnails || item.thumbnail);
         const year = item.year ? String(item.year) : '';
+        const lowerTitle = title.toLowerCase();
+        const isEP = lowerTitle.includes('ep') || lowerTitle.includes('single') || lowerTitle.includes('mini');
+        const albumType = isEP ? 'EP' : 'Album';
 
         albums.push({
           id,
@@ -1060,7 +1084,7 @@ apiRouter.get('/albums', rateLimit({ maxRequests: 60, windowMs: 60000, endpointN
           artist: artist || 'Nghệ sĩ',
           year,
           thumbnail,
-          type: item.type || 'Album'
+          type: albumType
         });
 
         if (albums.length >= 10) break;
@@ -1090,6 +1114,9 @@ apiRouter.get('/albums', rateLimit({ maxRequests: 60, windowMs: 60000, endpointN
 
             const thumbnail = extractThumbnail(item.thumbnails || item.thumbnail);
             const year = item.year ? String(item.year) : '';
+            const lowerTitle = title.toLowerCase();
+            const isEP = lowerTitle.includes('ep') || lowerTitle.includes('single') || lowerTitle.includes('mini');
+            const albumType = isEP ? 'EP' : 'Album';
 
             if (normArtist) seenArtists.add(normArtist);
 
@@ -1099,7 +1126,7 @@ apiRouter.get('/albums', rateLimit({ maxRequests: 60, windowMs: 60000, endpointN
               artist: artist || 'Nghệ sĩ',
               year,
               thumbnail,
-              type: item.type || 'Album'
+              type: albumType
             });
 
             if (albums.length >= 10) break;
@@ -1129,6 +1156,9 @@ apiRouter.get('/albums', rateLimit({ maxRequests: 60, windowMs: 60000, endpointN
 
               const thumbnail = extractThumbnail(item.thumbnails || item.thumbnail);
               const year = item.year ? String(item.year) : '';
+              const lowerTitle = title.toLowerCase();
+              const isEP = lowerTitle.includes('ep') || lowerTitle.includes('single') || lowerTitle.includes('mini');
+              const albumType = isEP ? 'EP' : 'Album';
 
               seenArtists.add(normArtist);
               albums.push({
@@ -1137,7 +1167,7 @@ apiRouter.get('/albums', rateLimit({ maxRequests: 60, windowMs: 60000, endpointN
                 artist,
                 year,
                 thumbnail,
-                type: item.type || 'Album'
+                type: albumType
               });
               break;
             }
@@ -1238,6 +1268,10 @@ apiRouter.get('/album/:albumId', rateLimit({ maxRequests: 80, windowMs: 60000, e
       });
     }
 
+    const lowerTitle = title.toLowerCase();
+    const isEP = lowerTitle.includes('ep') || lowerTitle.includes('single') || (subtitle || '').toLowerCase().includes('ep');
+    const albumType = isEP ? 'EP' : 'Album';
+
     const payload = {
       success: true,
       album: {
@@ -1246,6 +1280,7 @@ apiRouter.get('/album/:albumId', rateLimit({ maxRequests: 80, windowMs: 60000, e
         artist,
         subtitle,
         thumbnail,
+        type: albumType,
         trackCount: tracks.length,
         tracks
       }
@@ -1263,6 +1298,7 @@ apiRouter.get('/album/:albumId', rateLimit({ maxRequests: 80, windowMs: 60000, e
         title: 'Album Tuyển Chọn',
         artist: 'Nghệ sĩ',
         subtitle: 'Album',
+        type: 'Album',
         thumbnail: 'wood_2.jpg',
         trackCount: fallbackTracks.length,
         tracks: fallbackTracks
@@ -1295,7 +1331,16 @@ apiRouter.get('/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000,
       streamData = await resolveAudioStream(videoId, true);
     }
 
-    if (req.query.redirect === '1') {
+    // Trên môi trường Serverless (Vercel) hoặc khi client yêu cầu: 
+    // Chuyển hướng 302 trực tiếp sang luồng Google Video CDN để không bao giờ bị nghẽn timeout 10s!
+    const isVercelRuntime = Boolean(
+      process.env.VERCEL || 
+      process.env.VERCEL_ENV || 
+      process.env.NOW_REGION || 
+      process.env.AWS_LAMBDA_FUNCTION_NAME
+    );
+
+    if (isVercelRuntime || req.query.redirect === '1') {
       return res.redirect(302, streamData.url);
     }
 
@@ -1357,8 +1402,16 @@ apiRouter.get('/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000,
 
     if (upstreamResponse.body) {
       const { Readable } = await import('stream');
-      // @ts-ignore
-      Readable.fromWeb(upstreamResponse.body).pipe(res);
+      const nodeStream = Readable.fromWeb(upstreamResponse.body);
+      nodeStream.on('error', (err) => {
+        if (err.name === 'AbortError' || err.code === 'ERR_STREAM_PREMATURE_CLOSE') return;
+        console.warn(`[Stream readable error ${videoId}]:`, err.message);
+      });
+      res.on('error', (err) => {
+        if (err.code === 'ERR_STREAM_PREMATURE_CLOSE' || err.code === 'ECONNRESET') return;
+        console.warn(`[Stream res error ${videoId}]:`, err.message);
+      });
+      nodeStream.pipe(res);
     } else {
       res.end();
     }
@@ -1402,6 +1455,9 @@ app.use('/', apiRouter);
 // 11. GLOBAL UNHANDLED ERROR HANDLERS
 // ============================================================================
 process.on('uncaughtException', err => {
+  if (err && (err.name === 'AbortError' || err.code === 'ERR_STREAM_PREMATURE_CLOSE' || String(err).includes('aborted'))) {
+    return;
+  }
   console.error('[UNCAUGHT EXCEPTION]:', err);
 });
 
