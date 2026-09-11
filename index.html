@@ -9,9 +9,17 @@
   <!-- Web & App Icons (Transparent Musical Cottage Icon) -->
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#2d4a36">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="Antigravity">
+
+  <!-- Apple iOS / iPadOS PWA Native-like & Fullscreen Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Antigravity">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 
   <!-- Google Fonts: Whimsical Rounded Typography cho chuẩn phong cách Anime Ghibli -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -692,5 +700,16 @@
   <!-- Scripts: YouTube Engine & Ghibli App -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <script src="app.js"></script>
+
+  <!-- PWA Offline Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('🍃 [PWA] Service Worker registered:', reg.scope))
+          .catch((err) => console.warn('⚠️ [PWA] Service Worker registration failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>
