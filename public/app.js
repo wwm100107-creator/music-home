@@ -39,6 +39,12 @@
     audio: document.getElementById('audioElement'),
 
     // Navigation & Tabs
+    sidebar: document.getElementById('sidebar'),
+    sidebarBackdrop: document.getElementById('sidebarBackdrop'),
+    sidebarCloseBtn: document.getElementById('sidebarCloseBtn'),
+    mobileTopBar: document.getElementById('mobileTopBar'),
+    mobileMenuToggleBtn: document.getElementById('mobileMenuToggleBtn'),
+    mobileSearchQuickBtn: document.getElementById('mobileSearchQuickBtn'),
     woodSliderSwitch: document.getElementById('woodSliderSwitch'),
     sidebarNavItems: document.querySelectorAll('.sidebar-nav-item'),
     tabViews: document.querySelectorAll('.tab-view-section'),
@@ -1742,18 +1748,82 @@
   }
 
   // ==========================================================================
+  // [SKILL: /apple-design & /animate]
+  // MOBILE HAMBURGER DRAWER CONTROLLER
+  // ==========================================================================
+  function openMobileSidebar() {
+    if (dom.sidebar) {
+      dom.sidebar.classList.add('mobile-open');
+    }
+    if (dom.sidebarBackdrop) {
+      dom.sidebarBackdrop.classList.add('active');
+    }
+    document.body.classList.add('mobile-drawer-open');
+    // Căn lại thanh trượt gỗ khi mở drawer
+    setTimeout(() => {
+      const activeItem = document.querySelector('.sidebar-nav-item.active');
+      if (activeItem) moveWoodSliderToItem(activeItem, false);
+    }, 50);
+  }
+
+  function closeMobileSidebar() {
+    if (dom.sidebar) {
+      dom.sidebar.classList.remove('mobile-open');
+    }
+    if (dom.sidebarBackdrop) {
+      dom.sidebarBackdrop.classList.remove('active');
+    }
+    document.body.classList.remove('mobile-drawer-open');
+  }
+
+  // ==========================================================================
   // 11. SỰ KIỆN TOÀN CỤC & SETUP
   // ==========================================================================
   function setupEvents() {
-    // Click Sidebar Tabs
+    // 1. Click Sidebar Tabs
     dom.sidebarNavItems.forEach(item => {
       item.addEventListener('click', (e) => {
         e.preventDefault();
         moveWoodSliderToItem(item, true);
         const tab = item.dataset.tab;
         switchTab(tab);
+        // Tự động đóng drawer trên Mobile để người dùng xem nội dung
+        if (window.innerWidth <= 768) {
+          closeMobileSidebar();
+        }
       });
     });
+
+    // 2. Mobile Drawer Controls
+    if (dom.mobileMenuToggleBtn) {
+      dom.mobileMenuToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openMobileSidebar();
+      });
+    }
+
+    if (dom.sidebarCloseBtn) {
+      dom.sidebarCloseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeMobileSidebar();
+      });
+    }
+
+    if (dom.sidebarBackdrop) {
+      dom.sidebarBackdrop.addEventListener('click', () => {
+        closeMobileSidebar();
+      });
+    }
+
+    // 3. Mobile Quick Search button
+    if (dom.mobileSearchQuickBtn) {
+      dom.mobileSearchQuickBtn.addEventListener('click', () => {
+        switchTab('search');
+        if (dom.mainSearchInput) {
+          dom.mainSearchInput.focus();
+        }
+      });
+    }
 
     // Resize window
     window.addEventListener('resize', () => {

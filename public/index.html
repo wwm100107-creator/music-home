@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Home Music • Studio Ghibli & Totoro Vibe</title>
   <meta name="description" content="Trình phát nhạc Studio Ghibli pixel-perfect theo thiết kế GIAODIEN.png, tích hợp Cobalt API Audio Downloader, Supabase Cloud Sync và Calcifer Wavy Progress Bar.">
 
@@ -60,10 +60,13 @@
     -->
     <aside class="sidebar-glass" id="sidebar">
       
-      <!-- Brand Logo: Home Music -->
+      <!-- Brand Logo: Home Music & Mobile Close Button -->
       <div class="sidebar-brand">
-        <img src="icon-home-music.png" alt="Home Music" class="brand-icon">
-        <span class="brand-text">Home Music</span>
+        <div class="brand-info-cluster">
+          <img src="icon-home-music.png" alt="Home Music" class="brand-icon">
+          <span class="brand-text">Home Music</span>
+        </div>
+        <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Đóng menu" title="Đóng menu">✕</button>
       </div>
 
       <!-- 
@@ -141,6 +144,9 @@
 
     </aside>
 
+    <!-- [SKILL: /apple-design] Backdrop làm mờ khi mở Drawer trên Mobile -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
+
     <!-- 
       ======================================================================
       3. MAIN CONTENT (GIAO DIỆN CHÍNH)
@@ -148,6 +154,22 @@
       ======================================================================
     -->
     <main class="main-content" id="mainContent">
+
+      <!-- [SKILL: /apple-design & /impeccable] Mobile Top Bar (Hiện trên màn hình di động < 768px) -->
+      <header class="mobile-top-bar" id="mobileTopBar">
+        <button class="mobile-menu-btn" id="mobileMenuToggleBtn" aria-label="Mở menu danh mục" title="Mở danh mục">
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+        </button>
+        <div class="mobile-header-brand">
+          <img src="icon-home-music.png" alt="Home Music" class="mobile-header-icon">
+          <span class="mobile-header-title">Home Music</span>
+        </div>
+        <button class="mobile-search-btn" id="mobileSearchQuickBtn" aria-label="Tìm kiếm" title="Tìm kiếm">
+          🔍
+        </button>
+      </header>
 
       <!-- ================================================================== -->
       <!-- 1. TAB HOME: XU HƯỚNG ÂM NHẠC & BỘ CHỌN QUỐC GIA GEO-IP -->

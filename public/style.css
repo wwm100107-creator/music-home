@@ -38,6 +38,12 @@ button, input, select, textarea {
 }
 
 :root {
+  /* [SKILL: /apple-design] iOS Safe Area Insets (Tai thỏ, Dynamic Island, Home Indicator) */
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+
   /* Bảng màu Ghibli & Totoro Vibe từ GIAODIEN.png */
   /* [SKILL: /apple-design & /impeccable] Frosted Glass (Sidebar) & Clear Glass (Bottom Player) */
   --sidebar-glass-bg: rgba(255, 255, 255, 0.15);
@@ -62,11 +68,21 @@ button, input, select, textarea {
   /* [SKILL: /animate] Easing curves chuẩn */
   --ease-out-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
   --ease-smooth: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-apple-spring: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+html {
+  height: 100vh;
+  height: 100dvh;
+  -webkit-text-size-adjust: 100%;
 }
 
 body.ghibli-app-body {
   width: 100vw;
+  min-height: 100vh;
+  min-height: 100dvh;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   font-family: var(--font-ghibli-nav);
   color: var(--ghibli-brown-dark);
@@ -85,6 +101,7 @@ body.ghibli-app-body {
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   object-fit: cover;
   z-index: -2;
   pointer-events: none;
@@ -136,6 +153,7 @@ body.ghibli-app-body {
   display: flex;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   position: relative;
 }
@@ -152,6 +170,7 @@ body.ghibli-app-body {
   width: 260px;
   min-width: 260px;
   height: 100vh;
+  height: 100dvh;
   background-color: var(--sidebar-glass-bg);
   background-image: linear-gradient(180deg, rgba(240, 252, 242, 0.22) 0%, rgba(220, 242, 225, 0.15) 100%);
   backdrop-filter: blur(12px) saturate(135%);
@@ -173,10 +192,52 @@ body.ghibli-app-body {
 .sidebar-brand {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   padding: 2px 4px 10px;
-  cursor: pointer;
   user-select: none;
+}
+
+.brand-info-cluster {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.sidebar-close-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  color: #fffde0;
+  font-size: 1.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease-apple-spring), background-color 0.2s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.sidebar-close-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: scale(1.08);
+}
+.sidebar-close-btn:active {
+  transform: scale(0.92);
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+.mobile-top-bar {
+  display: none;
 }
 
 .brand-icon {
@@ -374,9 +435,11 @@ body.ghibli-app-body {
 .main-content {
   flex: 1;
   height: 100vh;
+  height: 100dvh;
   padding: 24px 36px 116px 36px;
   overflow-y: auto;
   position: relative;
+  -webkit-overflow-scrolling: touch;
 }
 
 .main-content::-webkit-scrollbar { width: 6px; }
@@ -4287,24 +4350,664 @@ body.music-playing .calcifer-flame {
   color: #7f5539;
 }
 
-@media (max-width: 768px) {
-  .drop-studio-card {
-    padding: 20px 16px;
+/* ==========================================================================
+   [SKILL: /apple-design, /impeccable & /animate]
+   HỆ THỐNG RESPONSIVE TOÀN DIỆN: MOBILE-FIRST & MEDIA QUERIES CHUẨN
+   - 100dvh (Dynamic Viewport Height) cho Safari & Chrome iOS
+   - env(safe-area-inset-*) tránh tai thỏ, Dynamic Island, Home Indicator
+   - Nút bấm chuẩn Apple HIG tối thiểu 44px x 44px chống bấm trượt
+   - Tỉ lệ bìa đĩa vuông 1:1 (aspect-ratio: 1/1, object-fit: cover)
+   ========================================================================== */
+
+/* Chuẩn hóa tỉ lệ 1:1 cho tất cả bìa nhạc */
+.album-cover-frame img.now-playing-cover,
+.track-card-thumb-shell img.track-card-img,
+.album-sleeve-wrap img.album-cover-img,
+.community-card-sleeve img.community-card-img,
+.theme-preview-sleeve img.theme-preview-img,
+.album-hero-sleeve img.album-hero-cover-img {
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+/* --------------------------------------------------------------------------
+   1. TABLET LAYOUT (768px - 1024px): IPAD & MÁY TÍNH BẢNG
+   -------------------------------------------------------------------------- */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .sidebar-glass {
+    width: 210px !important;
+    min-width: 210px !important;
+    padding: 20px 10px 18px 12px !important;
   }
-  .drop-form-row {
-    grid-template-columns: 1fr;
-    gap: 14px;
+  .brand-text {
+    font-size: 1.62rem !important;
   }
-  .theme-picker-grid {
-    grid-template-columns: repeat(3, 1fr);
+  .brand-icon {
+    width: 34px !important;
+    height: 34px !important;
   }
-  .theme-preset-thumb {
-    width: 68px;
-    height: 68px;
+  .nav-icon {
+    width: 26px !important;
+    height: 26px !important;
+  }
+  .nav-text {
+    font-size: 1.05rem !important;
+  }
+  .main-content {
+    padding: 20px 20px 116px 20px !important;
+  }
+  .nature-songs-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+    gap: 12px !important;
+  }
+  .albums-grid {
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important;
+    gap: 16px !important;
   }
   .community-tracks-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important;
+    gap: 16px !important;
+  }
+  .bottom-player-glass {
+    padding: 0 16px !important;
+    gap: 8px !important;
+  }
+  .player-left-group {
+    min-width: 170px !important;
+    max-width: 210px !important;
+    gap: 10px !important;
+  }
+  .album-cover-frame {
+    width: 52px !important;
+    height: 52px !important;
+  }
+  .track-title-text {
+    font-size: 0.95rem !important;
+    max-width: 130px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .track-artist-text {
+    font-size: 0.8rem !important;
+    max-width: 130px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .track-album-text {
+    display: none !important;
+  }
+  .player-controls-row {
+    gap: 10px !important;
+  }
+  .wavy-progress-wrapper {
+    max-width: 360px !important;
+  }
+  .player-right-group {
+    min-width: 170px !important;
+    gap: 6px !important;
+  }
+  .volume-text-label {
+    display: none !important;
+  }
+  .volume-slider-shell {
+    width: 60px !important;
+  }
+  .queue-toggle-btn {
+    padding: 6px 8px !important;
+    font-size: 0.78rem !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   2. MOBILE LAYOUT (< 768px): IPHONE, ANDROID PHONE & MÀN HÌNH NHỎ
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  /* Ngăn cuộn nền khi Drawer đang mở */
+  body.mobile-drawer-open {
+    overflow: hidden !important;
+  }
+
+  /* Khung nội dung chính & Safe Area iOS */
+  .main-content {
+    padding: calc(10px + var(--sat)) 12px calc(86px + var(--sab)) 12px !important;
+  }
+
+  /* Mobile Top Bar (Header di động) */
+  .mobile-top-bar {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 52px;
+    padding: 0 8px 0 10px;
+    margin-bottom: 14px;
+    background: rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    flex-shrink: 0;
+  }
+
+  /* Nút Hamburger chuẩn Apple 44x44px */
+  .mobile-menu-btn {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.15s var(--ease-apple-spring), background 0.15s ease;
+  }
+
+  .mobile-menu-btn:active {
+    transform: scale(0.92);
+  }
+
+  .hamburger-line {
+    display: block;
+    width: 20px;
+    height: 2.2px;
+    background: var(--ghibli-brown-dark);
+    border-radius: 2px;
+  }
+
+  .mobile-header-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mobile-header-icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  }
+
+  .mobile-header-title {
+    font-family: var(--font-ghibli-brand);
+    font-size: clamp(1.2rem, 4.5vw, 1.45rem);
+    color: #fffbe6;
+    text-shadow: 0 1px 4px rgba(35, 20, 10, 0.7);
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+
+  /* Nút tìm kiếm nhanh Mobile 44x44px */
+  .mobile-search-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    border-radius: 12px;
+    font-size: 1.15rem;
+    cursor: pointer;
+    transition: transform 0.15s var(--ease-apple-spring), background 0.15s ease;
+  }
+
+  .mobile-search-btn:active {
+    transform: scale(0.92);
+  }
+
+  /* SIDEBAR: Slide-out Hamburger Drawer với nền kính mờ Frosted Glass */
+  .sidebar-glass {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: min(310px, 84vw) !important;
+    min-width: unset !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    z-index: 1100 !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.36s cubic-bezier(0.32, 0.72, 0, 1) !important;
+    will-change: transform;
+    background: rgba(30, 42, 32, 0.92) !important;
+    background-image: linear-gradient(180deg, rgba(38, 54, 40, 0.95) 0%, rgba(22, 32, 24, 0.94) 100%) !important;
+    backdrop-filter: blur(20px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+    border-right: 1.5px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 10px 0 35px rgba(0, 0, 0, 0.45) !important;
+    padding-top: max(20px, calc(16px + var(--sat))) !important;
+    padding-bottom: max(20px, calc(16px + var(--sab))) !important;
+    padding-left: max(16px, calc(12px + var(--sal))) !important;
+    padding-right: 16px !important;
+  }
+
+  .sidebar-glass.mobile-open {
+    transform: translateX(0) !important;
+  }
+
+  .sidebar-close-btn {
+    display: flex !important;
+  }
+
+  /* Backdrop mờ khi mở Drawer */
+  .sidebar-backdrop {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    background: rgba(12, 20, 14, 0.65) !important;
+    backdrop-filter: blur(6px) !important;
+    -webkit-backdrop-filter: blur(6px) !important;
+    z-index: 1050 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.32s cubic-bezier(0.32, 0.72, 0, 1) !important;
+  }
+
+  .sidebar-backdrop.active {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  .sidebar-nav-item a.nav-item-link {
+    min-height: 48px !important;
+  }
+
+  /* ------------------------------------------------------------------------
+     GRIDS: CHUYỂN TOÀN BỘ SANG 2 CỘT (GRID 2 COLUMNS) VÀ CLAMP() CO GIÃN
+     ------------------------------------------------------------------------ */
+  .nature-songs-grid,
+  .albums-grid,
+  .community-tracks-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 24px !important;
+  }
+
+  /* 1. Nature Song Cards trên Mobile */
+  .nature-track-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 10px 8px !important;
+    gap: 8px !important;
+    border-radius: 16px !important;
+  }
+
+  .track-card-thumb-shell {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1 !important;
+    border-radius: 12px !important;
+  }
+
+  .track-card-img {
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    object-fit: cover !important;
+  }
+
+  .track-card-info {
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 2px !important;
+  }
+
+  .track-card-title {
+    font-size: clamp(0.78rem, 2.9vw, 0.92rem) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important;
+  }
+
+  .track-card-artist {
+    font-size: clamp(0.68rem, 2.3vw, 0.8rem) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important;
+  }
+
+  .track-card-duration {
+    font-size: 0.72rem !important;
+  }
+
+  /* 2. Album Cards trên Mobile */
+  .album-card {
+    padding: 10px 8px !important;
+    border-radius: 16px !important;
+  }
+
+  .album-sleeve-wrap {
+    width: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    margin-bottom: 8px !important;
+  }
+
+  .album-cover-img {
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    object-fit: cover !important;
+  }
+
+  .album-card-title {
+    font-size: clamp(0.78rem, 2.9vw, 0.92rem) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important;
+  }
+
+  .album-card-artist {
+    font-size: clamp(0.68rem, 2.3vw, 0.8rem) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important;
+  }
+
+  .album-play-overlay-btn {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+
+  /* 3. Community Music Cards trên Mobile */
+  .community-track-card {
+    padding: 10px 8px !important;
+    border-radius: 16px !important;
+  }
+
+  .community-card-sleeve {
+    width: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    margin-bottom: 8px !important;
+  }
+
+  .community-card-img {
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    object-fit: cover !important;
+  }
+
+  .community-card-title {
+    font-size: clamp(0.78rem, 2.9vw, 0.92rem) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important;
+  }
+
+  .community-card-artist {
+    font-size: clamp(0.68rem, 2.3vw, 0.8rem) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important;
+  }
+
+  .community-card-play-btn {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+
+  /* ------------------------------------------------------------------------
+     BOTTOM PLAYER: COMPACT MODE
+     - Ẩn volume & nút phụ (shuffle/loop)
+     - Giữ lại thumbnail mini, tên bài/nghệ sĩ, Play/Pause + Next
+     - Thanh tiến trình lửa Calcifer thu ngắn đặt ở trên cùng
+     - Safe Area Inset Bottom chuẩn iOS
+     ------------------------------------------------------------------------ */
+  .bottom-player-glass {
+    height: calc(76px + var(--sab)) !important;
+    padding: 4px 10px calc(6px + var(--sab)) 10px !important;
+    display: grid !important;
+    grid-template-areas:
+      "progress progress"
+      "meta controls" !important;
+    grid-template-columns: 1fr auto !important;
+    grid-template-rows: auto 1fr !important;
+    align-items: center !important;
+    gap: 2px 8px !important;
+  }
+
+  .player-right-group {
+    display: none !important;
+  }
+
+  .player-left-group {
+    grid-area: meta !important;
+    min-width: 0 !important;
+    gap: 8px !important;
+    overflow: hidden !important;
+  }
+
+  .album-cover-frame {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    border-radius: 8px !important;
+    aspect-ratio: 1 / 1 !important;
+  }
+
+  .now-playing-meta {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    gap: 1px !important;
+  }
+
+  .song-title-row {
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .track-title-text {
+    font-size: clamp(0.8rem, 3.2vw, 0.94rem) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: calc(100vw - 200px) !important;
+  }
+
+  .track-artist-text {
+    font-size: clamp(0.68rem, 2.5vw, 0.78rem) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: calc(100vw - 200px) !important;
+  }
+
+  .track-album-text {
+    display: none !important;
+  }
+
+  .leaf-heart-btn {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.95rem !important;
+  }
+
+  .player-center-group {
+    grid-area: controls !important;
+    display: contents !important;
+  }
+
+  .wavy-progress-wrapper {
+    grid-area: progress !important;
+    width: 100% !important;
+    height: 18px !important;
+    margin: 0 !important;
+  }
+
+  .wavy-vine-svg {
+    height: 14px !important;
+  }
+
+  .calcifer-flame {
+    height: 32px !important;
+    max-width: 28px !important;
+  }
+
+  .calcifer-thumb-anchor {
+    transform: translate(-50%, -55%) !important;
+  }
+
+  .time-readout-row {
+    font-size: 0.65rem !important;
+    bottom: -2px !important;
+    right: 4px !important;
+  }
+
+  .player-controls-row {
+    grid-area: controls !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+
+  #shuffleBtn,
+  #loopBtn,
+  #prevBtn {
+    display: none !important;
+  }
+
+  .wood-disc-play-btn {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  #nextBtn {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    width: 44px !important;
+    height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* ------------------------------------------------------------------------
+     CÁC PHẦN TỬ KHÁC: HOME, SEARCH, DROP MUSIC, QUEUE DRAWER TRÊN MOBILE
+     ------------------------------------------------------------------------ */
+  .home-top-bar {
+    flex-direction: column !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .home-search-quickbox {
+    width: 100% !important;
+  }
+
+  .country-selector-wrapper {
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+
+  .ghibli-hero-banner {
+    padding: 16px 14px !important;
+    border-radius: 18px !important;
+  }
+
+  .hero-main-title {
+    font-size: clamp(1.25rem, 4.5vw, 1.75rem) !important;
+  }
+
+  .hero-sub-description {
+    font-size: clamp(0.78rem, 2.6vw, 0.92rem) !important;
+  }
+
+  .genre-pills-row {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 6px !important;
+    margin: 0 -4px !important;
+  }
+
+  .genre-pill-btn {
+    min-height: 44px !important;
+    padding: 8px 14px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+
+  .search-huge-box {
+    width: 100% !important;
+  }
+
+  .ghibli-search-huge-input {
+    font-size: 16px !important; /* Ngăn iOS Safari tự động phóng to form input */
+    padding: 12px 44px 12px 46px !important;
+    border-radius: 20px !important;
+  }
+
+  .search-clear-btn {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    right: 4px !important;
+  }
+
+  /* Ngăn kéo Playlist Drawer thành Bottom Sheet nổi trên Mobile */
+  .playlist-drawer-cottage {
+    top: auto !important;
+    bottom: calc(82px + var(--sab)) !important;
+    right: 10px !important;
+    left: 10px !important;
+    width: auto !important;
+    max-height: 55vh !important;
+    z-index: 1060 !important;
+    border-radius: 18px !important;
+  }
+
+  /* Drop Your Music Form trên Mobile */
+  .drop-studio-card {
+    padding: 18px 14px !important;
+    border-radius: 18px !important;
+  }
+
+  .drop-form-row {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .dropzone-browse-btn {
+    min-height: 44px !important;
+  }
+
+  .drop-submit-action-btn {
+    min-height: 48px !important;
+  }
+
+  .refresh-community-btn {
+    min-height: 44px !important;
+  }
+
+  .album-search-bar-wrap {
+    width: 100% !important;
+  }
+
+  .album-search-input {
+    font-size: 16px !important;
+  }
+
+  .clear-album-search-btn {
+    min-width: 44px !important;
+    min-height: 44px !important;
   }
 }
 
