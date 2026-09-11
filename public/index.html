@@ -232,12 +232,20 @@
         </div>
 
         <!-- Trending Section -->
-        <div class="section-heading-row">
+        <div class="section-heading-row chart-heading-row">
           <div class="heading-left">
-            <span class="heading-icon">🍃</span>
+            <span class="heading-icon">🔥</span>
             <h2 class="heading-title" id="trendingSectionTitle">Bảng Xếp Hạng Thịnh Hành</h2>
           </div>
-          <span class="heading-badge-counter" id="trendingCounter">20 bài hát</span>
+          <div class="chart-timeframe-switch" id="chartTimeframeSwitch" role="group" aria-label="Thời gian bảng xếp hạng">
+            <button class="timeframe-pill-btn active" id="timeframeDailyBtn" data-timeframe="daily" title="Bảng xếp hạng ngày: lượt nghe cao nhất trong 24h qua">
+              <span class="pill-fire-icon">🔥</span> Hôm Nay (24h)
+            </button>
+            <button class="timeframe-pill-btn" id="timeframeWeeklyBtn" data-timeframe="weekly" title="Bảng xếp hạng tuần: tổng lượt nghe cao nhất 7 ngày qua">
+              <span class="pill-chart-icon">📈</span> Tuần Này (7 Ngày)
+            </button>
+          </div>
+          <span class="heading-badge-counter" id="trendingCounter">Top 20 bài</span>
         </div>
 
         <!-- Trending Tracks Grid -->

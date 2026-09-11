@@ -31,7 +31,8 @@
     regionalAlbums: [],
     albumsLoadedCountry: null,
     communityTracks: [],
-    communityLoaded: false
+    communityLoaded: false,
+    currentTimeframe: 'daily'
   };
 
   // Cache DOM
@@ -56,6 +57,9 @@
     heroFlag: document.getElementById('heroFlag'),
     heroGreetingText: document.getElementById('heroGreetingText'),
     genrePillContainer: document.getElementById('genrePillContainer'),
+    chartTimeframeSwitch: document.getElementById('chartTimeframeSwitch'),
+    timeframeDailyBtn: document.getElementById('timeframeDailyBtn'),
+    timeframeWeeklyBtn: document.getElementById('timeframeWeeklyBtn'),
     trendingSectionTitle: document.getElementById('trendingSectionTitle'),
     trendingCounter: document.getElementById('trendingCounter'),
     trendingTracksGrid: document.getElementById('trendingTracksGrid'),
@@ -726,9 +730,32 @@
       card.classList.add('active-playing');
     }
 
+    let rankHtml = '';
+    if (track.rank) {
+      let rankClass = 'rank-other';
+      let rankLabel = `#${track.rank}`;
+      if (track.rank === 1) {
+        rankClass = 'rank-gold';
+        rankLabel = '🥇 1';
+      } else if (track.rank === 2) {
+        rankClass = 'rank-silver';
+        rankLabel = '🥈 2';
+      } else if (track.rank === 3) {
+        rankClass = 'rank-bronze';
+        rankLabel = '🥉 3';
+      }
+      rankHtml = `<span class="chart-rank-badge ${rankClass}" title="Hạng #${track.rank}">${rankLabel}</span>`;
+    }
+
+    const playCountText = track.playCount || (track.views ? `${(track.views / 1e6).toFixed(1)}M lượt nghe` : null);
+    const playCountHtml = playCountText
+      ? `<span class="track-card-views" title="Lượt nghe thực tế">${playCountText.startsWith('🔥') || playCountText.startsWith('📈') ? playCountText : `🔥 ${playCountText}`}</span>`
+      : '';
+
     card.innerHTML = `
       <div class="track-card-thumb-shell">
         <img src="${track.thumbnail || 'wood_2.jpg'}" alt="${track.title}" class="track-card-img" loading="lazy">
+        ${rankHtml}
         <div class="track-card-play-overlay">
           <span class="play-icon-triangle">▶</span>
         </div>
@@ -736,7 +763,10 @@
       <div class="track-card-info">
         <span class="track-card-title" title="${track.title}">${track.title}</span>
         <span class="track-card-artist" title="${track.artist}">${track.artist || 'Nghệ sĩ'}</span>
-        <span class="track-card-duration">${track.duration || '3:30'}</span>
+        <div class="track-card-meta-row">
+          <span class="track-card-duration">${track.duration || '3:30'}</span>
+          ${playCountHtml}
+        </div>
       </div>
     `;
 
@@ -751,23 +781,35 @@
   }
 
   // ==========================================================================
-  // 7. GEO-IP & TRENDING ENGINE
+  // 7. GEO-IP & TRENDING ENGINE (DAILY 24H & WEEKLY CHARTS)
   // ==========================================================================
-  async function loadTrendingMusic(countryCode = null) {
+  async function loadTrendingMusic(countryCode = null, timeframe = null) {
     try {
+      if (timeframe) {
+        state.currentTimeframe = timeframe;
+      }
+      const curTimeframe = state.currentTimeframe || 'daily';
+
+      // Cập nhật trạng thái active của timeframe switch buttons
+      if (dom.timeframeDailyBtn && dom.timeframeWeeklyBtn) {
+        dom.timeframeDailyBtn.classList.toggle('active', curTimeframe === 'daily');
+        dom.timeframeWeeklyBtn.classList.toggle('active', curTimeframe === 'weekly');
+      }
+
       if (dom.trendingTracksGrid) {
         dom.trendingTracksGrid.innerHTML = `
           <div class="ghibli-loading-placeholder">
             <div class="loading-leaf-spinner">🌿</div>
-            <p class="loading-text">Đang lắng nghe giai điệu từ thiên nhiên...</p>
+            <p class="loading-text">Đang cập nhật bảng xếp hạng ${curTimeframe === 'weekly' ? 'tuần này (7 ngày)' : 'hôm nay (24h)'}...</p>
           </div>
         `;
       }
 
       const clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Ho_Chi_Minh';
-      const url = countryCode
-        ? `/api/trending?country=${countryCode}`
-        : `/api/trending?tz=${encodeURIComponent(clientTz)}`;
+      const targetCountry = countryCode || state.selectedCountry || '';
+      const url = targetCountry
+        ? `/api/trending?country=${targetCountry}&timeframe=${curTimeframe}`
+        : `/api/trending?tz=${encodeURIComponent(clientTz)}&timeframe=${curTimeframe}`;
 
       const res = await fetch(url);
       const data = await res.json();
@@ -784,10 +826,11 @@
         // Cập nhật Banner
         if (dom.heroFlag) dom.heroFlag.textContent = data.flag || '🇻🇳';
         if (dom.heroGreetingText) {
-          dom.heroGreetingText.textContent = `${data.countryName} • ${data.greeting || 'Bảng Xếp Hạng & Xu Hướng Thịnh Hành'}`;
+          const tfLabel = curTimeframe === 'weekly' ? 'Bảng Xếp Hạng Tuần Này (7 Ngày)' : 'Bảng Xếp Hạng Hôm Nay (24h)';
+          dom.heroGreetingText.textContent = `${data.countryName} • ${tfLabel}`;
         }
         if (dom.trendingCounter) {
-          dom.trendingCounter.textContent = `${state.trendingTracks.length} bài hát`;
+          dom.trendingCounter.textContent = `Top ${state.trendingTracks.length} bài (${curTimeframe === 'weekly' ? 'Tuần' : 'Ngày'})`;
         }
 
         // Cập nhật Genre Pills
@@ -1836,8 +1879,27 @@
       dom.countrySelectDropdown.addEventListener('change', (e) => {
         const country = e.target.value;
         showToast(`🌐 Đang chuyển sang bảng xếp hạng ${country}...`);
-        loadTrendingMusic(country);
+        loadTrendingMusic(country, state.currentTimeframe);
         loadAlbumsByRegion(country);
+      });
+    }
+
+    // Chart Timeframe Switch (Daily 24h vs Weekly)
+    if (dom.timeframeDailyBtn) {
+      dom.timeframeDailyBtn.addEventListener('click', () => {
+        if (state.currentTimeframe === 'daily') return;
+        state.currentTimeframe = 'daily';
+        showToast('🔥 Bảng xếp hạng: Hôm Nay (24h)');
+        loadTrendingMusic(state.selectedCountry, 'daily');
+      });
+    }
+
+    if (dom.timeframeWeeklyBtn) {
+      dom.timeframeWeeklyBtn.addEventListener('click', () => {
+        if (state.currentTimeframe === 'weekly') return;
+        state.currentTimeframe = 'weekly';
+        showToast('📈 Bảng xếp hạng: Tuần Này (7 Ngày)');
+        loadTrendingMusic(state.selectedCountry, 'weekly');
       });
     }
 

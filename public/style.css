@@ -2730,6 +2730,65 @@ body.music-playing .calcifer-flame {
   border-radius: 14px;
 }
 
+/* --- CHART TIMEFRAME SWITCH --- */
+.chart-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.chart-timeframe-switch {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 253, 245, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(181, 137, 87, 0.4);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(45, 25, 10, 0.08);
+}
+
+.timeframe-pill-btn {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #5c3a21;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.25, 1, 0.5, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.timeframe-pill-btn:hover {
+  background: rgba(255, 255, 255, 0.6);
+  color: #2b1810;
+  transform: translateY(-1px);
+}
+
+.timeframe-pill-btn.active {
+  background: linear-gradient(135deg, #2d6a4f, #1b4332);
+  color: #fefae0;
+  box-shadow: 0 3px 10px rgba(27, 67, 50, 0.28);
+  transform: translateY(-1px);
+}
+
+.pill-fire-icon,
+.pill-chart-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
 /* --- NATURE SONGS GRID & CARDS --- */
 .nature-songs-grid {
   display: grid;
@@ -2850,6 +2909,75 @@ body.music-playing .calcifer-flame {
   font-size: 0.74rem;
   font-weight: 600;
   color: #a77d54;
+}
+
+/* --- CHART RANK BADGES & LIVE VIEW METRICS --- */
+.chart-rank-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 3;
+  padding: 2px 7px;
+  border-radius: 8px;
+  font-family: var(--font-ghibli-brand);
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-rank-badge.rank-gold {
+  background: linear-gradient(135deg, #ffe066 0%, #f4a261 100%);
+  color: #3b1d06;
+  border: 1px solid #ffba08;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.chart-rank-badge.rank-silver {
+  background: linear-gradient(135deg, #ffffff 0%, #ced4da 100%);
+  color: #212529;
+  border: 1px solid #e9ecef;
+}
+
+.chart-rank-badge.rank-bronze {
+  background: linear-gradient(135deg, #ffd166 0%, #cd7f32 100%);
+  color: #2b1500;
+  border: 1px solid #b07d62;
+}
+
+.chart-rank-badge.rank-other {
+  background: rgba(35, 20, 12, 0.78);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: #fdf0d5;
+  border: 1px solid rgba(254, 250, 224, 0.3);
+  font-size: 0.68rem;
+}
+
+.track-card-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.track-card-views {
+  font-family: var(--font-ghibli-meta);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #d9480f;
+  background: rgba(255, 235, 230, 0.85);
+  border: 1px solid rgba(255, 146, 114, 0.4);
+  padding: 1px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
 }
 
 /* Loading & Empty placeholders */
@@ -4678,6 +4806,50 @@ body.music-playing .calcifer-flame {
 
   .track-card-duration {
     font-size: 0.72rem !important;
+  }
+
+  /* 1.1 Chart Headings, Timeframe Switch & Badges trên Mobile */
+  .chart-heading-row {
+    gap: 8px !important;
+  }
+
+  .chart-timeframe-switch {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    margin-top: 2px;
+  }
+
+  .timeframe-pill-btn {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+    padding: 6px 10px !important;
+    font-size: 0.76rem !important;
+  }
+
+  .chart-rank-badge {
+    top: 6px !important;
+    left: 6px !important;
+    font-size: 0.74rem !important;
+    padding: 2.5px 7px !important;
+    border-radius: 8px !important;
+  }
+
+  .track-card-meta-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 4px !important;
+    margin-top: 3px !important;
+  }
+
+  .track-card-views {
+    font-size: 0.65rem !important;
+    padding: 1px 5px !important;
+    max-width: 65%;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   /* 2. Album Cards trên Mobile */
