@@ -815,7 +815,7 @@ apiRouter.get('/test-innertube/:videoId', async (req, res) => {
       const yt = await Innertube.create({
         client_type: ClientType[t],
         cache: new UniversalCache(false),
-        generate_session_locally: true
+        generate_session_locally: false
       });
       const info = await yt.getBasicInfo(videoId);
       const formats = info.streaming_data?.adaptive_formats || [];
