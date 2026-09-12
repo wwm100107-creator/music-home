@@ -868,12 +868,10 @@ apiRouter.get('/test-cookie-stream/:videoId', async (req, res) => {
   const cleanCookie = rawCookie.replace(/^cookie:\s*/i, '').replace(/^["']|["']$/g, '').replace(/[\r\n]+/g, ' ').trim();
 
   const combos = [
-    { name: 'VISIONOS_WITH_COOKIE', client_type: ClientType.VISIONOS, cookie: cleanCookie },
-    { name: 'VISIONOS_NO_COOKIE', client_type: ClientType.VISIONOS, cookie: undefined },
-    { name: 'IOS_NO_COOKIE', client_type: ClientType.IOS, cookie: undefined },
-    { name: 'MWEB_WITH_COOKIE', client_type: ClientType.MWEB, cookie: cleanCookie },
-    { name: 'WEB_WITH_COOKIE', client_type: ClientType.WEB, cookie: cleanCookie },
-    { name: 'MUSIC_WITH_COOKIE', client_type: ClientType.MUSIC, cookie: cleanCookie }
+    { name: 'VISIONOS_LOCAL_WITH_COOKIE', client_type: ClientType.VISIONOS, cookie: cleanCookie, generate_session_locally: true },
+    { name: 'IOS_LOCAL_WITH_COOKIE', client_type: ClientType.IOS, cookie: cleanCookie, generate_session_locally: true },
+    { name: 'VISIONOS_REMOTE_WITH_COOKIE', client_type: ClientType.VISIONOS, cookie: cleanCookie, generate_session_locally: false },
+    { name: 'MWEB_WITH_COOKIE', client_type: ClientType.MWEB, cookie: cleanCookie, generate_session_locally: false }
   ];
 
   const results = {};
@@ -883,7 +881,7 @@ apiRouter.get('/test-cookie-stream/:videoId', async (req, res) => {
         client_type: c.client_type,
         cookie: c.cookie,
         cache: new UniversalCache(false),
-        generate_session_locally: !c.cookie
+        generate_session_locally: c.generate_session_locally
       });
       const info = await yt.getBasicInfo(videoId);
       const formats = info.streaming_data?.adaptive_formats || [];
