@@ -862,6 +862,46 @@ apiRouter.get('/cookie-status', (req, res) => {
   });
 });
 
+apiRouter.get('/test-cookie-stream/:videoId', async (req, res) => {
+  const { videoId } = req.params;
+  const rawCookie = process.env.YOUTUBE_COOKIE || process.env.COOKIE || '';
+  const cleanCookie = rawCookie.replace(/^cookie:\s*/i, '').replace(/^["']|["']$/g, '').replace(/[\r\n]+/g, ' ').trim();
+
+  const combos = [
+    { name: 'VISIONOS_WITH_COOKIE', client_type: ClientType.VISIONOS, cookie: cleanCookie },
+    { name: 'VISIONOS_NO_COOKIE', client_type: ClientType.VISIONOS, cookie: undefined },
+    { name: 'IOS_NO_COOKIE', client_type: ClientType.IOS, cookie: undefined },
+    { name: 'MWEB_WITH_COOKIE', client_type: ClientType.MWEB, cookie: cleanCookie },
+    { name: 'WEB_WITH_COOKIE', client_type: ClientType.WEB, cookie: cleanCookie },
+    { name: 'MUSIC_WITH_COOKIE', client_type: ClientType.MUSIC, cookie: cleanCookie }
+  ];
+
+  const results = {};
+  for (const c of combos) {
+    try {
+      const yt = await Innertube.create({
+        client_type: c.client_type,
+        cookie: c.cookie,
+        cache: new UniversalCache(false),
+        generate_session_locally: !c.cookie
+      });
+      const info = await yt.getBasicInfo(videoId);
+      const formats = info.streaming_data?.adaptive_formats || [];
+      const audioWithUrl = formats.filter(f => (f.mime_type?.startsWith('audio/') || f.has_audio) && f.url);
+      results[c.name] = {
+        playability_status: info.playability_status?.status,
+        reason: info.playability_status?.reason,
+        audioFormatsCount: audioWithUrl.length,
+        firstUrlDomain: audioWithUrl[0]?.url ? new URL(audioWithUrl[0].url).hostname : null
+      };
+    } catch (err) {
+      results[c.name] = { error: err.message };
+    }
+  }
+
+  res.json(results);
+});
+
 // 10.2. Location & Supported Countries
 apiRouter.get('/location', (req, res) => {
   const detectedCode = detectCountry(req);
