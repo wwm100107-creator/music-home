@@ -235,7 +235,8 @@ const circuitBreaker = new CircuitBreaker(4, 60000);
 let ytSearchInstance = null;
 let ytStreamInstance = null;
 
-function sanitizeCookie(raw) {
+function getYouTubeCookie() {
+  const raw = process.env.YOUTUBE_COOKIE || process.env.COOKIE || '';
   if (!raw) return '';
   let str = String(raw).trim();
   str = str.replace(/^cookie:\s*/i, '');
@@ -244,37 +245,35 @@ function sanitizeCookie(raw) {
   return str;
 }
 
-const ytCookie = sanitizeCookie(process.env.YOUTUBE_COOKIE || process.env.COOKIE || '');
-
 async function getSearchClient() {
+  const cookie = getYouTubeCookie();
   if (!ytSearchInstance) {
     const config = {
       cache: new UniversalCache(false),
-      generate_session_locally: !ytCookie
+      generate_session_locally: false
     };
-    if (ytCookie) {
-      config.cookie = ytCookie;
+    if (cookie) {
+      config.cookie = cookie;
     }
     ytSearchInstance = await Innertube.create(config);
-    console.log('✅ YouTube Search client initialized' + (ytCookie ? ' [COOKIE AUTHENTICATED]' : ''));
+    console.log('✅ YouTube Search client initialized' + (cookie ? ' [COOKIE AUTHENTICATED]' : ''));
   }
   return ytSearchInstance;
 }
 
-async function getStreamClient() {
-  if (!ytStreamInstance) {
-    // Nếu có Cookie: dùng ClientType.MWEB (đã xác thực thành công 100% với Google trên Vercel)
-    // Nếu không có Cookie: dùng ClientType.VISIONOS
+async function getStreamClient(forceNew = false) {
+  const cookie = getYouTubeCookie();
+  if (!ytStreamInstance || forceNew) {
     const config = {
-      client_type: ytCookie ? ClientType.MWEB : ClientType.VISIONOS,
+      client_type: cookie ? ClientType.MWEB : ClientType.VISIONOS,
       cache: new UniversalCache(false),
-      generate_session_locally: !ytCookie
+      generate_session_locally: false
     };
-    if (ytCookie) {
-      config.cookie = ytCookie;
+    if (cookie) {
+      config.cookie = cookie;
     }
     ytStreamInstance = await Innertube.create(config);
-    console.log(`✅ YouTube Stream client initialized (${ytCookie ? 'MWEB with Authenticated Cookie' : 'VISIONOS'})`);
+    console.log(`✅ YouTube Stream client initialized (${cookie ? 'MWEB with Authenticated Cookie' : 'VISIONOS'})`);
   }
   return ytStreamInstance;
 }
@@ -292,8 +291,14 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
     if (cached) return cached;
   }
 
-  const ytStream = await getStreamClient();
-  const info = await ytStream.getBasicInfo(videoId);
+  let ytStream = await getStreamClient(forceRefresh);
+  let info = await ytStream.getBasicInfo(videoId);
+
+  if (info.playability_status?.status === 'LOGIN_REQUIRED') {
+    console.warn(`[Stream ${videoId}]: Got LOGIN_REQUIRED, re-initializing client with fresh cookie...`);
+    ytStream = await getStreamClient(true);
+    info = await ytStream.getBasicInfo(videoId);
+  }
 
   if (info.playability_status?.status && info.playability_status.status !== 'OK') {
     const reason = info.playability_status.reason || 'Video is not playable';
@@ -307,7 +312,8 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
   const audioFormats = allFormats.filter(f => (f.mime_type?.startsWith('audio/') || f.has_audio));
 
   if (audioFormats.length === 0) {
-    throw new Error(`Không tìm thấy luồng âm thanh (${info.playability_status?.status || 'UNKNOWN'}: ${info.playability_status?.reason || 'No streaming data'})`);
+    const cookie = getYouTubeCookie();
+    throw new Error(`Không tìm thấy luồng âm thanh (${info.playability_status?.status || 'UNKNOWN'}: ${info.playability_status?.reason || 'No streaming data'} - Client: ${cookie ? 'MWEB' : 'VISIONOS'}, CookieLen: ${cookie ? cookie.length : 0})`);
   }
 
   // Ưu tiên itag 140 (AAC 128kbps) hoặc 251 (Opus) hoặc 139 (AAC 48kbps)
