@@ -868,10 +868,8 @@ apiRouter.get('/test-cookie-stream/:videoId', async (req, res) => {
   const cleanCookie = rawCookie.replace(/^cookie:\s*/i, '').replace(/^["']|["']$/g, '').replace(/[\r\n]+/g, ' ').trim();
 
   const combos = [
-    { name: 'VISIONOS_LOCAL_WITH_COOKIE', client_type: ClientType.VISIONOS, cookie: cleanCookie, generate_session_locally: true },
-    { name: 'IOS_LOCAL_WITH_COOKIE', client_type: ClientType.IOS, cookie: cleanCookie, generate_session_locally: true },
-    { name: 'VISIONOS_REMOTE_WITH_COOKIE', client_type: ClientType.VISIONOS, cookie: cleanCookie, generate_session_locally: false },
-    { name: 'MWEB_WITH_COOKIE', client_type: ClientType.MWEB, cookie: cleanCookie, generate_session_locally: false }
+    { name: 'MWEB_WITH_COOKIE', client_type: ClientType.MWEB, cookie: cleanCookie, generate_session_locally: false },
+    { name: 'WEB_WITH_COOKIE', client_type: ClientType.WEB, cookie: cleanCookie, generate_session_locally: false }
   ];
 
   const results = {};
@@ -884,13 +882,15 @@ apiRouter.get('/test-cookie-stream/:videoId', async (req, res) => {
         generate_session_locally: c.generate_session_locally
       });
       const info = await yt.getBasicInfo(videoId);
-      const formats = info.streaming_data?.adaptive_formats || [];
-      const audioWithUrl = formats.filter(f => (f.mime_type?.startsWith('audio/') || f.has_audio) && f.url);
+      const adaptive = info.streaming_data?.adaptive_formats || [];
+      const progressive = info.streaming_data?.formats || [];
+      
       results[c.name] = {
         playability_status: info.playability_status?.status,
-        reason: info.playability_status?.reason,
-        audioFormatsCount: audioWithUrl.length,
-        firstUrlDomain: audioWithUrl[0]?.url ? new URL(audioWithUrl[0].url).hostname : null
+        adaptiveCount: adaptive.length,
+        progressiveCount: progressive.length,
+        adaptiveSample: adaptive.slice(0, 3).map(f => ({ itag: f.itag, mime: f.mime_type, hasUrl: Boolean(f.url), hasCipher: Boolean(f.signature_cipher || f.cipher) })),
+        progressiveSample: progressive.slice(0, 3).map(f => ({ itag: f.itag, mime: f.mime_type, hasUrl: Boolean(f.url), hasCipher: Boolean(f.signature_cipher || f.cipher) }))
       };
     } catch (err) {
       results[c.name] = { error: err.message };
