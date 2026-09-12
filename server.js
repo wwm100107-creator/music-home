@@ -2,7 +2,17 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Innertube, ClientType, UniversalCache } from 'youtubei.js';
+import { Innertube, ClientType, UniversalCache, Platform } from 'youtubei.js';
+
+// Setup high-performance JavaScript evaluator for Innertube deciphering
+if (Platform && Platform.shim) {
+  Platform.shim.eval = async (data, env) => {
+    const keys = Object.keys(env);
+    const values = Object.values(env);
+    const fn = new Function(...keys, data.output);
+    return fn(...values);
+  };
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -220,13 +230,21 @@ class CircuitBreaker {
 const circuitBreaker = new CircuitBreaker(4, 60000);
 
 // ============================================================================
-// 6. DUAL-CLIENT INNERTUBE ENGINE (With YouTube Cookie & Token Auth)
+// 6. DUAL-CLIENT INNERTUBE ENGINE (With YouTube Cookie & Deciphering Auth)
 // ============================================================================
 let ytSearchInstance = null;
 let ytStreamInstance = null;
 
-const ytCookie = process.env.YOUTUBE_COOKIE || process.env.COOKIE || '';
-const ytPoToken = process.env.YOUTUBE_PO_TOKEN || undefined;
+function sanitizeCookie(raw) {
+  if (!raw) return '';
+  let str = String(raw).trim();
+  str = str.replace(/^cookie:\s*/i, '');
+  str = str.replace(/^["']|["']$/g, '');
+  str = str.replace(/[\r\n]+/g, ' ').trim();
+  return str;
+}
+
+const ytCookie = sanitizeCookie(process.env.YOUTUBE_COOKIE || process.env.COOKIE || '');
 
 async function getSearchClient() {
   if (!ytSearchInstance) {
@@ -245,19 +263,18 @@ async function getSearchClient() {
 
 async function getStreamClient() {
   if (!ytStreamInstance) {
+    // Nếu có Cookie: dùng ClientType.MWEB (đã xác thực thành công 100% với Google trên Vercel)
+    // Nếu không có Cookie: dùng ClientType.VISIONOS
     const config = {
-      client_type: ClientType.IOS,
+      client_type: ytCookie ? ClientType.MWEB : ClientType.VISIONOS,
       cache: new UniversalCache(false),
       generate_session_locally: !ytCookie
     };
     if (ytCookie) {
       config.cookie = ytCookie;
     }
-    if (ytPoToken) {
-      config.po_token = ytPoToken;
-    }
     ytStreamInstance = await Innertube.create(config);
-    console.log('✅ YouTube Stream client initialized' + (ytCookie ? ' [COOKIE AUTHENTICATED]' : ''));
+    console.log(`✅ YouTube Stream client initialized (${ytCookie ? 'MWEB with Authenticated Cookie' : 'VISIONOS'})`);
   }
   return ytStreamInstance;
 }
@@ -268,7 +285,7 @@ async function getClients() {
   return { ytSearch, ytStream };
 }
 
-// Helper resolve audio stream URL
+// Helper resolve audio stream URL với hỗ trợ giải mã chữ ký (Deciphering)
 async function resolveAudioStream(videoId, forceRefresh = false) {
   if (!forceRefresh) {
     const cached = streamCache.get(videoId);
@@ -287,40 +304,30 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
   const combined = info.streaming_data?.formats || [];
   const allFormats = [...adaptive, ...combined];
 
-  const audioFormats = allFormats.filter(f => (f.mime_type?.startsWith('audio/') || f.has_audio) && f.url);
-
-  if (audioFormats.length === 0) {
-    // Thử fallback sang VisionOS nếu client iOS chưa lấy được định dạng
-    try {
-      const visionClient = await Innertube.create({
-        client_type: ClientType.VISIONOS,
-        cookie: ytCookie || undefined,
-        cache: new UniversalCache(false),
-        generate_session_locally: !ytCookie
-      });
-      const vInfo = await visionClient.getBasicInfo(videoId);
-      const vAdaptive = vInfo.streaming_data?.adaptive_formats || [];
-      const vCombined = vInfo.streaming_data?.formats || [];
-      const vAll = [...vAdaptive, ...vCombined];
-      const vAudio = vAll.filter(f => (f.mime_type?.startsWith('audio/') || f.has_audio) && f.url);
-      if (vAudio.length > 0) {
-        audioFormats.push(...vAudio);
-      }
-    } catch (_) {}
-  }
+  const audioFormats = allFormats.filter(f => (f.mime_type?.startsWith('audio/') || f.has_audio));
 
   if (audioFormats.length === 0) {
     throw new Error('Không tìm thấy luồng âm thanh trực tiếp cho bài hát này.');
   }
 
+  // Ưu tiên itag 140 (AAC 128kbps) hoặc 251 (Opus) hoặc 139 (AAC 48kbps)
   let chosenFormat =
     audioFormats.find(f => f.itag === 140) ||
     audioFormats.find(f => f.itag === 251) ||
     audioFormats.find(f => f.itag === 139) ||
     audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
 
+  let streamUrl = chosenFormat.url;
+  if (!streamUrl && typeof chosenFormat.decipher === 'function') {
+    streamUrl = await chosenFormat.decipher(ytStream.session.player);
+  }
+
+  if (!streamUrl) {
+    throw new Error('Không thể giải mã luồng âm thanh cho bài hát này.');
+  }
+
   try {
-    const urlObj = new URL(chosenFormat.url);
+    const urlObj = new URL(streamUrl);
     if (!urlObj.hostname.endsWith('.googlevideo.com') && !urlObj.hostname.endsWith('.c.youtube.com')) {
       throw new Error(`Unauthorized upstream domain: ${urlObj.hostname}`);
     }
@@ -330,7 +337,7 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
 
   const streamData = {
     videoId,
-    url: chosenFormat.url,
+    url: streamUrl,
     itag: chosenFormat.itag,
     mimeType: chosenFormat.mime_type ? chosenFormat.mime_type.split(';')[0] : 'audio/mp4',
     contentLength: chosenFormat.content_length ? parseInt(chosenFormat.content_length, 10) : null,
@@ -860,50 +867,6 @@ apiRouter.get('/cookie-status', (req, res) => {
       ? '✅ Biến môi trường YOUTUBE_COOKIE đã được nạp thành công!'
       : '⚠️ Chưa cấu hình biến môi trường YOUTUBE_COOKIE trên Vercel.'
   });
-});
-
-apiRouter.get('/test-cookie-stream/:videoId', async (req, res) => {
-  const { videoId } = req.params;
-  const rawCookie = process.env.YOUTUBE_COOKIE || process.env.COOKIE || '';
-  const cleanCookie = rawCookie.replace(/^cookie:\s*/i, '').replace(/^["']|["']$/g, '').replace(/[\r\n]+/g, ' ').trim();
-
-  const combos = [
-    { name: 'MWEB_WITH_COOKIE', client_type: ClientType.MWEB, cookie: cleanCookie, generate_session_locally: false }
-  ];
-
-  const results = {};
-  for (const c of combos) {
-    try {
-      const yt = await Innertube.create({
-        client_type: c.client_type,
-        cookie: c.cookie,
-        cache: new UniversalCache(false),
-        generate_session_locally: c.generate_session_locally
-      });
-      const info = await yt.getBasicInfo(videoId);
-      const adaptive = info.streaming_data?.adaptive_formats || [];
-      const audioFormats = adaptive.filter(f => f.mime_type?.startsWith('audio/'));
-      const targetFormat = audioFormats.find(f => f.itag === 140) || audioFormats.find(f => f.itag === 251) || audioFormats[0];
-
-      let streamUrl = targetFormat?.url;
-      if (!streamUrl && targetFormat && typeof targetFormat.decipher === 'function') {
-        streamUrl = await targetFormat.decipher(yt.session.player);
-      }
-
-      results[c.name] = {
-        playability_status: info.playability_status?.status,
-        audioCount: audioFormats.length,
-        chosenItag: targetFormat?.itag,
-        streamUrlReceived: Boolean(streamUrl),
-        streamUrlDomain: streamUrl ? new URL(streamUrl).hostname : null,
-        streamUrlSample: streamUrl ? streamUrl.substring(0, 80) + '...' : null
-      };
-    } catch (err) {
-      results[c.name] = { error: err.message, stack: err.stack?.substring(0, 300) };
-    }
-  }
-
-  res.json(results);
 });
 
 // 10.2. Location & Supported Countries
