@@ -868,8 +868,7 @@ apiRouter.get('/test-cookie-stream/:videoId', async (req, res) => {
   const cleanCookie = rawCookie.replace(/^cookie:\s*/i, '').replace(/^["']|["']$/g, '').replace(/[\r\n]+/g, ' ').trim();
 
   const combos = [
-    { name: 'MWEB_WITH_COOKIE', client_type: ClientType.MWEB, cookie: cleanCookie, generate_session_locally: false },
-    { name: 'WEB_WITH_COOKIE', client_type: ClientType.WEB, cookie: cleanCookie, generate_session_locally: false }
+    { name: 'MWEB_WITH_COOKIE', client_type: ClientType.MWEB, cookie: cleanCookie, generate_session_locally: false }
   ];
 
   const results = {};
@@ -883,17 +882,24 @@ apiRouter.get('/test-cookie-stream/:videoId', async (req, res) => {
       });
       const info = await yt.getBasicInfo(videoId);
       const adaptive = info.streaming_data?.adaptive_formats || [];
-      const progressive = info.streaming_data?.formats || [];
-      
+      const audioFormats = adaptive.filter(f => f.mime_type?.startsWith('audio/'));
+      const targetFormat = audioFormats.find(f => f.itag === 140) || audioFormats.find(f => f.itag === 251) || audioFormats[0];
+
+      let streamUrl = targetFormat?.url;
+      if (!streamUrl && targetFormat && typeof targetFormat.decipher === 'function') {
+        streamUrl = await targetFormat.decipher(yt.session.player);
+      }
+
       results[c.name] = {
         playability_status: info.playability_status?.status,
-        adaptiveCount: adaptive.length,
-        progressiveCount: progressive.length,
-        adaptiveSample: adaptive.slice(0, 3).map(f => ({ itag: f.itag, mime: f.mime_type, hasUrl: Boolean(f.url), hasCipher: Boolean(f.signature_cipher || f.cipher) })),
-        progressiveSample: progressive.slice(0, 3).map(f => ({ itag: f.itag, mime: f.mime_type, hasUrl: Boolean(f.url), hasCipher: Boolean(f.signature_cipher || f.cipher) }))
+        audioCount: audioFormats.length,
+        chosenItag: targetFormat?.itag,
+        streamUrlReceived: Boolean(streamUrl),
+        streamUrlDomain: streamUrl ? new URL(streamUrl).hostname : null,
+        streamUrlSample: streamUrl ? streamUrl.substring(0, 80) + '...' : null
       };
     } catch (err) {
-      results[c.name] = { error: err.message };
+      results[c.name] = { error: err.message, stack: err.stack?.substring(0, 300) };
     }
   }
 
