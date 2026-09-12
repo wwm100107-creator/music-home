@@ -881,56 +881,37 @@ apiRouter.get('/cookie-status', (req, res) => {
 apiRouter.get('/test-clients/:videoId', async (req, res) => {
   const { videoId } = req.params;
   const cookie = getYouTubeCookie();
-  const clientsToTest = [
-    { name: 'MWEB_WITH_COOKIE', client_type: ClientType.MWEB, cookie, generate_session_locally: false },
-    { name: 'WEB_WITH_COOKIE', client_type: ClientType.WEB, cookie, generate_session_locally: false },
-    { name: 'ANDROID_WITH_COOKIE', client_type: ClientType.ANDROID, cookie, generate_session_locally: false },
-    { name: 'IOS_WITH_COOKIE', client_type: ClientType.IOS, cookie, generate_session_locally: false },
-    { name: 'TV_WITH_COOKIE', client_type: ClientType.TV, cookie, generate_session_locally: false }
-  ];
 
-  const results = {};
-  for (const c of clientsToTest) {
-    try {
-      const yt = await Innertube.create({
-        client_type: c.client_type,
-        cookie: c.cookie,
-        cache: new UniversalCache(false),
-        generate_session_locally: c.generate_session_locally
-      });
-      const info = await yt.getBasicInfo(videoId);
-      const formats = info.streaming_data?.formats || [];
-      const adaptive = info.streaming_data?.adaptive_formats || [];
-      const all = [...formats, ...adaptive];
-      const audio = all.filter(f => (f.mime_type?.startsWith('audio/') || f.has_audio));
-      const target = audio.find(f => f.url) || audio[0];
+  try {
+    const yt = await Innertube.create({
+      cache: new UniversalCache(false),
+      generate_session_locally: false
+    });
+    const track = await yt.music.getInfo(videoId);
+    const formats = track.streaming_data?.adaptive_formats || [];
+    const audio = formats.filter(f => f.mime_type?.startsWith('audio/'));
+    const target = audio.find(f => f.itag === 140) || audio[0];
 
-      let streamUrl = target?.url;
-      if (!streamUrl && target && typeof target.decipher === 'function') {
-        try {
-          streamUrl = await target.decipher(yt.session.player);
-        } catch (e) {
-          streamUrl = 'decipher_err: ' + e.message;
-        }
+    let streamUrl = target?.url;
+    if (!streamUrl && target && typeof target.decipher === 'function') {
+      try {
+        streamUrl = await target.decipher(yt.session.player);
+      } catch (e) {
+        streamUrl = 'decipher_err: ' + e.message;
       }
-
-      results[c.name] = {
-        status: info.playability_status?.status,
-        reason: info.playability_status?.reason,
-        formatsCount: formats.length,
-        adaptiveCount: adaptive.length,
-        audioCount: audio.length,
-        targetItag: target?.itag,
-        targetMime: target?.mime_type,
-        hasDirectUrl: Boolean(target?.url),
-        resolvedUrl: streamUrl ? (streamUrl.startsWith('http') ? streamUrl.substring(0, 70) + '...' : streamUrl) : null
-      };
-    } catch (err) {
-      results[c.name] = { error: err.message };
     }
-  }
 
-  res.json(results);
+    return res.json({
+      success: true,
+      musicStatus: track.playability_status?.status,
+      reason: track.playability_status?.reason,
+      audioCount: audio.length,
+      targetItag: target?.itag,
+      streamUrl: streamUrl ? streamUrl.substring(0, 70) + '...' : null
+    });
+  } catch (err) {
+    return res.json({ success: false, error: err.message, stack: err.stack?.substring(0, 300) });
+  }
 });
 
 // 10.2. Location & Supported Countries
