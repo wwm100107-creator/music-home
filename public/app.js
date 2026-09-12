@@ -459,45 +459,54 @@
 
     showToast(`🎵 Đang phát: ${track.title}`);
 
-    // Dọn dẹp / dừng YouTube video nếu đang phát để tránh trùng lặp âm thanh
+    // Dọn dẹp / dừng âm thanh trước đó để tránh trùng lặp
     if (ytPlayer && isYtReady && typeof ytPlayer.stopVideo === 'function') {
       ytPlayer.stopVideo();
     }
+    if (dom.audio) {
+      dom.audio.pause();
+    }
 
-    // 1. Luồng âm thanh trực tiếp (Direct Audio từ Drop Your Music, Catbox, iTunes preview)
+    // 1. Luồng âm thanh trực tiếp (Drop Your Music, file tải lên, iTunes preview)
     const directAudioSource = track.audioUrl || track.streamUrl || track.previewUrl;
-    const finalAudioSrc = directAudioSource || `/api/stream/${track.id}`;
 
-    // 2. ƯU TIÊN HÀNG ĐẦU: NATIVE HTML5 AUDIO ENGINE
-    // Đây là chìa khóa then chốt để phát nhạc chạy ngầm (Background Playback)
-    // khi tắt màn hình, khóa máy hoặc chuyển ứng dụng trên iOS (iPhone/iPad) & Android
-    // giống hệt Spotify / Apple Music / NhacCuaTui.
-    state.activeEngine = 'audio';
-    dom.audio.src = finalAudioSrc;
-
-    const playPromise = dom.audio.play();
-    if (playPromise !== undefined) {
-      playPromise.then(() => {
-        setPlaybackVisualState(true);
-        state.consecutiveErrors = 0;
-        updateMediaSession(track);
-      }).catch(audioErr => {
-        if (audioErr.name === 'AbortError') return;
-        console.warn('[Native Audio Engine Warning]:', audioErr.message);
-
-        // Fallback dự phòng sang YouTube Iframe Engine nếu stream trực tiếp bị lỗi hoặc từ chối
-        if (ytPlayer && isYtReady && typeof ytPlayer.loadVideoById === 'function' && !directAudioSource) {
-          console.log('🔄 Đang chuyển sang YouTube Engine dự phòng...');
-          state.activeEngine = 'youtube';
-          ytPlayer.loadVideoById(track.id);
-          ytPlayer.playVideo();
+    if (directAudioSource) {
+      // Ưu tiên phát qua HTML5 Audio cho file âm thanh trực tiếp
+      state.activeEngine = 'audio';
+      dom.audio.src = directAudioSource;
+      const playPromise = dom.audio.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
           setPlaybackVisualState(true);
           state.consecutiveErrors = 0;
           updateMediaSession(track);
-        } else {
+        }).catch(audioErr => {
+          if (audioErr.name === 'AbortError') return;
+          console.warn('[Native Audio Engine Warning]:', audioErr.message);
           setPlaybackVisualState(false);
-        }
-      });
+        });
+      }
+    } else {
+      // 2. Nhạc YouTube: Phát tức thì qua YouTube Engine chính thức (Zero Delay, mượt mà 100%)
+      if (ytPlayer && isYtReady && typeof ytPlayer.loadVideoById === 'function') {
+        state.activeEngine = 'youtube';
+        ytPlayer.loadVideoById(track.id);
+        ytPlayer.playVideo();
+        setPlaybackVisualState(true);
+        state.consecutiveErrors = 0;
+        updateMediaSession(track);
+      } else {
+        // Fallback qua audio element nếu player chưa sẵn sàng
+        state.activeEngine = 'audio';
+        dom.audio.src = `/api/stream/${track.id}`;
+        dom.audio.play().then(() => {
+          setPlaybackVisualState(true);
+          state.consecutiveErrors = 0;
+          updateMediaSession(track);
+        }).catch(() => {
+          setPlaybackVisualState(false);
+        });
+      }
     }
   }
 
