@@ -307,7 +307,7 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
   const audioFormats = allFormats.filter(f => (f.mime_type?.startsWith('audio/') || f.has_audio));
 
   if (audioFormats.length === 0) {
-    throw new Error('Không tìm thấy luồng âm thanh trực tiếp cho bài hát này.');
+    throw new Error(`Không tìm thấy luồng âm thanh (${info.playability_status?.status || 'UNKNOWN'}: ${info.playability_status?.reason || 'No streaming data'})`);
   }
 
   // Ưu tiên itag 140 (AAC 128kbps) hoặc 251 (Opus) hoặc 139 (AAC 48kbps)
