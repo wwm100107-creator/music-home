@@ -37,6 +37,10 @@ button, input, select, textarea {
   font-family: inherit;
 }
 
+html, body {
+  -webkit-tap-highlight-color: transparent;
+}
+
 :root {
   /* [SKILL: /apple-design] iOS Safe Area Insets (Tai thỏ, Dynamic Island, Home Indicator) */
   --sat: env(safe-area-inset-top, 0px);
@@ -1900,6 +1904,7 @@ body.twilight-mode .time-readout-pill {
   display: flex;
   align-items: center;
   cursor: pointer;
+  touch-action: none;
 }
 
 .wavy-vine-svg {
@@ -4928,7 +4933,16 @@ body.twilight-mode .hero-main-title {
 
   /* Khung nội dung chính & Safe Area iOS */
   .main-content {
-    padding: calc(10px + var(--sat)) 12px calc(86px + var(--sab)) 12px !important;
+    padding: calc(10px + var(--sat)) 12px calc(115px + var(--sab)) 12px !important;
+  }
+
+  /* Ngăn chặn triệt để hiện tượng iOS Safari tự động phóng to (auto-zoom) khi chạm vào ô input */
+  .ghibli-quick-search-input,
+  .country-dropdown-select,
+  .nature-input-control,
+  input[type="text"],
+  input[type="search"] {
+    font-size: 16px !important;
   }
 
   /* Mobile Top Bar (Header di động) */
@@ -5547,4 +5561,47 @@ body.twilight-mode .hero-main-title {
     min-height: 44px !important;
   }
 }
+
+/* --------------------------------------------------------------------------
+   3. TABLET NARROW SCREEN (< 880px): HIDE HI-RES CHIP TO PREVENT WRAP
+   -------------------------------------------------------------------------- */
+@media (min-width: 769px) and (max-width: 880px) {
+  .hi-res-audio-chip {
+    display: none !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   4. ULTRA-COMPACT MOBILE (< 360px): GALAXY Z FLIP COVER, IPHONE SE COMPACT
+   -------------------------------------------------------------------------- */
+@media (max-width: 360px) {
+  .bottom-player-glass {
+    padding: 6px 8px 8px 8px !important;
+    left: 6px !important;
+    right: 6px !important;
+    width: calc(100% - 12px) !important;
+  }
+  .album-cover-frame {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+  }
+  .track-title-text,
+  .track-artist-text {
+    max-width: calc(100vw - 160px) !important;
+  }
+  .wood-disc-play-btn {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+  }
+  #nextBtn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+  }
+}
+
 
