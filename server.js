@@ -809,7 +809,7 @@ apiRouter.get('/health', (req, res) => {
 apiRouter.get('/test-innertube/:videoId', async (req, res) => {
   const { videoId } = req.params;
   const results = {};
-  const types = ['IOS', 'VISIONOS', 'WEB', 'MWEB'];
+  const types = ['TV_EMBEDDED', 'ANDROID_VR', 'KIDS', 'TV_SIMPLY', 'IOS', 'VISIONOS'];
   for (const t of types) {
     try {
       const yt = await Innertube.create({
