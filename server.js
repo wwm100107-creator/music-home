@@ -878,6 +878,60 @@ apiRouter.get('/cookie-status', (req, res) => {
   });
 });
 
+apiRouter.get('/test-clients/:videoId', async (req, res) => {
+  const { videoId } = req.params;
+  const clientsToTest = [
+    { name: 'ANDROID_LOCAL', client_type: ClientType.ANDROID, generate_session_locally: true },
+    { name: 'ANDROID_REMOTE', client_type: ClientType.ANDROID, generate_session_locally: false },
+    { name: 'IOS_LOCAL', client_type: ClientType.IOS, generate_session_locally: true },
+    { name: 'TV_EMBEDDED', client_type: ClientType.TV_EMBEDDED, generate_session_locally: false },
+    { name: 'WEB_EMBEDDED', client_type: ClientType.WEB_EMBEDDED, generate_session_locally: false },
+    { name: 'VISIONOS_LOCAL', client_type: ClientType.VISIONOS, generate_session_locally: true }
+  ];
+
+  const results = {};
+  for (const c of clientsToTest) {
+    try {
+      const yt = await Innertube.create({
+        client_type: c.client_type,
+        cache: new UniversalCache(false),
+        generate_session_locally: c.generate_session_locally
+      });
+      const info = await yt.getBasicInfo(videoId);
+      const formats = info.streaming_data?.formats || [];
+      const adaptive = info.streaming_data?.adaptive_formats || [];
+      const all = [...formats, ...adaptive];
+      const audio = all.filter(f => (f.mime_type?.startsWith('audio/') || f.has_audio));
+      const target = audio.find(f => f.url) || audio[0];
+
+      let streamUrl = target?.url;
+      if (!streamUrl && target && typeof target.decipher === 'function') {
+        try {
+          streamUrl = await target.decipher(yt.session.player);
+        } catch (e) {
+          streamUrl = 'decipher_err: ' + e.message;
+        }
+      }
+
+      results[c.name] = {
+        status: info.playability_status?.status,
+        reason: info.playability_status?.reason,
+        formatsCount: formats.length,
+        adaptiveCount: adaptive.length,
+        audioCount: audio.length,
+        targetItag: target?.itag,
+        targetMime: target?.mime_type,
+        hasDirectUrl: Boolean(target?.url),
+        resolvedUrl: streamUrl ? (streamUrl.startsWith('http') ? streamUrl.substring(0, 70) + '...' : streamUrl) : null
+      };
+    } catch (err) {
+      results[c.name] = { error: err.message };
+    }
+  }
+
+  res.json(results);
+});
+
 // 10.2. Location & Supported Countries
 apiRouter.get('/location', (req, res) => {
   const detectedCode = detectCountry(req);
