@@ -865,10 +865,13 @@ apiRouter.get('/health', (req, res) => {
 // 10.1.1. YouTube Cookie Status Check
 apiRouter.get('/cookie-status', (req, res) => {
   const cookie = process.env.YOUTUBE_COOKIE || process.env.COOKIE || '';
+  const keys = ['SAPISID', '__Secure-1PSID', '__Secure-3PSID', 'SID', 'HSID', 'SSID', 'APISID', 'LOGIN_INFO', 'VISITOR_INFO1_LIVE', 'PREF', 'YSC'];
+  const presentKeys = keys.filter(k => cookie.includes(k + '='));
   res.json({
     hasCookie: Boolean(cookie),
     cookieLength: cookie.length,
     authenticated: Boolean(cookie && (cookie.includes('SID=') || cookie.includes('VISITOR_INFO1_LIVE='))),
+    presentKeys,
     instructions: Boolean(cookie)
       ? '✅ Biến môi trường YOUTUBE_COOKIE đã được nạp thành công!'
       : '⚠️ Chưa cấu hình biến môi trường YOUTUBE_COOKIE trên Vercel.'
