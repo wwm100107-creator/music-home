@@ -46,10 +46,10 @@ button, input, select, textarea {
 
   /* Bảng màu Ghibli & Totoro Vibe từ GIAODIEN.png */
   /* [SKILL: /apple-design & /impeccable] Frosted Glass (Sidebar) & Clear Glass (Bottom Player) */
-  --sidebar-glass-bg: rgba(255, 255, 255, 0.15);
-  --sidebar-border: rgba(255, 255, 255, 0.28);
-  --player-glass-bg: rgba(255, 255, 255, 0.05);
-  --player-border: rgba(255, 255, 255, 0.18);
+  --sidebar-glass-bg: rgba(255, 255, 255, 0.32);
+  --sidebar-border: rgba(255, 255, 255, 0.42);
+  --player-glass-bg: rgba(255, 253, 245, 0.82);
+  --player-border: rgba(181, 137, 87, 0.38);
   
   --ghibli-cream: #fefae0;
   --ghibli-yellow-light: #fdf6c7;
@@ -60,15 +60,57 @@ button, input, select, textarea {
   --ghibli-vine-bright: #7fc95e;
   --ghibli-leaf-green: #52b788;
   
-  --font-ghibli-brand: 'AustieBostHappyHolly', 'Sniglet', 'Fredoka', cursive, sans-serif;
-  --font-ghibli-nav: 'AustieBostHappyHolly', 'Fredoka', 'Comfortaa', cursive, sans-serif;
-  --font-ghibli-title: 'AustieBostHappyHolly', 'Comfortaa', 'Fredoka', cursive, sans-serif;
-  --font-ghibli-meta: 'AustieBostHappyHolly', 'Quicksand', 'Fredoka', sans-serif;
+  /* International Typography Architecture */
+  --font-ghibli-brand: 'AustieBostHappyHolly', 'Fredoka', cursive, sans-serif;
+  --font-ghibli-title: 'Fredoka', 'Comfortaa', cursive, sans-serif;
+  --font-ghibli-body: 'Plus Jakarta Sans', 'Quicksand', system-ui, -apple-system, sans-serif;
+  --font-ghibli-nav: 'Plus Jakarta Sans', 'Fredoka', sans-serif;
+  --font-ghibli-meta: 'Plus Jakarta Sans', 'Quicksand', -apple-system, sans-serif;
+  --font-ghibli-numeric: 'Plus Jakarta Sans', monospace;
+
+  /* Theme variables (Day Mode) */
+  --theme-text-main: #2b1810;
+  --theme-text-muted: #6f4e37;
+  --theme-card-bg: rgba(255, 253, 245, 0.84);
+  --theme-card-border: rgba(181, 137, 87, 0.42);
+  --theme-card-hover-bg: #fffdf5;
+  --theme-accent: #2d6a4f;
+  --theme-accent-bright: #52b788;
 
   /* [SKILL: /animate] Easing curves chuẩn */
   --ease-out-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
   --ease-smooth: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-apple-spring: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* ==========================================================================
+   TWILIGHT / NIGHT MODE: ĐÊM RỪNG ĐOM ĐÓM GHIBLI
+   ========================================================================== */
+body.twilight-mode {
+  --sidebar-glass-bg: rgba(14, 28, 18, 0.88);
+  --sidebar-border: rgba(82, 183, 136, 0.32);
+  --player-glass-bg: rgba(12, 24, 16, 0.92);
+  --player-border: rgba(82, 183, 136, 0.36);
+  
+  --theme-text-main: #fefae0;
+  --theme-text-muted: #b7c9be;
+  --theme-card-bg: rgba(18, 34, 23, 0.88);
+  --theme-card-border: rgba(82, 183, 136, 0.32);
+  --theme-card-hover-bg: rgba(26, 48, 33, 0.95);
+  --theme-accent: #52b788;
+  --theme-accent-bright: #74c69d;
+  
+  background-color: #0b170e !important;
+  color: var(--theme-text-main) !important;
+}
+
+body.twilight-mode .nature-overlay {
+  background: radial-gradient(circle at 60% 45%, rgba(10, 25, 15, 0.3) 0%, rgba(5, 14, 8, 0.82) 100%) !important;
+}
+
+body.twilight-mode .firefly {
+  box-shadow: 0 0 14px #9ef01a, 0 0 24px #d8f3dc !important;
+  opacity: 0.85 !important;
 }
 
 html {
@@ -84,8 +126,8 @@ body.ghibli-app-body {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  font-family: var(--font-ghibli-nav);
-  color: var(--ghibli-brown-dark);
+  font-family: var(--font-ghibli-body);
+  color: var(--theme-text-main);
   background-color: #72a87d;
   user-select: none;
   -webkit-font-smoothing: antialiased;
@@ -1553,52 +1595,70 @@ body.ghibli-app-body {
   right: 0;
   height: 96px;
   background-color: var(--player-glass-bg);
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
-  backdrop-filter: blur(2.5px);
-  -webkit-backdrop-filter: blur(2.5px);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(20px) saturate(170%);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
   border-top: 1px solid var(--player-border);
-  box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 -8px 32px rgba(45, 25, 10, 0.08);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 28px;
+  padding: 0 32px;
   z-index: 100;
 
-  /* [YÊU CẦU 4]: TRẠNG THÁI MẶC ĐỊNH LÀ ẨN KHI WEB MỚI LOAD */
+  /* Mặc định ẩn khi web mới load - trượt mượt mà lên khi có nhạc */
   opacity: 0;
   transform: translateY(100%);
   pointer-events: none;
 
-  /* [YÊU CẦU 4]: HIỆU ỨNG XUẤT HIỆN TRƯỢT MƯỢT MÀ TỪ DƯỚI LÊN VÀ RÕ DẦN */
-  transition: opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1),
-              transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+              transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
   will-change: opacity, transform;
 }
 
-/* [YÊU CẦU 4]: KHI CÓ CLASS .active ĐƯỢC THÊM VÀO */
+/* Khi có bài hát được kích hoạt */
 .bottom-player-glass.active {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
 }
 
-/* Left Group: Album Cover + Song Meta + Heart */
+/* Twilight Mode (Đêm Rừng Đom Đóm) cho Bottom Player */
+body.twilight-mode .bottom-player-glass {
+  background-color: rgba(18, 28, 22, 0.88);
+  background-image: linear-gradient(180deg, rgba(82, 183, 136, 0.08) 0%, rgba(0, 0, 0, 0.3) 100%);
+  border-top: 1px solid rgba(82, 183, 136, 0.25);
+  box-shadow: 0 -8px 36px rgba(0, 0, 0, 0.55), 0 0 24px rgba(82, 183, 136, 0.08);
+}
+
+/* ==========================================================================
+   ZONE 1 (LEFT 28%): Album Cover + Track Metadata + Heart
+   ========================================================================== */
 .player-left-group {
   display: flex;
   align-items: center;
   gap: 14px;
-  min-width: 220px;
+  flex: 0 0 28%;
+  max-width: 320px;
+  min-width: 200px;
+  overflow: hidden;
 }
 
 .album-cover-frame {
-  width: 66px;
-  height: 66px;
-  border-radius: 10px;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
   overflow: hidden;
   border: 2px solid var(--ghibli-brown-dark);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
   flex-shrink: 0;
   background: #1f3020;
+  position: relative;
+}
+
+body.twilight-mode .album-cover-frame {
+  border-color: #52b788;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), 0 0 10px rgba(82, 183, 136, 0.2);
 }
 
 .now-playing-cover {
@@ -1608,15 +1668,14 @@ body.ghibli-app-body {
   will-change: opacity, transform;
 }
 
-/* [SKILL: /animate] Hiệu ứng fade-in mượt mà (0.5s) khi Thumbnail YouTube xuất hiện */
 .now-playing-cover.cover-fade-in {
-  animation: coverFadeIn 0.5s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  animation: coverFadeIn 0.4s cubic-bezier(0.23, 1, 0.32, 1) forwards;
 }
 
 @keyframes coverFadeIn {
   0% {
     opacity: 0;
-    transform: scale(0.96);
+    transform: scale(0.95);
   }
   100% {
     opacity: 1;
@@ -1624,32 +1683,34 @@ body.ghibli-app-body {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .now-playing-cover.cover-fade-in {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-}
-
 .now-playing-meta {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .song-title-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .track-title-text {
   font-family: var(--font-ghibli-nav);
-  font-size: 1.06rem;
+  font-size: 1.02rem;
   font-weight: 800;
   color: var(--ghibli-brown-dark);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.2px;
+}
+
+body.twilight-mode .track-title-text {
+  color: #fefae0;
 }
 
 .leaf-heart-btn {
@@ -1658,42 +1719,61 @@ body.ghibli-app-body {
   font-size: 1.05rem;
   cursor: pointer;
   line-height: 1;
-  transition: transform 0.15s;
+  padding: 4px;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  flex-shrink: 0;
 }
 
 .leaf-heart-btn:hover {
-  transform: scale(1.25);
+  transform: scale(1.3);
 }
 
 .track-artist-text {
-  font-family: var(--font-ghibli-meta);
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #4a3525;
+  font-family: var(--font-ghibli-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #5c4331;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.twilight-mode .track-artist-text {
+  color: #a3b18a;
 }
 
 .track-album-text {
   font-family: var(--font-ghibli-meta);
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #6a4f3b;
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: #7f5539;
   font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Center Group: Controls + Wavy Vine Track + Calcifer Thumb */
+body.twilight-mode .track-album-text {
+  color: #81b29a;
+}
+
+/* ==========================================================================
+   ZONE 2 (CENTER 44%): Controls + Wavy Vine Scrubber + Calcifer Flame
+   ========================================================================== */
 .player-center-group {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  flex: 1;
-  max-width: 520px;
+  gap: 6px;
+  flex: 1 1 44%;
+  max-width: 620px;
+  padding: 0 12px;
 }
 
 .player-controls-row {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
 }
 
 .nature-ctrl-btn {
@@ -1704,42 +1784,61 @@ body.ghibli-app-body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.15s, color 0.15s;
+  transition: transform 0.18s var(--ease-out-spring), color 0.15s;
   position: relative;
+  padding: 6px;
+  border-radius: 50%;
+}
+
+body.twilight-mode .nature-ctrl-btn {
+  color: #d8f3dc;
 }
 
 .nature-ctrl-btn:hover {
-  transform: scale(1.15);
+  transform: scale(1.18);
   color: #1b4332;
 }
 
+body.twilight-mode .nature-ctrl-btn:hover {
+  color: #74c69d;
+}
+
 .nature-ctrl-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
 }
 
 /* Nút Play/Pause đĩa gỗ tròn trung tâm */
 .wood-disc-play-btn {
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: radial-gradient(circle, #caa071 0%, #8c5d2f 85%, #5e3a18 100%);
+  background: radial-gradient(circle at 35% 35%, #caa071 0%, #8c5d2f 75%, #5e3a18 100%);
   border: 3px solid #3d2311;
   color: #fffde0;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 
-    0 4px 10px rgba(0, 0, 0, 0.35),
-    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+    0 5px 12px rgba(0, 0, 0, 0.32),
+    inset 0 2px 4px rgba(255, 255, 255, 0.45);
   cursor: pointer;
-  transition: transform 0.15s var(--ease-out-spring), box-shadow 0.15s;
+  transition: transform 0.2s var(--ease-out-spring), box-shadow 0.2s;
+}
+
+body.twilight-mode .wood-disc-play-btn {
+  background: radial-gradient(circle at 35% 35%, #52b788 0%, #2d6a4f 75%, #1b4332 100%);
+  border-color: #081c15;
+  box-shadow: 
+    0 5px 14px rgba(0, 0, 0, 0.5),
+    0 0 16px rgba(82, 183, 136, 0.35),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
 }
 
 .wood-disc-play-btn:hover {
-  transform: scale(1.1);
+  transform: scale(1.12);
   box-shadow: 
-    0 6px 14px rgba(0, 0, 0, 0.42),
-    inset 0 2px 5px rgba(255, 255, 255, 0.55);
+    0 8px 18px rgba(0, 0, 0, 0.4),
+    inset 0 2px 5px rgba(255, 255, 255, 0.6);
 }
 
 .wood-disc-play-btn:active {
@@ -1747,12 +1846,12 @@ body.ghibli-app-body {
 }
 
 .wood-play-icon {
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   margin-left: 3px;
 }
 
 .wood-pause-icon {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
 }
 
 .loop-badge-dot {
@@ -1763,13 +1862,40 @@ body.ghibli-app-body {
   font-weight: 900;
 }
 
-/* 
-  [SKILL: /animate & /improve-animations] 
-  THANH TIẾN TRÌNH DÂY LEO LƯỢN SÓNG & CỤC CHẠY NGỌN LỬA CALCIFER (F.JPG / F.PNG)
-*/
+/* Symmetrical Scrubber Cluster */
+.player-scrubber-cluster {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.time-readout-pill {
+  font-family: var(--font-ghibli-numeric);
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ghibli-brown-dark);
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(181, 137, 87, 0.22);
+  min-width: 44px;
+  text-align: center;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+body.twilight-mode .time-readout-pill {
+  background: rgba(0, 0, 0, 0.35);
+  color: #d8f3dc;
+  border-color: rgba(82, 183, 136, 0.3);
+}
+
+/* Thanh dây leo lượn sóng */
 .wavy-progress-wrapper {
   position: relative;
-  width: 100%;
+  flex: 1;
   height: 28px;
   display: flex;
   align-items: center;
@@ -1787,25 +1913,34 @@ body.ghibli-app-body {
   stroke: var(--ghibli-vine-dark);
   stroke-width: 4.5;
   stroke-linecap: round;
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
+}
+
+body.twilight-mode .vine-base-track {
+  stroke: #2d4a36;
 }
 
 .vine-progress-fill {
   fill: none;
   stroke: var(--ghibli-vine-bright);
-  stroke-width: 4;
+  stroke-width: 4.5;
   stroke-linecap: round;
   stroke-dasharray: 600;
   stroke-dashoffset: 600;
   transition: stroke-dashoffset 0.1s linear;
 }
 
-/* Cục chạy Calcifer Flame Thumb */
+body.twilight-mode .vine-progress-fill {
+  stroke: #52b788;
+  filter: drop-shadow(0 0 6px rgba(82, 183, 136, 0.8));
+}
+
+/* Cục chạy Calcifer Flame Thumb & Micro-motion */
 .calcifer-thumb-anchor {
   position: absolute;
   top: 0;
   left: 0%;
-  transform: translate(-50%, -65%);
+  transform: translate(-50%, -64%);
   pointer-events: none;
   transition: left 0.1s linear;
   z-index: 10;
@@ -1813,34 +1948,114 @@ body.ghibli-app-body {
 
 .calcifer-flame {
   width: auto;
-  height: 62px;
-  max-width: 52px;
+  height: 60px;
+  max-width: 50px;
   object-fit: contain;
-  /* [SKILL: /impeccable] Hiệu ứng phát sáng tự nhiên của ngọn lửa Calcifer (fire.gif nền trong suốt) */
   filter: drop-shadow(0 0 10px rgba(255, 120, 20, 0.85)) drop-shadow(0 0 4px rgba(255, 200, 0, 0.6));
   transform-origin: bottom center;
   pointer-events: none;
   display: block;
-  transition: transform 0.15s ease-out;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s;
 }
 
-/* Khi nhạc đang phát: Calcifer nhấp nháy, phập phồng phập phồng */
-body.music-playing .calcifer-flame {
-  animation: calciferBreathe 1.3s infinite ease-in-out alternate;
+/* Khi nhạc đang phát: Calcifer nhảy múa sinh động */
+body.music-playing .calcifer-flame,
+.calcifer-flame.calcifer-dancing {
+  animation: calciferDancingGlow 1.2s infinite ease-in-out alternate;
 }
 
-@keyframes calciferBreathe {
+@keyframes calciferDancingGlow {
   0% {
-    transform: scale(0.95, 1.05) translateY(0) rotate(-2deg);
-    filter: drop-shadow(0 0 6px rgba(255, 120, 0, 0.75));
+    transform: scale(0.95, 1.05) translateY(0) rotate(-3deg);
+    filter: drop-shadow(0 0 8px rgba(255, 120, 0, 0.85)) drop-shadow(0 0 3px rgba(255, 220, 50, 0.7));
   }
   50% {
-    transform: scale(1.06, 0.94) translateY(2px) rotate(2deg);
-    filter: drop-shadow(0 0 16px rgba(255, 200, 0, 0.95));
+    transform: scale(1.08, 0.92) translateY(2px) rotate(3deg);
+    filter: drop-shadow(0 0 18px rgba(255, 190, 0, 0.95)) drop-shadow(0 0 6px rgba(255, 90, 0, 0.9));
   }
   100% {
     transform: scale(1, 1) translateY(-2px) rotate(-1deg);
-    filter: drop-shadow(0 0 10px rgba(255, 90, 0, 0.85));
+    filter: drop-shadow(0 0 12px rgba(255, 110, 0, 0.9)) drop-shadow(0 0 4px rgba(255, 200, 0, 0.8));
+  }
+}
+
+/* Khi tạm dừng (Paused): Calcifer ngủ ngoan ấm cúng */
+.calcifer-flame.calcifer-sleeping {
+  animation: none !important;
+  transform: scale(0.88, 0.82) translateY(5px) rotate(-3deg);
+  filter: drop-shadow(0 0 5px rgba(255, 100, 20, 0.5)) saturate(0.85);
+  opacity: 0.92;
+}
+
+/* Tia than hồng li ti (Calcifer Sparks) */
+.calcifer-sparks {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.calcifer-sparks .spark {
+  position: absolute;
+  border-radius: 50%;
+  background: #ffd166;
+  box-shadow: 0 0 6px #ff9f1c;
+  opacity: 0;
+}
+
+body.music-playing .calcifer-sparks .spark.s1,
+.calcifer-flame.calcifer-dancing + .calcifer-sparks .spark.s1 {
+  width: 3px;
+  height: 3px;
+  animation: emberSparkFloat1 1.6s infinite ease-out;
+}
+
+body.music-playing .calcifer-sparks .spark.s2,
+.calcifer-flame.calcifer-dancing + .calcifer-sparks .spark.s2 {
+  width: 2.5px;
+  height: 2.5px;
+  animation: emberSparkFloat2 1.9s infinite ease-out 0.4s;
+}
+
+body.music-playing .calcifer-sparks .spark.s3,
+.calcifer-flame.calcifer-dancing + .calcifer-sparks .spark.s3 {
+  width: 2px;
+  height: 2px;
+  animation: emberSparkFloat3 1.4s infinite ease-out 0.8s;
+}
+
+@keyframes emberSparkFloat1 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-14px, -32px) scale(0.2);
+    opacity: 0;
+  }
+}
+
+@keyframes emberSparkFloat2 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(12px, -36px) scale(0.2);
+    opacity: 0;
+  }
+}
+
+@keyframes emberSparkFloat3 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(-6px, -42px) scale(0.1);
+    opacity: 0;
   }
 }
 
@@ -1851,47 +2066,71 @@ body.music-playing .calcifer-flame {
   transform: translateX(-50%);
   background: var(--ghibli-brown-dark);
   color: #ffffff;
-  font-family: var(--font-ghibli-meta);
-  font-size: 0.72rem;
+  font-family: var(--font-ghibli-numeric);
+  font-size: 0.74rem;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 6px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s;
+  font-variant-numeric: tabular-nums;
 }
 
-.time-readout-row {
-  position: absolute;
-  right: 0;
-  bottom: -4px;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-family: var(--font-ghibli-meta);
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--ghibli-brown-dark);
-}
-
-.time-divider {
-  opacity: 0.6;
-}
-
-/* Right Group: Volume + Loa + Danh sách phát */
+/* ==========================================================================
+   ZONE 3 (RIGHT 28%): Hi-Res Audio Chip + Volume + Queue Toggle
+   ========================================================================== */
 .player-right-group {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 220px;
+  gap: 12px;
+  flex: 0 0 28%;
+  max-width: 320px;
+  min-width: 200px;
   justify-content: flex-end;
 }
 
-.volume-text-label {
-  font-family: var(--font-ghibli-nav);
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--ghibli-brown-dark);
+/* Hi-Res Lossless Audio Chip */
+.hi-res-audio-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: rgba(212, 163, 115, 0.18);
+  border: 1px solid rgba(181, 137, 87, 0.35);
+  font-family: var(--font-ghibli-meta);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #6a421b;
+  letter-spacing: 0.5px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+body.twilight-mode .hi-res-audio-chip {
+  background: rgba(82, 183, 136, 0.16);
+  border-color: rgba(82, 183, 136, 0.35);
+  color: #95d5b2;
+}
+
+.hi-res-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2d6a4f;
+  box-shadow: 0 0 6px #52b788;
+}
+
+body.twilight-mode .hi-res-dot {
+  background: #52b788;
+  box-shadow: 0 0 8px #74c69d;
+}
+
+.volume-cluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .volume-speaker-btn {
@@ -1903,6 +2142,11 @@ body.music-playing .calcifer-flame {
   align-items: center;
   justify-content: center;
   transition: transform 0.15s;
+  padding: 4px;
+}
+
+body.twilight-mode .volume-speaker-btn {
+  color: #d8f3dc;
 }
 
 .volume-speaker-btn:hover {
@@ -1927,6 +2171,10 @@ body.music-playing .calcifer-flame {
   cursor: pointer;
 }
 
+body.twilight-mode .nature-slider {
+  background: #2d4a36;
+}
+
 .nature-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
@@ -1940,17 +2188,27 @@ body.music-playing .calcifer-flame {
   transition: transform 0.12s;
 }
 
+body.twilight-mode .nature-slider::-webkit-slider-thumb {
+  background: radial-gradient(circle, #d8f3dc, #52b788);
+  border-color: #081c15;
+}
+
 .nature-slider::-webkit-slider-thumb:hover {
   transform: scale(1.25);
   background: var(--ghibli-vine-bright);
 }
 
 .volume-percent-badge {
-  font-family: var(--font-ghibli-meta);
+  font-family: var(--font-ghibli-numeric);
   font-size: 0.8rem;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
   color: #4a2c11;
   width: 32px;
+}
+
+body.twilight-mode .volume-percent-badge {
+  color: #a3b18a;
 }
 
 .queue-toggle-btn {
@@ -1964,16 +2222,28 @@ body.music-playing .calcifer-flame {
   font-family: var(--font-ghibli-nav);
   font-size: 0.78rem;
   font-weight: 800;
-  padding: 4px 10px;
+  padding: 5px 11px;
   border-radius: 12px;
   cursor: pointer;
   box-shadow: 0 2px 0 #b58957;
   transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+body.twilight-mode .queue-toggle-btn {
+  background: rgba(45, 106, 79, 0.35);
+  border-color: rgba(82, 183, 136, 0.45);
+  color: #d8f3dc;
+  box-shadow: 0 2px 0 #1b4332;
 }
 
 .queue-toggle-btn:hover {
   background: #fefae0;
   transform: translateY(-2px);
+}
+
+body.twilight-mode .queue-toggle-btn:hover {
+  background: rgba(82, 183, 136, 0.4);
 }
 
 /* --------------------------------------------------------------------------
@@ -2508,18 +2778,20 @@ body.music-playing .calcifer-flame {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- HOME TOP BAR: QUICK SEARCH + COUNTRY SELECTOR --- */
+/* --- HOME TOP BAR: QUICK SEARCH + COUNTRY SELECTOR + AMBIENT TOGGLE --- */
 .home-top-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .home-search-quickbox {
   flex: 1;
-  max-width: 580px;
+  min-width: 260px;
+  max-width: 540px;
   position: relative;
   display: flex;
   align-items: center;
@@ -2536,41 +2808,50 @@ body.music-playing .calcifer-flame {
 .ghibli-quick-search-input {
   width: 100%;
   padding: 10px 16px 10px 42px;
-  background: rgba(255, 253, 245, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 2px solid #8c5d2f;
+  background: var(--theme-card-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1.5px solid var(--theme-card-border);
   border-radius: 20px;
-  font-family: var(--font-ghibli-nav);
-  font-size: 0.95rem;
-  color: var(--ghibli-brown-dark);
+  font-family: var(--font-ghibli-body);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--theme-text-main);
   outline: none;
-  box-shadow: 0 4px 12px rgba(45, 25, 10, 0.12);
+  box-shadow: 0 4px 12px rgba(45, 25, 10, 0.08);
   transition: all 0.2s ease;
 }
 
 .ghibli-quick-search-input:focus {
-  background: #fffdf5;
-  border-color: #2d6a4f;
-  box-shadow: 0 4px 16px rgba(45, 106, 79, 0.25);
+  background: var(--theme-card-hover-bg);
+  border-color: var(--theme-accent);
+  box-shadow: 0 4px 18px rgba(45, 106, 79, 0.22);
 }
 
 .ghibli-quick-search-input::placeholder {
-  color: #7f5539;
+  color: var(--theme-text-muted);
   opacity: 0.75;
+}
+
+.home-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 /* Country Selector */
 .country-selector-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(254, 250, 224, 0.88);
-  backdrop-filter: blur(12px);
-  border: 2px solid #8c5d2f;
+  gap: 6px;
+  background: var(--theme-card-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1.5px solid var(--theme-card-border);
   border-radius: 20px;
   padding: 4px 12px;
-  box-shadow: 0 4px 12px rgba(45, 25, 10, 0.12);
+  box-shadow: 0 4px 12px rgba(45, 25, 10, 0.08);
   flex-shrink: 0;
 }
 
@@ -2578,19 +2859,20 @@ body.music-playing .calcifer-flame {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: #4a2c11;
+  font-family: var(--font-ghibli-body);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--theme-text-muted);
   cursor: pointer;
 }
 
 .country-dropdown-select {
   background: transparent;
   border: none;
-  font-family: var(--font-ghibli-nav);
-  font-size: 0.92rem;
-  font-weight: 800;
-  color: #2b1810;
+  font-family: var(--font-ghibli-body);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--theme-text-main);
   cursor: pointer;
   outline: none;
   padding: 4px 4px;
@@ -2599,57 +2881,106 @@ body.music-playing .calcifer-flame {
 .country-dropdown-select option {
   background: #fffdf5;
   color: #2b1810;
-  font-weight: 700;
+  font-weight: 600;
 }
 
-/* --- GHIBLI HERO BANNER --- */
+body.twilight-mode .country-dropdown-select option {
+  background: #142419;
+  color: #fefae0;
+}
+
+/* Ambient Mode Toggle Button (Day / Twilight Ghibli) */
+.ambient-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--theme-card-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1.5px solid var(--theme-card-border);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-family: var(--font-ghibli-body);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--theme-text-main);
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(45, 25, 10, 0.08);
+  transition: all 0.22s cubic-bezier(0.25, 1, 0.5, 1);
+  white-space: nowrap;
+}
+
+.ambient-mode-btn:hover {
+  background: var(--theme-card-hover-bg);
+  border-color: var(--theme-accent);
+  color: var(--theme-accent);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(45, 106, 79, 0.2);
+}
+
+.ambient-mode-btn .mode-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+/* --- GHIBLI HERO BANNER (REFINED STREAMLINED HEADING) --- */
 .ghibli-hero-banner {
   position: relative;
-  background: linear-gradient(135deg, rgba(255, 253, 245, 0.75) 0%, rgba(220, 242, 225, 0.65) 100%);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 2.5px solid rgba(140, 93, 47, 0.6);
-  border-radius: 24px;
-  padding: 28px 32px;
-  margin-bottom: 28px;
-  box-shadow: 0 10px 28px rgba(30, 20, 10, 0.1);
+  background: linear-gradient(135deg, rgba(255, 253, 245, 0.82) 0%, rgba(220, 242, 225, 0.7) 100%);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 2px solid rgba(140, 93, 47, 0.45);
+  border-radius: 20px;
+  padding: 18px 24px;
+  margin-bottom: 22px;
+  box-shadow: 0 8px 24px rgba(30, 20, 10, 0.07);
   overflow: hidden;
+}
+
+body.twilight-mode .ghibli-hero-banner {
+  background: linear-gradient(135deg, rgba(20, 38, 26, 0.85) 0%, rgba(12, 26, 16, 0.9) 100%);
+  border-color: rgba(82, 183, 136, 0.35);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.3);
 }
 
 .region-badge-pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #2d6a4f;
+  background: var(--theme-accent);
   color: #fefae0;
-  font-family: var(--font-ghibli-nav);
-  font-size: 0.82rem;
-  font-weight: 800;
-  padding: 5px 14px;
-  border-radius: 14px;
-  margin-bottom: 12px;
-  box-shadow: 0 3px 8px rgba(45, 106, 79, 0.3);
+  font-family: var(--font-ghibli-body);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 3px 8px rgba(45, 106, 79, 0.25);
 }
 
 .hero-main-title {
   font-family: var(--font-ghibli-brand);
-  font-size: 2.45rem;
+  font-size: clamp(1.5rem, 3.2vw, 2.1rem);
   font-weight: normal;
-  color: #2b1810;
+  color: var(--theme-text-main);
   -webkit-text-stroke: 0 !important;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.75);
-  margin-bottom: 8px;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
+  margin-bottom: 4px;
   letter-spacing: 0.02em;
 }
 
+body.twilight-mode .hero-main-title {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
 .hero-sub-description {
-  font-family: var(--font-ghibli-meta);
-  font-size: 0.98rem;
-  font-weight: 600;
-  color: #593d25;
-  max-width: 680px;
-  margin-bottom: 20px;
-  line-height: 1.5;
+  font-family: var(--font-ghibli-body);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--theme-text-muted);
+  max-width: 640px;
+  margin-bottom: 12px;
+  line-height: 1.45;
 }
 
 /* Dynamic Genre Filter Pills */
@@ -4940,8 +5271,19 @@ body.music-playing .calcifer-flame {
      - Safe Area Inset Bottom chuẩn iOS
      ------------------------------------------------------------------------ */
   .bottom-player-glass {
-    height: calc(76px + var(--sab)) !important;
-    padding: 4px 10px calc(6px + var(--sab)) 10px !important;
+    position: fixed !important;
+    bottom: calc(10px + var(--sab)) !important;
+    left: 10px !important;
+    right: 10px !important;
+    width: calc(100% - 20px) !important;
+    height: auto !important;
+    min-height: 72px !important;
+    padding: 6px 12px 8px 12px !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(220, 195, 160, 0.45) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.35) inset !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
     display: grid !important;
     grid-template-areas:
       "progress progress"
@@ -4949,7 +5291,13 @@ body.music-playing .calcifer-flame {
     grid-template-columns: 1fr auto !important;
     grid-template-rows: auto 1fr !important;
     align-items: center !important;
-    gap: 2px 8px !important;
+    gap: 4px 10px !important;
+    z-index: 1000 !important;
+  }
+
+  body.twilight-mode .bottom-player-glass {
+    border-color: rgba(82, 183, 136, 0.35) !important;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(82, 183, 136, 0.25) inset !important;
   }
 
   .player-right-group {
@@ -4959,7 +5307,8 @@ body.music-playing .calcifer-flame {
   .player-left-group {
     grid-area: meta !important;
     min-width: 0 !important;
-    gap: 8px !important;
+    flex: 1 1 auto !important;
+    gap: 10px !important;
     overflow: hidden !important;
   }
 
@@ -4967,7 +5316,7 @@ body.music-playing .calcifer-flame {
     width: 44px !important;
     height: 44px !important;
     min-width: 44px !important;
-    border-radius: 8px !important;
+    border-radius: 10px !important;
     aspect-ratio: 1 / 1 !important;
   }
 
@@ -4983,19 +5332,19 @@ body.music-playing .calcifer-flame {
   }
 
   .track-title-text {
-    font-size: clamp(0.8rem, 3.2vw, 0.94rem) !important;
+    font-size: clamp(0.82rem, 3.4vw, 0.96rem) !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    max-width: calc(100vw - 200px) !important;
+    max-width: calc(100vw - 190px) !important;
   }
 
   .track-artist-text {
-    font-size: clamp(0.68rem, 2.5vw, 0.78rem) !important;
+    font-size: clamp(0.7rem, 2.6vw, 0.8rem) !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    max-width: calc(100vw - 200px) !important;
+    max-width: calc(100vw - 190px) !important;
   }
 
   .track-album-text {
@@ -5003,8 +5352,8 @@ body.music-playing .calcifer-flame {
   }
 
   .leaf-heart-btn {
-    min-width: 44px !important;
-    min-height: 44px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -5016,9 +5365,31 @@ body.music-playing .calcifer-flame {
     display: contents !important;
   }
 
-  .wavy-progress-wrapper {
+  /* Scrubber cluster on mobile spanning full top area */
+  .player-scrubber-cluster {
     grid-area: progress !important;
     width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    margin: 0 !important;
+  }
+
+  .time-readout-pill {
+    font-size: 0.68rem !important;
+    min-width: 32px !important;
+    padding: 1px 4px !important;
+    border-radius: 6px !important;
+    background: rgba(255, 255, 255, 0.6) !important;
+  }
+
+  body.twilight-mode .time-readout-pill {
+    background: rgba(0, 0, 0, 0.4) !important;
+    color: #d8f3dc !important;
+  }
+
+  .wavy-progress-wrapper {
+    flex: 1 !important;
     height: 18px !important;
     margin: 0 !important;
   }
@@ -5028,25 +5399,19 @@ body.music-playing .calcifer-flame {
   }
 
   .calcifer-flame {
-    height: 32px !important;
+    height: 34px !important;
     max-width: 28px !important;
   }
 
   .calcifer-thumb-anchor {
-    transform: translate(-50%, -55%) !important;
-  }
-
-  .time-readout-row {
-    font-size: 0.65rem !important;
-    bottom: -2px !important;
-    right: 4px !important;
+    transform: translate(-50%, -58%) !important;
   }
 
   .player-controls-row {
     grid-area: controls !important;
     display: flex !important;
     align-items: center !important;
-    gap: 6px !important;
+    gap: 8px !important;
   }
 
   #shuffleBtn,
@@ -5063,10 +5428,10 @@ body.music-playing .calcifer-flame {
   }
 
   #nextBtn {
-    min-width: 44px !important;
-    min-height: 44px !important;
-    width: 44px !important;
-    height: 44px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    width: 40px !important;
+    height: 40px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;

@@ -63,6 +63,8 @@
     trendingSectionTitle: document.getElementById('trendingSectionTitle'),
     trendingCounter: document.getElementById('trendingCounter'),
     trendingTracksGrid: document.getElementById('trendingTracksGrid'),
+    ambientModeBtn: document.getElementById('ambientModeBtn'),
+    ambientModeText: document.getElementById('ambientModeText'),
 
     // Search view
     mainSearchInput: document.getElementById('mainSearchInput'),
@@ -296,6 +298,27 @@
     highlightActiveCard(track.id);
   }
 
+  function setPlaybackVisualState(isPlaying) {
+    state.isPlaying = !!isPlaying;
+    if (isPlaying) {
+      document.body.classList.add('music-playing');
+      if (dom.playIcon) dom.playIcon.classList.add('hidden');
+      if (dom.pauseIcon) dom.pauseIcon.classList.remove('hidden');
+      if (dom.calciferFlame) {
+        dom.calciferFlame.classList.add('calcifer-dancing');
+        dom.calciferFlame.classList.remove('calcifer-sleeping');
+      }
+    } else {
+      document.body.classList.remove('music-playing');
+      if (dom.playIcon) dom.playIcon.classList.remove('hidden');
+      if (dom.pauseIcon) dom.pauseIcon.classList.add('hidden');
+      if (dom.calciferFlame) {
+        dom.calciferFlame.classList.remove('calcifer-dancing');
+        dom.calciferFlame.classList.add('calcifer-sleeping');
+      }
+    }
+  }
+
   // ==========================================================================
   // YOUTUBE AUDIO ENGINE (Official High-Speed, Zero-Timeout Google Audio Stream)
   // ==========================================================================
@@ -328,19 +351,13 @@
           onStateChange: (event) => {
             // YT.PlayerState: 1 = PLAYING, 2 = PAUSED, 0 = ENDED, 3 = BUFFERING
             if (event.data === 1) {
-              state.isPlaying = true;
+              setPlaybackVisualState(true);
               state.consecutiveErrors = 0;
-              document.body.classList.add('music-playing');
-              if (dom.playIcon) dom.playIcon.classList.add('hidden');
-              if (dom.pauseIcon) dom.pauseIcon.classList.remove('hidden');
               const dur = ytPlayer.getDuration();
               if (dur && dom.totalDuration) dom.totalDuration.textContent = formatTime(dur);
             } else if (event.data === 2) {
               if (state.activeEngine === 'youtube') {
-                state.isPlaying = false;
-                document.body.classList.remove('music-playing');
-                if (dom.playIcon) dom.playIcon.classList.remove('hidden');
-                if (dom.pauseIcon) dom.pauseIcon.classList.add('hidden');
+                setPlaybackVisualState(false);
               }
             } else if (event.data === 0) {
               if (state.activeEngine === 'youtube') {
@@ -362,13 +379,10 @@
               dom.audio.src = `/api/stream/${state.currentTrack.id}`;
               dom.audio.load();
               dom.audio.play().then(() => {
-                state.isPlaying = true;
+                setPlaybackVisualState(true);
                 state.consecutiveErrors = 0;
-                document.body.classList.add('music-playing');
-                if (dom.playIcon) dom.playIcon.classList.add('hidden');
-                if (dom.pauseIcon) dom.pauseIcon.classList.remove('hidden');
               }).catch(() => {
-                state.isPlaying = false;
+                setPlaybackVisualState(false);
                 state.consecutiveErrors = (state.consecutiveErrors || 0) + 1;
                 if (state.consecutiveErrors >= 3) {
                   showToast('🍂 Bài hát này tạm thời gặp sự cố bản quyền. Vui lòng chọn bài khác.');
@@ -452,11 +466,8 @@
       dom.audio.src = track.audioUrl || track.streamUrl || track.previewUrl;
       dom.audio.load();
       dom.audio.play().then(() => {
-        state.isPlaying = true;
+        setPlaybackVisualState(true);
         state.consecutiveErrors = 0;
-        document.body.classList.add('music-playing');
-        if (dom.playIcon) dom.playIcon.classList.add('hidden');
-        if (dom.pauseIcon) dom.pauseIcon.classList.remove('hidden');
       }).catch(err => {
         console.warn('[Audio Playback error]:', err.message);
       });
@@ -476,11 +487,8 @@
       state.activeEngine = 'youtube';
       ytPlayer.loadVideoById(track.id);
       ytPlayer.playVideo();
-      state.isPlaying = true;
+      setPlaybackVisualState(true);
       state.consecutiveErrors = 0;
-      document.body.classList.add('music-playing');
-      if (dom.playIcon) dom.playIcon.classList.add('hidden');
-      if (dom.pauseIcon) dom.pauseIcon.classList.remove('hidden');
     } else {
       // Ưu tiên 2: Phát ngay lập tức qua luồng Audio Proxy /api/stream/:id
       console.log('⚡ YouTube Engine chưa sẵn sàng, phát qua Audio Proxy...');
@@ -488,11 +496,8 @@
       dom.audio.src = `/api/stream/${track.id}`;
       dom.audio.load();
       dom.audio.play().then(() => {
-        state.isPlaying = true;
+        setPlaybackVisualState(true);
         state.consecutiveErrors = 0;
-        document.body.classList.add('music-playing');
-        if (dom.playIcon) dom.playIcon.classList.add('hidden');
-        if (dom.pauseIcon) dom.pauseIcon.classList.remove('hidden');
       }).catch(err => {
         console.warn('[Audio Proxy Play Error]:', err.message);
       });
@@ -514,17 +519,11 @@
     if (state.activeEngine === 'audio' || state.currentTrack.previewUrl) {
       if (dom.audio.paused) {
         dom.audio.play().then(() => {
-          state.isPlaying = true;
-          document.body.classList.add('music-playing');
-          if (dom.playIcon) dom.playIcon.classList.add('hidden');
-          if (dom.pauseIcon) dom.pauseIcon.classList.remove('hidden');
+          setPlaybackVisualState(true);
         }).catch(() => {});
       } else {
         dom.audio.pause();
-        state.isPlaying = false;
-        document.body.classList.remove('music-playing');
-        if (dom.playIcon) dom.playIcon.classList.remove('hidden');
-        if (dom.pauseIcon) dom.pauseIcon.classList.add('hidden');
+        setPlaybackVisualState(false);
       }
       return;
     }
@@ -533,16 +532,10 @@
       const pState = ytPlayer.getPlayerState();
       if (pState === 1) { // Đang phát -> Tạm dừng
         ytPlayer.pauseVideo();
-        state.isPlaying = false;
-        document.body.classList.remove('music-playing');
-        if (dom.playIcon) dom.playIcon.classList.remove('hidden');
-        if (dom.pauseIcon) dom.pauseIcon.classList.add('hidden');
+        setPlaybackVisualState(false);
       } else { // Đang dừng -> Phát
         ytPlayer.playVideo();
-        state.isPlaying = true;
-        document.body.classList.add('music-playing');
-        if (dom.playIcon) dom.playIcon.classList.add('hidden');
-        if (dom.pauseIcon) dom.pauseIcon.classList.remove('hidden');
+        setPlaybackVisualState(true);
       }
       return;
     }
@@ -2023,19 +2016,13 @@
       });
 
       dom.audio.addEventListener('playing', () => {
-        state.isPlaying = true;
+        setPlaybackVisualState(true);
         state.consecutiveErrors = 0;
-        document.body.classList.add('music-playing');
-        if (dom.playIcon) dom.playIcon.classList.add('hidden');
-        if (dom.pauseIcon) dom.pauseIcon.classList.remove('hidden');
       });
 
       dom.audio.addEventListener('pause', () => {
         if (state.activeEngine === 'audio') {
-          state.isPlaying = false;
-          document.body.classList.remove('music-playing');
-          if (dom.playIcon) dom.playIcon.classList.remove('hidden');
-          if (dom.pauseIcon) dom.pauseIcon.classList.add('hidden');
+          setPlaybackVisualState(false);
         }
       });
 
@@ -2066,10 +2053,7 @@
           return;
         }
 
-        state.isPlaying = false;
-        document.body.classList.remove('music-playing');
-        if (dom.playIcon) dom.playIcon.classList.remove('hidden');
-        if (dom.pauseIcon) dom.pauseIcon.classList.add('hidden');
+        setPlaybackVisualState(false);
 
         state.consecutiveErrors = (state.consecutiveErrors || 0) + 1;
         if (state.consecutiveErrors >= 3) {
@@ -2195,9 +2179,63 @@
     });
   }
 
+  // ==========================================================================
+  // 12. AMBIENT MODE: BAN NGÀY (DAY) / ĐÊM RỪNG ĐOM ĐÓM (TWILIGHT)
+  // ==========================================================================
+  function initAmbientMode() {
+    const ambientBtn = dom.ambientModeBtn || document.getElementById('ambientModeBtn');
+    const ambientText = dom.ambientModeText || document.getElementById('ambientModeText');
+    const sunIcon = ambientBtn ? ambientBtn.querySelector('.sun-icon') : null;
+    const moonIcon = ambientBtn ? ambientBtn.querySelector('.moon-icon') : null;
+
+    function applyMode(isTwilight, save = true) {
+      if (isTwilight) {
+        document.body.classList.add('twilight-mode');
+        if (ambientText) ambientText.textContent = 'Đêm Rừng';
+        if (sunIcon) sunIcon.classList.add('hidden');
+        if (moonIcon) moonIcon.classList.remove('hidden');
+        if (ambientBtn) ambientBtn.title = 'Chuyển sang chế độ Ban Ngày ☀️';
+      } else {
+        document.body.classList.remove('twilight-mode');
+        if (ambientText) ambientText.textContent = 'Ban Ngày';
+        if (sunIcon) sunIcon.classList.remove('hidden');
+        if (moonIcon) moonIcon.classList.add('hidden');
+        if (ambientBtn) ambientBtn.title = 'Chuyển sang chế độ Đêm Rừng Đom Đóm 🌙';
+      }
+      if (save) {
+        try {
+          localStorage.setItem('ghibli_ambient_mode', isTwilight ? 'twilight' : 'day');
+        } catch (_) {}
+      }
+    }
+
+    let savedMode = null;
+    try {
+      savedMode = localStorage.getItem('ghibli_ambient_mode');
+    } catch (_) {}
+
+    if (savedMode === 'twilight') {
+      applyMode(true, false);
+    } else if (savedMode === 'day') {
+      applyMode(false, false);
+    } else {
+      const currentHour = new Date().getHours();
+      const isNight = currentHour >= 18 || currentHour < 6;
+      applyMode(isNight, false);
+    }
+
+    if (ambientBtn) {
+      ambientBtn.addEventListener('click', () => {
+        const isTwilight = document.body.classList.contains('twilight-mode');
+        applyMode(!isTwilight, true);
+      });
+    }
+  }
+
   // Khởi động
   function init() {
     setVolume(0.8);
+    initAmbientMode();
     setupEvents();
     initDropYourMusicEvents();
     loadFavorites();

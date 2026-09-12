@@ -21,10 +21,10 @@
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 
-  <!-- Google Fonts: Whimsical Rounded Typography cho chuẩn phong cách Anime Ghibli -->
+  <!-- Google Fonts: Plus Jakarta Sans (Modern Geometric Sans) + Whimsical Rounded Typography Anime Ghibli -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@600;700;800;900&family=Fredoka:wght@500;600;700;800&family=Sniglet:wght@800&family=Quicksand:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&family=Comfortaa:wght@600;700;800;900&family=Fredoka:wght@500;600;700;800&family=Sniglet:wght@800&family=Quicksand:wght@600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="style.css">
 </head>
@@ -191,21 +191,30 @@
             <input type="text" id="homeQuickSearchInput" placeholder="Tìm kiếm bài hát, nghệ sĩ hoặc dán link YouTube..." class="ghibli-quick-search-input">
           </div>
 
-          <div class="country-selector-wrapper">
-            <label for="countrySelectDropdown" class="country-selector-label">
-              <span class="globe-icon">🌐</span>
-              <span class="label-text">Khu vực:</span>
-            </label>
-            <div class="custom-select-shell">
-              <select id="countrySelectDropdown" class="country-dropdown-select" title="Chọn quốc gia đề xuất âm nhạc">
-                <option value="VN" selected>🇻🇳 Việt Nam (VN)</option>
-                <option value="US">🇺🇸 United States (US)</option>
-                <option value="KR">🇰🇷 South Korea (KR)</option>
-                <option value="JP">🇯🇵 Japan (JP)</option>
-                <option value="GB">🇬🇧 United Kingdom (GB)</option>
-                <option value="GLOBAL">🌐 Global Hits</option>
-              </select>
+          <div class="home-top-actions">
+            <div class="country-selector-wrapper">
+              <label for="countrySelectDropdown" class="country-selector-label">
+                <span class="globe-icon">🌐</span>
+                <span class="label-text">Khu vực:</span>
+              </label>
+              <div class="custom-select-shell">
+                <select id="countrySelectDropdown" class="country-dropdown-select" title="Chọn quốc gia đề xuất âm nhạc">
+                  <option value="VN" selected>🇻🇳 Việt Nam (VN)</option>
+                  <option value="US">🇺🇸 United States (US)</option>
+                  <option value="KR">🇰🇷 South Korea (KR)</option>
+                  <option value="JP">🇯🇵 Japan (JP)</option>
+                  <option value="GB">🇬🇧 United Kingdom (GB)</option>
+                  <option value="GLOBAL">🌐 Global Hits</option>
+                </select>
+              </div>
             </div>
+
+            <!-- Nút bật/tắt chế độ Đêm Rừng Đom Đóm / Ban Ngày (Twilight Mode) -->
+            <button id="ambientModeBtn" class="ambient-mode-btn" title="Chuyển chế độ: Ban Ngày ☀️ / Đêm Rừng Đom Đóm 🌙" aria-label="Chuyển chế độ ánh sáng">
+              <span class="mode-icon sun-icon">☀️</span>
+              <span class="mode-icon moon-icon hidden">🌙</span>
+              <span class="mode-label" id="ambientModeText">Ban Ngày</span>
+            </button>
           </div>
         </div>
 
@@ -629,62 +638,68 @@
         </div>
 
         <!-- 
-          THANH TIẾN TRÌNH LƯỢN SÓNG ĐẶC BIỆT & CỤC CHẠY NGỌN LỬA CALCIFER (FIRE.MP4)
+          THANH TIẾN TRÌNH LƯỢN SÓNG ĐẶC BIỆT & CỤC CHẠY NGỌN LỬA CALCIFER
           [SKILL: /animate & /improve-animations]
-          - Đường cong lượn sóng nhẹ màu xanh lá bằng SVG
-          - Cục chạy (Thumb) sử dụng video fire.mp4 lặp vô hạn với mix-blend-mode: multiply khử phông nền
-          - CSS keyframes ngọn lửa nhấp nháy, phập phồng nhẹ khi nhạc đang phát
+          - Thời gian 2 bên đối xứng chuẩn quốc tế (00:00 / 03:45)
+          - Chú lửa Calcifer có tia than hồng li ti phát sáng khi phát nhạc
         -->
-        <div class="wavy-progress-wrapper" id="progressContainer" title="Nhấp hoặc kéo chú lửa Calcifer để tua nhạc">
+        <div class="player-scrubber-cluster">
+          <span id="currentTime" class="time-readout-pill time-current">00:00</span>
           
-          <svg class="wavy-vine-svg" id="wavyVineSvg" viewBox="0 0 600 24" preserveAspectRatio="none">
-            <!-- Đường cong lượn sóng nền -->
-            <path id="vineBasePath" class="vine-base-track" d="M 0 12 Q 150 20, 300 12 T 600 12"/>
-            <!-- Đoạn tiến trình đã phát -->
-            <path id="vineProgressFill" class="vine-progress-fill" d="M 0 12 Q 150 20, 300 12 T 600 12"/>
-          </svg>
+          <div class="wavy-progress-wrapper" id="progressContainer" title="Nhấp hoặc kéo chú lửa Calcifer để tua nhạc">
+            <svg class="wavy-vine-svg" id="wavyVineSvg" viewBox="0 0 600 24" preserveAspectRatio="none">
+              <!-- Đường cong lượn sóng nền -->
+              <path id="vineBasePath" class="vine-base-track" d="M 0 12 Q 150 20, 300 12 T 600 12"/>
+              <!-- Đoạn tiến trình đã phát -->
+              <path id="vineProgressFill" class="vine-progress-fill" d="M 0 12 Q 150 20, 300 12 T 600 12"/>
+            </svg>
 
-          <!-- Cục chạy Ngọn lửa Calcifer chạy dọc theo đường cong (fire.gif lặp vô hạn) -->
-          <div class="calcifer-thumb-anchor" id="progressThumb">
-            <img class="calcifer-flame" id="calciferFlame" src="fire.gif" alt="Calcifer Flame Thumb" title="Calcifer Flame Thumb">
+            <!-- Cục chạy Ngọn lửa Calcifer chạy dọc theo đường cong -->
+            <div class="calcifer-thumb-anchor" id="progressThumb">
+              <img class="calcifer-flame" id="calciferFlame" src="fire.gif" alt="Calcifer Flame Thumb" title="Calcifer Flame Thumb">
+              <!-- Hạt than hồng vi mô -->
+              <div class="calcifer-sparks" id="calciferSparks" aria-hidden="true">
+                <span class="spark s1"></span>
+                <span class="spark s2"></span>
+                <span class="spark s3"></span>
+              </div>
+            </div>
+
+            <!-- Bong bóng hiển thị thời gian khi rê chuột -->
+            <div class="time-floating-chip" id="progressHoverTime">00:00</div>
           </div>
 
-          <!-- Bong bóng hiển thị thời gian khi rê chuột -->
-          <div class="time-floating-chip" id="progressHoverTime">00:00</div>
-
-          <!-- Thời gian phát -->
-          <div class="time-readout-row">
-            <span id="currentTime">00:00</span>
-            <span class="time-divider">/</span>
-            <span id="totalDuration">00:00</span>
-          </div>
-
+          <span id="totalDuration" class="time-readout-pill time-total">00:00</span>
         </div>
 
       </div>
 
-      <!-- RIGHT: Âm lượng + Loa mộc + Bật/Tắt Danh sách phát -->
+      <!-- RIGHT: Âm lượng + Loa mộc + Bật/Tắt Danh sách phát + Hi-Res Audio -->
       <div class="player-right-group">
-        <span class="volume-text-label">Volume</span>
-
-        <button id="muteBtn" class="volume-speaker-btn" title="Bật / Tắt âm lượng [M]">
-          <!-- Biểu tượng loa mộc Ghibli -->
-          <svg id="volumeHighIcon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-            <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-          </svg>
-          <svg id="volumeMutedIcon" class="hidden" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-            <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
-            <line x1="23" y1="9" x2="17" y2="15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></line>
-            <line x1="17" y1="9" x2="23" y2="15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></line>
-          </svg>
-        </button>
-
-        <div class="volume-slider-shell">
-          <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.8" class="nature-slider">
+        <div class="hi-res-audio-chip" title="Chất lượng âm thanh phòng thu 320kbps Lossless">
+          <span class="hi-res-dot"></span> Hi-Res
         </div>
-        <span id="volumePercent" class="volume-percent-badge">80%</span>
+
+        <div class="volume-cluster">
+          <button id="muteBtn" class="volume-speaker-btn" title="Bật / Tắt âm lượng [M]">
+            <!-- Biểu tượng loa mộc Ghibli -->
+            <svg id="volumeHighIcon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+            </svg>
+            <svg id="volumeMutedIcon" class="hidden" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+              <line x1="23" y1="9" x2="17" y2="15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></line>
+              <line x1="17" y1="9" x2="23" y2="15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></line>
+            </svg>
+          </button>
+
+          <div class="volume-slider-shell">
+            <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.8" class="nature-slider">
+          </div>
+          <span id="volumePercent" class="volume-percent-badge">80%</span>
+        </div>
 
         <!-- Nút bật/tắt ngăn kéo danh sách phát -->
         <button id="queueToggleBtn" class="queue-toggle-btn" title="Xem danh sách chờ & ô chọn hạt dẻ">
