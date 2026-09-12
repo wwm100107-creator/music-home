@@ -880,13 +880,13 @@ apiRouter.get('/cookie-status', (req, res) => {
 
 apiRouter.get('/test-clients/:videoId', async (req, res) => {
   const { videoId } = req.params;
+  const cookie = getYouTubeCookie();
   const clientsToTest = [
-    { name: 'ANDROID_LOCAL', client_type: ClientType.ANDROID, generate_session_locally: true },
-    { name: 'ANDROID_REMOTE', client_type: ClientType.ANDROID, generate_session_locally: false },
-    { name: 'IOS_LOCAL', client_type: ClientType.IOS, generate_session_locally: true },
-    { name: 'TV_EMBEDDED', client_type: ClientType.TV_EMBEDDED, generate_session_locally: false },
-    { name: 'WEB_EMBEDDED', client_type: ClientType.WEB_EMBEDDED, generate_session_locally: false },
-    { name: 'VISIONOS_LOCAL', client_type: ClientType.VISIONOS, generate_session_locally: true }
+    { name: 'MWEB_WITH_COOKIE', client_type: ClientType.MWEB, cookie, generate_session_locally: false },
+    { name: 'WEB_WITH_COOKIE', client_type: ClientType.WEB, cookie, generate_session_locally: false },
+    { name: 'ANDROID_WITH_COOKIE', client_type: ClientType.ANDROID, cookie, generate_session_locally: false },
+    { name: 'IOS_WITH_COOKIE', client_type: ClientType.IOS, cookie, generate_session_locally: false },
+    { name: 'TV_WITH_COOKIE', client_type: ClientType.TV, cookie, generate_session_locally: false }
   ];
 
   const results = {};
@@ -894,6 +894,7 @@ apiRouter.get('/test-clients/:videoId', async (req, res) => {
     try {
       const yt = await Innertube.create({
         client_type: c.client_type,
+        cookie: c.cookie,
         cache: new UniversalCache(false),
         generate_session_locally: c.generate_session_locally
       });
