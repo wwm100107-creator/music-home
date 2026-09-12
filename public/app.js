@@ -474,7 +474,6 @@
     // giống hệt Spotify / Apple Music / NhacCuaTui.
     state.activeEngine = 'audio';
     dom.audio.src = finalAudioSrc;
-    dom.audio.load();
 
     const playPromise = dom.audio.play();
     if (playPromise !== undefined) {
@@ -483,6 +482,7 @@
         state.consecutiveErrors = 0;
         updateMediaSession(track);
       }).catch(audioErr => {
+        if (audioErr.name === 'AbortError') return;
         console.warn('[Native Audio Engine Warning]:', audioErr.message);
 
         // Fallback dự phòng sang YouTube Iframe Engine nếu stream trực tiếp bị lỗi hoặc từ chối

@@ -1560,16 +1560,9 @@ apiRouter.get('/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000,
       streamData = await resolveAudioStream(videoId, true);
     }
 
-    // Trên môi trường Serverless (Vercel) hoặc khi client yêu cầu: 
-    // Chuyển hướng 302 trực tiếp sang luồng Google Video CDN để không bao giờ bị nghẽn timeout 10s!
-    const isVercelRuntime = Boolean(
-      process.env.VERCEL || 
-      process.env.VERCEL_ENV || 
-      process.env.NOW_REGION || 
-      process.env.AWS_LAMBDA_FUNCTION_NAME
-    );
-
-    if (isVercelRuntime || req.query.redirect === '1') {
+    // Chỉ chuyển hướng 302 nếu client yêu cầu rõ ràng qua query parameter ?redirect=1
+    // MẶC ĐỊNH BẮT BUỘC PROXY STREAM để không bị lỗi 403 Forbidden do Google Video CDN khóa IP client!
+    if (req.query.redirect === '1') {
       return res.redirect(302, streamData.url);
     }
 
