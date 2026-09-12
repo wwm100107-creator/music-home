@@ -711,8 +711,8 @@
 
   </div>
 
-  <!-- Thẻ Audio cốt lõi cho track preview / direct audio -->
-  <audio id="audioElement" preload="metadata"></audio>
+  <!-- Thẻ Audio cốt lõi cho track preview / direct audio / VisionOS background stream -->
+  <audio id="audioElement" preload="auto" playsinline webkit-playsinline></audio>
 
   <!-- Container YouTube IFrame Engine ngầm (đảm bảo phát nhạc 100% không bao giờ lỗi luồng trên Vercel) -->
   <div id="ytPlayerContainer" style="position: fixed; width: 200px; height: 200px; bottom: 0; right: 0; opacity: 0.001; pointer-events: none; z-index: -1;"></div>

@@ -296,10 +296,12 @@
 
     updateLikeButtonUI(track.id);
     highlightActiveCard(track.id);
+    updateMediaSession(track);
   }
 
   function setPlaybackVisualState(isPlaying) {
     state.isPlaying = !!isPlaying;
+    updateMediaSessionPlaybackState(isPlaying);
     if (isPlaying) {
       document.body.classList.add('music-playing');
       if (dom.playIcon) dom.playIcon.classList.add('hidden');
@@ -457,49 +459,44 @@
 
     showToast(`🎵 Đang phát: ${track.title}`);
 
-    // Track có direct audio URL (từ Drop Your Music, Catbox, hoặc iTunes preview)
-    if (track.audioUrl || track.streamUrl || track.previewUrl) {
-      state.activeEngine = 'audio';
-      if (ytPlayer && isYtReady && typeof ytPlayer.stopVideo === 'function') {
-        ytPlayer.stopVideo();
-      }
-      dom.audio.src = track.audioUrl || track.streamUrl || track.previewUrl;
-      dom.audio.load();
-      dom.audio.play().then(() => {
-        setPlaybackVisualState(true);
-        state.consecutiveErrors = 0;
-      }).catch(err => {
-        console.warn('[Audio Playback error]:', err.message);
-      });
-      return;
+    // Dọn dẹp / dừng YouTube video nếu đang phát để tránh trùng lặp âm thanh
+    if (ytPlayer && isYtReady && typeof ytPlayer.stopVideo === 'function') {
+      ytPlayer.stopVideo();
     }
 
-    // Track YouTube:
-    // Dọn dẹp dom.audio an toàn (KHÔNG gán src = '' để tránh kích hoạt sự kiện onerror của trình duyệt)
-    if (dom.audio) {
-      dom.audio.pause();
-      dom.audio.removeAttribute('src');
-      dom.audio.load();
-    }
+    // 1. Luồng âm thanh trực tiếp (Direct Audio từ Drop Your Music, Catbox, iTunes preview)
+    const directAudioSource = track.audioUrl || track.streamUrl || track.previewUrl;
+    const finalAudioSrc = directAudioSource || `/api/stream/${track.id}`;
 
-    // Ưu tiên 1: YouTube Iframe Engine nếu đã sẵn sàng
-    if (ytPlayer && isYtReady && typeof ytPlayer.loadVideoById === 'function') {
-      state.activeEngine = 'youtube';
-      ytPlayer.loadVideoById(track.id);
-      ytPlayer.playVideo();
-      setPlaybackVisualState(true);
-      state.consecutiveErrors = 0;
-    } else {
-      // Ưu tiên 2: Phát ngay lập tức qua luồng Audio Proxy /api/stream/:id
-      console.log('⚡ YouTube Engine chưa sẵn sàng, phát qua Audio Proxy...');
-      state.activeEngine = 'audio';
-      dom.audio.src = `/api/stream/${track.id}`;
-      dom.audio.load();
-      dom.audio.play().then(() => {
+    // 2. ƯU TIÊN HÀNG ĐẦU: NATIVE HTML5 AUDIO ENGINE
+    // Đây là chìa khóa then chốt để phát nhạc chạy ngầm (Background Playback)
+    // khi tắt màn hình, khóa máy hoặc chuyển ứng dụng trên iOS (iPhone/iPad) & Android
+    // giống hệt Spotify / Apple Music / NhacCuaTui.
+    state.activeEngine = 'audio';
+    dom.audio.src = finalAudioSrc;
+    dom.audio.load();
+
+    const playPromise = dom.audio.play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
         setPlaybackVisualState(true);
         state.consecutiveErrors = 0;
-      }).catch(err => {
-        console.warn('[Audio Proxy Play Error]:', err.message);
+        updateMediaSession(track);
+      }).catch(audioErr => {
+        console.warn('[Native Audio Engine Warning]:', audioErr.message);
+
+        // Fallback dự phòng sang YouTube Iframe Engine nếu stream trực tiếp bị lỗi hoặc từ chối
+        if (ytPlayer && isYtReady && typeof ytPlayer.loadVideoById === 'function' && !directAudioSource) {
+          console.log('🔄 Đang chuyển sang YouTube Engine dự phòng...');
+          state.activeEngine = 'youtube';
+          ytPlayer.loadVideoById(track.id);
+          ytPlayer.playVideo();
+          setPlaybackVisualState(true);
+          state.consecutiveErrors = 0;
+          updateMediaSession(track);
+        } else {
+          setPlaybackVisualState(false);
+        }
       });
     }
   }
@@ -516,7 +513,7 @@
       return;
     }
 
-    if (state.activeEngine === 'audio' || state.currentTrack.previewUrl) {
+    if (state.activeEngine === 'audio') {
       if (dom.audio.paused) {
         dom.audio.play().then(() => {
           setPlaybackVisualState(true);
@@ -542,27 +539,34 @@
 
     if (dom.audio.src) {
       if (dom.audio.paused) {
-        dom.audio.play().catch(() => {});
+        dom.audio.play().then(() => {
+          setPlaybackVisualState(true);
+        }).catch(() => {});
       } else {
         dom.audio.pause();
+        setPlaybackVisualState(false);
       }
     }
   }
 
   function playNextTrack() {
-    if (state.queue.length === 0) return;
+    if (state.queue.length === 0 && state.trendingTracks.length === 0) return;
 
-    if (state.loopMode === 'acorn' && state.customLoopIds.size > 0) {
-      const acornTracks = state.queue.filter(t => state.customLoopIds.has(t.id));
-      if (acornTracks.length > 0) {
-        let curAcornIdx = acornTracks.findIndex(t => t.id === state.currentTrack?.id);
-        let nextAcornIdx = (curAcornIdx + 1) % acornTracks.length;
-        playTrack(acornTracks[nextAcornIdx], false);
-        return;
+    // Chế độ phát hạt dẻ (Acorn Custom Loop)
+    if (state.loopMode === 'acorn') {
+      const acornIds = getAcornSelectedIds();
+      if (acornIds.length > 0) {
+        const acornTracks = state.queue.filter(t => acornIds.includes(t.id));
+        if (acornTracks.length > 0) {
+          const currentAcornIdx = acornTracks.findIndex(t => t.id === state.currentTrack?.id);
+          const nextAcornIdx = (currentAcornIdx + 1) % acornTracks.length;
+          playTrack(acornTracks[nextAcornIdx], false);
+          return;
+        }
       }
     }
 
-    if (state.isShuffle) {
+    if (state.isShuffle && state.queue.length > 0) {
       let randIdx = Math.floor(Math.random() * state.queue.length);
       state.queueIndex = randIdx;
       playTrack(state.queue[randIdx], false);
@@ -572,6 +576,16 @@
     if (state.queueIndex < state.queue.length - 1) {
       state.queueIndex++;
       playTrack(state.queue[state.queueIndex], false);
+    } else if (state.queue.length <= 1 && state.trendingTracks.length > 1) {
+      // Tự động chuyển bài tiếp theo trong bảng xếp hạng khi khóa màn hình
+      const currIdx = state.trendingTracks.findIndex(t => t.id === state.currentTrack?.id);
+      if (currIdx !== -1 && currIdx < state.trendingTracks.length - 1) {
+        playTrack(state.trendingTracks[currIdx + 1], true);
+      } else if (state.loopMode === 'all') {
+        playTrack(state.trendingTracks[0], true);
+      } else {
+        showToast('🍃 Đã hết danh sách bài hát.');
+      }
     } else if (state.loopMode === 'all') {
       state.queueIndex = 0;
       playTrack(state.queue[0], false);
@@ -2006,12 +2020,14 @@
           const percent = (dom.audio.currentTime / dom.audio.duration) * 100;
           updateProgressUI(percent);
           if (dom.currentTime) dom.currentTime.textContent = formatTime(dom.audio.currentTime);
+          updateMediaSessionPosition(dom.audio.currentTime, dom.audio.duration);
         }
       });
 
       dom.audio.addEventListener('loadedmetadata', () => {
-        if (state.activeEngine === 'audio' && dom.totalDuration && dom.audio.duration) {
-          dom.totalDuration.textContent = formatTime(dom.audio.duration);
+        if (state.activeEngine === 'audio' && dom.audio.duration) {
+          if (dom.totalDuration) dom.totalDuration.textContent = formatTime(dom.audio.duration);
+          updateMediaSessionPosition(dom.audio.currentTime, dom.audio.duration);
         }
       });
 
@@ -2232,10 +2248,125 @@
     }
   }
 
+  // ==========================================================================
+  // 13. W3C MEDIA SESSION API (Phát trong nền khi khóa màn hình, Lock Screen Widget, AirPods)
+  // ==========================================================================
+  function updateMediaSession(track) {
+    if (!('mediaSession' in navigator) || !track) return;
+
+    try {
+      const rawArt = upgradeThumbnailUrl(track.thumbnail || '');
+      let safeArtUrl = rawArt;
+      if (rawArt && !rawArt.startsWith('http')) {
+        try {
+          safeArtUrl = new URL(rawArt, window.location.origin).href;
+        } catch (_) {}
+      }
+
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.title || 'Home Music',
+        artist: track.artist || 'Studio Ghibli',
+        album: track.album || 'Khu Vườn Âm Nhạc Home Music',
+        artwork: safeArtUrl ? [
+          { src: safeArtUrl, sizes: '96x96', type: 'image/jpeg' },
+          { src: safeArtUrl, sizes: '128x128', type: 'image/jpeg' },
+          { src: safeArtUrl, sizes: '192x192', type: 'image/jpeg' },
+          { src: safeArtUrl, sizes: '256x256', type: 'image/jpeg' },
+          { src: safeArtUrl, sizes: '384x384', type: 'image/jpeg' },
+          { src: safeArtUrl, sizes: '512x512', type: 'image/jpeg' }
+        ] : [
+          { src: new URL('icon-192.png', window.location.origin).href, sizes: '192x192', type: 'image/png' },
+          { src: new URL('icon-512.png', window.location.origin).href, sizes: '512x512', type: 'image/png' }
+        ]
+      });
+
+      updateMediaSessionPlaybackState(state.isPlaying);
+    } catch (err) {
+      console.warn('[MediaSession Metadata Warning]:', err.message);
+    }
+  }
+
+  function updateMediaSessionPlaybackState(isPlaying) {
+    if (!('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    } catch (_) {}
+  }
+
+  function updateMediaSessionPosition(currentTime, duration) {
+    if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+    if (!duration || isNaN(duration) || duration <= 0) return;
+    try {
+      navigator.mediaSession.setPositionState({
+        duration: Math.max(duration, 0),
+        playbackRate: 1.0,
+        position: Math.min(Math.max(currentTime || 0, 0), duration)
+      });
+    } catch (_) {}
+  }
+
+  function setupMediaSessionHandlers() {
+    if (!('mediaSession' in navigator)) return;
+
+    const actionHandlers = [
+      ['play', () => {
+        if (!state.isPlaying) togglePlayPause();
+      }],
+      ['pause', () => {
+        if (state.isPlaying) togglePlayPause();
+      }],
+      ['previoustrack', () => {
+        playPrevTrack();
+      }],
+      ['nexttrack', () => {
+        playNextTrack();
+      }],
+      ['seekto', (details) => {
+        if (details.seekTime === undefined || isNaN(details.seekTime)) return;
+        if (state.activeEngine === 'audio' && dom.audio && dom.audio.duration) {
+          dom.audio.currentTime = details.seekTime;
+          updateMediaSessionPosition(details.seekTime, dom.audio.duration);
+        } else if (state.activeEngine === 'youtube' && ytPlayer && typeof ytPlayer.seekTo === 'function') {
+          ytPlayer.seekTo(details.seekTime, true);
+        }
+      }],
+      ['seekbackward', (details) => {
+        const skip = details.seekOffset || 10;
+        if (state.activeEngine === 'audio' && dom.audio) {
+          dom.audio.currentTime = Math.max(dom.audio.currentTime - skip, 0);
+          updateMediaSessionPosition(dom.audio.currentTime, dom.audio.duration);
+        } else if (state.activeEngine === 'youtube' && ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
+          ytPlayer.seekTo(Math.max(ytPlayer.getCurrentTime() - skip, 0), true);
+        }
+      }],
+      ['seekforward', (details) => {
+        const skip = details.seekOffset || 10;
+        if (state.activeEngine === 'audio' && dom.audio) {
+          dom.audio.currentTime = Math.min(dom.audio.currentTime + skip, dom.audio.duration || 9999);
+          updateMediaSessionPosition(dom.audio.currentTime, dom.audio.duration);
+        } else if (state.activeEngine === 'youtube' && ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
+          ytPlayer.seekTo(ytPlayer.getCurrentTime() + skip, true);
+        }
+      }],
+      ['stop', () => {
+        if (state.isPlaying) togglePlayPause();
+      }]
+    ];
+
+    for (const [action, handler] of actionHandlers) {
+      try {
+        navigator.mediaSession.setActionHandler(action, handler);
+      } catch (err) {
+        // Một số action có thể không được hỗ trợ trên trình duyệt cũ
+      }
+    }
+  }
+
   // Khởi động
   function init() {
     setVolume(0.8);
     initAmbientMode();
+    setupMediaSessionHandlers();
     setupEvents();
     initDropYourMusicEvents();
     loadFavorites();
