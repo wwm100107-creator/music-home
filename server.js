@@ -806,35 +806,6 @@ apiRouter.get('/health', (req, res) => {
   });
 });
 
-apiRouter.get('/test-innertube/:videoId', async (req, res) => {
-  const { videoId } = req.params;
-  const results = {};
-  const types = ['TV_EMBEDDED', 'ANDROID_VR', 'KIDS', 'TV_SIMPLY', 'IOS', 'VISIONOS'];
-  for (const t of types) {
-    try {
-      const yt = await Innertube.create({
-        client_type: ClientType[t],
-        cache: new UniversalCache(false),
-        generate_session_locally: false
-      });
-      const info = await yt.getBasicInfo(videoId);
-      const formats = info.streaming_data?.adaptive_formats || [];
-      const audioWithUrl = formats.filter(f => f.mime_type?.startsWith('audio/') && f.url);
-      results[t] = {
-        playability_status: info.playability_status?.status,
-        reason: info.playability_status?.reason,
-        totalFormats: formats.length,
-        audioFormatsWithUrl: audioWithUrl.length,
-        sampleMime: audioWithUrl[0]?.mime_type,
-        sampleUrl: audioWithUrl[0]?.url ? audioWithUrl[0].url.substring(0, 60) + '...' : null
-      };
-    } catch (e) {
-      results[t] = { error: e.message };
-    }
-  }
-  res.json(results);
-});
-
 // 10.2. Location & Supported Countries
 apiRouter.get('/location', (req, res) => {
   const detectedCode = detectCountry(req);
