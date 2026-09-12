@@ -220,30 +220,44 @@ class CircuitBreaker {
 const circuitBreaker = new CircuitBreaker(4, 60000);
 
 // ============================================================================
-// 6. DUAL-CLIENT INNERTUBE ENGINE (Search Client & VisionOS Stream Client)
+// 6. DUAL-CLIENT INNERTUBE ENGINE (With YouTube Cookie & Token Auth)
 // ============================================================================
 let ytSearchInstance = null;
 let ytStreamInstance = null;
 
+const ytCookie = process.env.YOUTUBE_COOKIE || process.env.COOKIE || '';
+const ytPoToken = process.env.YOUTUBE_PO_TOKEN || undefined;
+
 async function getSearchClient() {
   if (!ytSearchInstance) {
-    ytSearchInstance = await Innertube.create({
+    const config = {
       cache: new UniversalCache(false),
-      generate_session_locally: true
-    });
-    console.log('✅ YouTube Search client initialized (WEB/MUSIC)');
+      generate_session_locally: !ytCookie
+    };
+    if (ytCookie) {
+      config.cookie = ytCookie;
+    }
+    ytSearchInstance = await Innertube.create(config);
+    console.log('✅ YouTube Search client initialized' + (ytCookie ? ' [COOKIE AUTHENTICATED]' : ''));
   }
   return ytSearchInstance;
 }
 
 async function getStreamClient() {
   if (!ytStreamInstance) {
-    ytStreamInstance = await Innertube.create({
-      client_type: ClientType.VISIONOS,
+    const config = {
+      client_type: ClientType.IOS,
       cache: new UniversalCache(false),
-      generate_session_locally: true
-    });
-    console.log('✅ YouTube Stream client initialized (VISIONOS Unthrottled Engine)');
+      generate_session_locally: !ytCookie
+    };
+    if (ytCookie) {
+      config.cookie = ytCookie;
+    }
+    if (ytPoToken) {
+      config.po_token = ytPoToken;
+    }
+    ytStreamInstance = await Innertube.create(config);
+    console.log('✅ YouTube Stream client initialized' + (ytCookie ? ' [COOKIE AUTHENTICATED]' : ''));
   }
   return ytStreamInstance;
 }
@@ -254,7 +268,7 @@ async function getClients() {
   return { ytSearch, ytStream };
 }
 
-// Helper resolve audio stream URL qua VisionOS
+// Helper resolve audio stream URL
 async function resolveAudioStream(videoId, forceRefresh = false) {
   if (!forceRefresh) {
     const cached = streamCache.get(videoId);
@@ -263,9 +277,37 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
 
   const ytStream = await getStreamClient();
   const info = await ytStream.getBasicInfo(videoId);
-  const formats = info.streaming_data?.adaptive_formats || [];
 
-  const audioFormats = formats.filter(f => f.mime_type?.startsWith('audio/') && f.url);
+  if (info.playability_status?.status && info.playability_status.status !== 'OK') {
+    const reason = info.playability_status.reason || 'Video is not playable';
+    console.warn(`[Playability Status for ${videoId}]:`, info.playability_status.status, '-', reason);
+  }
+
+  const adaptive = info.streaming_data?.adaptive_formats || [];
+  const combined = info.streaming_data?.formats || [];
+  const allFormats = [...adaptive, ...combined];
+
+  const audioFormats = allFormats.filter(f => (f.mime_type?.startsWith('audio/') || f.has_audio) && f.url);
+
+  if (audioFormats.length === 0) {
+    // Thử fallback sang VisionOS nếu client iOS chưa lấy được định dạng
+    try {
+      const visionClient = await Innertube.create({
+        client_type: ClientType.VISIONOS,
+        cookie: ytCookie || undefined,
+        cache: new UniversalCache(false),
+        generate_session_locally: !ytCookie
+      });
+      const vInfo = await visionClient.getBasicInfo(videoId);
+      const vAdaptive = vInfo.streaming_data?.adaptive_formats || [];
+      const vCombined = vInfo.streaming_data?.formats || [];
+      const vAll = [...vAdaptive, ...vCombined];
+      const vAudio = vAll.filter(f => (f.mime_type?.startsWith('audio/') || f.has_audio) && f.url);
+      if (vAudio.length > 0) {
+        audioFormats.push(...vAudio);
+      }
+    } catch (_) {}
+  }
 
   if (audioFormats.length === 0) {
     throw new Error('Không tìm thấy luồng âm thanh trực tiếp cho bài hát này.');
@@ -274,6 +316,7 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
   let chosenFormat =
     audioFormats.find(f => f.itag === 140) ||
     audioFormats.find(f => f.itag === 251) ||
+    audioFormats.find(f => f.itag === 139) ||
     audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
 
   try {
@@ -289,7 +332,7 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
     videoId,
     url: chosenFormat.url,
     itag: chosenFormat.itag,
-    mimeType: chosenFormat.mime_type.split(';')[0],
+    mimeType: chosenFormat.mime_type ? chosenFormat.mime_type.split(';')[0] : 'audio/mp4',
     contentLength: chosenFormat.content_length ? parseInt(chosenFormat.content_length, 10) : null,
     bitrate: chosenFormat.bitrate
   };
@@ -803,6 +846,19 @@ apiRouter.get('/health', (req, res) => {
       stream: streamCache.store.size,
       trending: trendingCache.store.size
     }
+  });
+});
+
+// 10.1.1. YouTube Cookie Status Check
+apiRouter.get('/cookie-status', (req, res) => {
+  const cookie = process.env.YOUTUBE_COOKIE || process.env.COOKIE || '';
+  res.json({
+    hasCookie: Boolean(cookie),
+    cookieLength: cookie.length,
+    authenticated: Boolean(cookie && (cookie.includes('SID=') || cookie.includes('VISITOR_INFO1_LIVE='))),
+    instructions: Boolean(cookie)
+      ? '✅ Biến môi trường YOUTUBE_COOKIE đã được nạp thành công!'
+      : '⚠️ Chưa cấu hình biến môi trường YOUTUBE_COOKIE trên Vercel.'
   });
 });
 
