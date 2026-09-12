@@ -878,42 +878,6 @@ apiRouter.get('/cookie-status', (req, res) => {
   });
 });
 
-apiRouter.get('/test-clients/:videoId', async (req, res) => {
-  const { videoId } = req.params;
-  const cookie = getYouTubeCookie();
-
-  try {
-    const yt = await Innertube.create({
-      cache: new UniversalCache(false),
-      generate_session_locally: false
-    });
-    const track = await yt.music.getInfo(videoId);
-    const formats = track.streaming_data?.adaptive_formats || [];
-    const audio = formats.filter(f => f.mime_type?.startsWith('audio/'));
-    const target = audio.find(f => f.itag === 140) || audio[0];
-
-    let streamUrl = target?.url;
-    if (!streamUrl && target && typeof target.decipher === 'function') {
-      try {
-        streamUrl = await target.decipher(yt.session.player);
-      } catch (e) {
-        streamUrl = 'decipher_err: ' + e.message;
-      }
-    }
-
-    return res.json({
-      success: true,
-      musicStatus: track.playability_status?.status,
-      reason: track.playability_status?.reason,
-      audioCount: audio.length,
-      targetItag: target?.itag,
-      streamUrl: streamUrl ? streamUrl.substring(0, 70) + '...' : null
-    });
-  } catch (err) {
-    return res.json({ success: false, error: err.message, stack: err.stack?.substring(0, 300) });
-  }
-});
-
 // 10.2. Location & Supported Countries
 apiRouter.get('/location', (req, res) => {
   const detectedCode = detectCountry(req);
