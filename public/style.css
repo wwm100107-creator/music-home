@@ -4530,6 +4530,164 @@ body.twilight-mode .hero-main-title {
   color: #ffffff;
 }
 
+/* 4. DROP LYRICS ATTACHMENT SECTION */
+.drop-lyrics-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 2px dashed rgba(181, 137, 87, 0.5);
+  border-radius: 20px;
+  padding: 16px 20px;
+  margin-top: 14px;
+  transition: border-color 0.22s ease, background 0.22s ease;
+}
+
+.drop-lyrics-section:hover {
+  border-color: #2d6a4f;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+body.twilight-mode .drop-lyrics-section {
+  background: rgba(20, 36, 26, 0.55);
+  border-color: rgba(82, 183, 136, 0.4);
+}
+
+body.twilight-mode .drop-lyrics-section:hover {
+  border-color: #7fc95e;
+  background: rgba(20, 36, 26, 0.75);
+}
+
+.drop-lyrics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.drop-field-sub {
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.8rem;
+  color: #7f5539;
+  margin-top: -2px;
+}
+
+body.twilight-mode .drop-field-sub {
+  color: #a8c5b2;
+}
+
+.drop-field-sub code {
+  background: rgba(45, 106, 79, 0.15);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-weight: 700;
+  color: #2d6a4f;
+}
+
+body.twilight-mode .drop-field-sub code {
+  background: rgba(127, 201, 94, 0.2);
+  color: #7fc95e;
+}
+
+.drop-lyrics-file-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  background: #f4eee2;
+  border: 1.5px solid #d4a373;
+  color: #2b1810;
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.drop-lyrics-file-btn:hover {
+  background: #ffffff;
+  border-color: #2d6a4f;
+  color: #2d6a4f;
+  transform: translateY(-1px);
+}
+
+body.twilight-mode .drop-lyrics-file-btn {
+  background: rgba(30, 52, 38, 0.85);
+  border-color: rgba(82, 183, 136, 0.4);
+  color: #d8f3dc;
+}
+
+.drop-lyrics-textarea {
+  width: 100%;
+  min-height: 96px;
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  font-family: inherit;
+  resize: vertical;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1.5px solid rgba(181, 137, 87, 0.35);
+  color: #2b1810;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+body.twilight-mode .drop-lyrics-textarea {
+  background: rgba(14, 26, 18, 0.65);
+  border-color: rgba(82, 183, 136, 0.35);
+  color: #f1faee;
+}
+
+.drop-lyrics-textarea:focus {
+  outline: none;
+  border-color: #2d6a4f;
+  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.18);
+}
+
+.drop-lyrics-file-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 4px 12px;
+  border-radius: 16px;
+  background: rgba(45, 106, 79, 0.15);
+  border: 1px solid rgba(45, 106, 79, 0.3);
+  font-family: var(--font-ghibli-nav);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #2d6a4f;
+  animation: cardFloatIn 0.3s ease;
+}
+
+body.twilight-mode .drop-lyrics-file-badge {
+  background: rgba(127, 201, 94, 0.18);
+  border-color: rgba(127, 201, 94, 0.35);
+  color: #7fc95e;
+}
+
+.badge-remove-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: inherit;
+  opacity: 0.75;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.badge-remove-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
 /* ACTIONS BAR */
 .drop-actions-bar {
   margin-top: 28px;

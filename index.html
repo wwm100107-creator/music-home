@@ -499,7 +499,31 @@
             </div>
           </div>
 
-          <!-- 4. Nút bấm Chia Sẻ Lên Ngôi Nhà Âm Nhạc -->
+          <!-- 4. Đính Kèm Lời Bài Hát (Tùy Chọn) -->
+          <div class="drop-lyrics-section">
+            <div class="drop-lyrics-header">
+              <label for="dropSongLyrics" class="drop-field-label">📜 Đính Kèm Lời Bài Hát (Tùy Chọn):</label>
+              <div class="drop-lyrics-upload-wrap">
+                <button type="button" class="drop-lyrics-file-btn" id="browseLyricsFileBtn">
+                  📄 Tải Lên File .lrc / .txt
+                </button>
+                <input type="file" id="dropLyricsFileInput" accept=".lrc,.txt" class="hidden">
+              </div>
+            </div>
+            <p class="drop-field-sub">
+              Dán lời bài hát hoặc tải file đồng bộ nhịp <code>.lrc</code>. Nếu để trống, hệ thống sẽ tự động tìm lời từ kho dữ liệu số.
+            </p>
+            <div class="drop-lyrics-input-wrap">
+              <textarea id="dropSongLyrics" class="drop-lyrics-textarea" rows="4" placeholder="Dán lời bài hát vào đây...&#10;Hỗ trợ cả văn bản thường hoặc định dạng đồng bộ nhịp [00:15.20] Từng câu hát..."></textarea>
+              <div class="drop-lyrics-file-badge hidden" id="lyricsFileBadge">
+                <span class="badge-icon">✅</span>
+                <span class="badge-filename" id="lyricsBadgeFilename">lyrics.lrc</span>
+                <button type="button" class="badge-remove-btn" id="removeLyricsFileBtn" title="Hủy file này">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. Nút bấm Chia Sẻ Lên Ngôi Nhà Âm Nhạc -->
           <div class="drop-actions-bar">
             <button id="dropSubmitBtn" class="drop-submit-action-btn">
               <span class="btn-sparkle">✨</span>

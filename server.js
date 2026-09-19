@@ -2023,7 +2023,8 @@ apiRouter.post('/drop/upload', async (req, res) => {
       imageBase64,
       imageName,
       imageMime,
-      directAudioUrl
+      directAudioUrl,
+      lyrics
     } = req.body || {};
 
     if (!directAudioUrl && !audioBase64) {
@@ -2032,6 +2033,7 @@ apiRouter.post('/drop/upload', async (req, res) => {
 
     const cleanTitle = (title || audioName || 'Khúc Ca Mộc Mạc').replace(/\.[^/.]+$/, '').trim();
     const cleanArtist = (artist || 'Cộng đồng Home Music').trim();
+    const cleanLyrics = (typeof lyrics === 'string' && lyrics.trim().length > 0) ? lyrics.trim() : null;
 
     let finalAudioUrl = directAudioUrl || '';
     if (!finalAudioUrl && audioBase64) {
@@ -2063,6 +2065,7 @@ apiRouter.post('/drop/upload', async (req, res) => {
       streamUrl: finalAudioUrl,
       source: 'drop',
       themePreset: themePreset || 'custom',
+      lyrics: cleanLyrics,
       createdAt: new Date().toISOString()
     };
 

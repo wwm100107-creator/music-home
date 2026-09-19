@@ -166,6 +166,12 @@
     customThemeFileName: document.getElementById('customThemeFileName'),
     customThemeEmpty: document.getElementById('customThemeEmpty'),
     removeCustomThemeBtn: document.getElementById('removeCustomThemeBtn'),
+    dropSongLyrics: document.getElementById('dropSongLyrics'),
+    browseLyricsFileBtn: document.getElementById('browseLyricsFileBtn'),
+    dropLyricsFileInput: document.getElementById('dropLyricsFileInput'),
+    lyricsFileBadge: document.getElementById('lyricsFileBadge'),
+    lyricsBadgeFilename: document.getElementById('lyricsBadgeFilename'),
+    removeLyricsFileBtn: document.getElementById('removeLyricsFileBtn'),
     dropSubmitBtn: document.getElementById('dropSubmitBtn'),
     dropSubmitLoading: document.getElementById('dropSubmitLoading'),
     dropCommunityCounterPill: document.getElementById('dropCommunityCounterPill'),
@@ -1056,6 +1062,26 @@
     }
   }
 
+  function parseLRC(lrcText) {
+    if (!lrcText || typeof lrcText !== 'string') return [];
+    const lines = lrcText.split(/\r?\n/);
+    const parsed = [];
+    const timeRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\](.*)/;
+
+    for (const line of lines) {
+      const match = line.match(timeRegex);
+      if (match) {
+        const minutes = parseInt(match[1], 10);
+        const seconds = parseInt(match[2], 10);
+        const fraction = match[3] ? parseFloat('0.' + match[3]) : 0;
+        const totalSeconds = parseFloat((minutes * 60 + seconds + fraction).toFixed(2));
+        const text = match[4].trim();
+        parsed.push({ time: totalSeconds, text });
+      }
+    }
+    return parsed.sort((a, b) => a.time - b.time);
+  }
+
   async function fetchAndRenderLyrics(track) {
     if (!track || !track.title) return;
 
@@ -1073,6 +1099,65 @@
     if (dom.lyricsTrackTitle) dom.lyricsTrackTitle.textContent = track.title;
     if (dom.lyricsTrackArtist) dom.lyricsTrackArtist.textContent = track.artist || 'Studio Ghibli';
     if (dom.lyricsTrackCover) dom.lyricsTrackCover.src = upgradeThumbnailUrl(track.thumbnail);
+
+    // Tự động mở mục Lyrics trên tất cả thiết bị theo đúng mong muốn của người dùng
+    openLyricsStage();
+
+    // ========================================================================
+    // ƯU TIÊN 1: NẾU BÀI HÁT CÓ LỜI ĐƯỢC NGƯỜI DÙNG ĐÍNH KÈM (DROP YOUR MUSIC)
+    // ========================================================================
+    if (track.lyrics && typeof track.lyrics === 'string' && track.lyrics.trim().length > 0) {
+      state.lyricsLoading = false;
+      const isLrc = /\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/.test(track.lyrics);
+
+      if (isLrc) {
+        const parsedLines = parseLRC(track.lyrics);
+        if (parsedLines.length > 0) {
+          state.lyrics = parsedLines;
+          if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '✨ Lời đồng bộ do tác giả đính kèm';
+          renderLyricsLines(state.lyrics);
+
+          if (dom.sheetLyricsActiveText) {
+            dom.sheetLyricsActiveText.textContent = state.lyrics[0]?.text || 'Giai điệu bắt đầu...';
+          }
+          if (dom.sheetLyricsNextText) {
+            dom.sheetLyricsNextText.textContent = state.lyrics[1]?.text || '';
+          }
+
+          // Đồng bộ với thời gian hiện tại
+          let curTime = 0;
+          if (state.activeEngine === 'audio' && dom.audio) {
+            curTime = dom.audio.currentTime || 0;
+          } else if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.getCurrentTime === 'function') {
+            curTime = ytPlayer.getCurrentTime() || 0;
+          }
+          if (curTime > 0) {
+            syncLyricsWithTime(curTime);
+          }
+          return;
+        }
+      }
+
+      // Ngược lại: Lời dạng văn bản thường (Plain Text)
+      state.lyrics = [];
+      if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '📜 Lời bài hát do tác giả đính kèm';
+      const plainLines = track.lyrics.split(/\r?\n/).filter(l => l.trim().length > 0);
+      if (dom.lyricsLinesContainer) {
+        dom.lyricsLinesContainer.innerHTML = plainLines.map(line => `
+          <div class="lyric-line past" style="opacity: 0.88; font-size: 1.35rem; text-align: center; margin-bottom: 14px;">
+            ${escapeHtml(line)}
+          </div>
+        `).join('');
+      }
+      if (dom.sheetLyricsActiveText) {
+        dom.sheetLyricsActiveText.textContent = plainLines[0] || 'Lời bài hát có sẵn';
+      }
+      return;
+    }
+
+    // ========================================================================
+    // ƯU TIÊN 2: TỰ ĐỘNG TÌM KIẾM TRÊN KHO DỮ LIỆU LRCLIB (NẾU KHÔNG ĐÍNH KÈM)
+    // ========================================================================
     if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '⏳ Đang nạp lời bài hát...';
 
     // Cập nhật trên thẻ Mobile Sheet
@@ -1088,9 +1173,6 @@
         </div>
       `;
     }
-
-    // Tự động mở mục Lyrics trên tất cả thiết bị theo đúng mong muốn của người dùng
-    openLyricsStage();
 
     try {
       const params = new URLSearchParams({
@@ -2345,6 +2427,10 @@
     if (dom.dropThemeFileInput) dom.dropThemeFileInput.value = '';
     if (dom.dropSongTitle) dom.dropSongTitle.value = '';
     if (dom.dropSongArtist) dom.dropSongArtist.value = '';
+    if (dom.dropSongLyrics) dom.dropSongLyrics.value = '';
+    if (dom.dropLyricsFileInput) dom.dropLyricsFileInput.value = '';
+    if (dom.lyricsFileBadge) dom.lyricsFileBadge.classList.add('hidden');
+    if (dom.lyricsBadgeFilename) dom.lyricsBadgeFilename.textContent = '';
 
     if (dom.dropSelectedBanner) dom.dropSelectedBanner.classList.add('hidden');
     if (dom.dropAudioPreviewElement) {
@@ -2405,7 +2491,8 @@
     }
 
     if (dom.removeSelectedFileBtn) {
-      dom.removeSelectedFileBtn.addEventListener('click', () => {
+      dom.removeSelectedFileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         selectedAudioFile = null;
         if (dom.dropAudioFileInput) dom.dropAudioFileInput.value = '';
         if (dom.dropSelectedBanner) dom.dropSelectedBanner.classList.add('hidden');
@@ -2463,7 +2550,48 @@
       });
     }
 
-    // 3. Nút Gửi Bài Hát
+    // 3. Đính Kèm File Lời Bài Hát (.lrc / .txt)
+    if (dom.browseLyricsFileBtn && dom.dropLyricsFileInput) {
+      dom.browseLyricsFileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dom.dropLyricsFileInput.click();
+      });
+
+      dom.dropLyricsFileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const content = event.target.result;
+          if (dom.dropSongLyrics) {
+            dom.dropSongLyrics.value = content;
+          }
+          if (dom.lyricsBadgeFilename) {
+            const lineCount = content.split(/\r?\n/).filter(l => l.trim().length > 0).length;
+            dom.lyricsBadgeFilename.textContent = `${file.name} (${lineCount} dòng)`;
+          }
+          if (dom.lyricsFileBadge) {
+            dom.lyricsFileBadge.classList.remove('hidden');
+          }
+          showToast(`📜 Đã đính kèm file lời: ${file.name}`);
+        };
+        reader.readAsText(file);
+      });
+    }
+
+    if (dom.removeLyricsFileBtn) {
+      dom.removeLyricsFileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (dom.dropSongLyrics) dom.dropSongLyrics.value = '';
+        if (dom.dropLyricsFileInput) dom.dropLyricsFileInput.value = '';
+        if (dom.lyricsFileBadge) dom.lyricsFileBadge.classList.add('hidden');
+        if (dom.lyricsBadgeFilename) dom.lyricsBadgeFilename.textContent = '';
+        showToast('Đã hủy đính kèm file lời bài hát');
+      });
+    }
+
+    // 4. Nút Gửi Bài Hát
     if (dom.dropSubmitBtn) {
       dom.dropSubmitBtn.addEventListener('click', async () => {
         if (!selectedAudioFile) {
@@ -2473,6 +2601,7 @@
 
         const title = (dom.dropSongTitle?.value || '').trim() || selectedAudioFile.name.replace(/\.[^/.]+$/, '');
         const artist = (dom.dropSongArtist?.value || '').trim() || 'Cộng đồng Home Music';
+        const lyrics = (dom.dropSongLyrics?.value || '').trim();
 
         // Khóa nút & bật loading
         dom.dropSubmitBtn.disabled = true;
@@ -2497,6 +2626,7 @@
             title,
             artist,
             duration: selectedAudioDuration,
+            lyrics: lyrics || null,
             audioBase64,
             audioName: selectedAudioFile.name,
             audioMime: selectedAudioFile.type,
