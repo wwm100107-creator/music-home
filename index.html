@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&family=Comfortaa:wght@600;700;800;900&family=Fredoka:wght@500;600;700;800&family=Sniglet:wght@800&family=Quicksand:wght@600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=2.2">
+  <link rel="stylesheet" href="style.css?v=3.0">
 </head>
 <body class="ghibli-app-body">
 
@@ -53,6 +53,9 @@
     <span class="firefly f5"></span>
     <span class="firefly f6"></span>
   </div>
+
+  <!-- [SKILL: /design-spells] Bụi tiên & đom đóm lướt theo con trỏ chuột trên PC -->
+  <canvas id="magicCursorCanvas" class="magic-cursor-canvas" aria-hidden="true"></canvas>
 
   <!-- KHUNG ỨNG DỤNG CHÍNH (SIDEBAR + MAIN + BOTTOM PLAYER) -->
   <div class="app-layout">
@@ -570,15 +573,43 @@
     -->
     <footer class="bottom-player-glass" id="bottomPlayer">
 
-      <!-- LEFT: Bìa album + Tên bài hát + Nghệ sĩ + Yêu thích -->
-      <div class="player-left-group">
-        <div class="album-cover-frame">
+      <!-- [SKILL: /design-spells] Quầng sáng quang học động tỏa ra từ bài hát đang phát -->
+      <div class="player-ambient-aura" id="playerAmbientAura" aria-hidden="true"></div>
+
+      <!-- LEFT: Bìa album + Đĩa than mini + Sóng âm cỏ lau + Kodama + Tên bài hát -->
+      <div class="player-left-group" id="playerLeftGroup">
+        <div class="album-cover-frame" id="albumCoverFrame">
+          <div class="player-mini-vinyl" id="playerMiniVinyl" aria-hidden="true">
+            <div class="mini-vinyl-center"></div>
+          </div>
           <img id="currentTrackCover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='24' fill='%23fefae0'>🎵</text></svg>" alt="Chưa có bài hát" class="now-playing-cover">
         </div>
         <div class="now-playing-meta">
           <div class="song-title-row">
             <span id="trackTitle" class="track-title-text" title="Chưa có bài hát nào">Chưa có bài hát nào</span>
             <button id="likeBtn" class="leaf-heart-btn" title="Yêu thích bài này">💚</button>
+            
+            <!-- [SKILL: /design-spells] Dải sóng âm thực vật Ghibli (Botanical Waveform) -->
+            <div class="nature-waveform-eq" id="natureWaveformEq" title="Sóng âm thiên nhiên" aria-hidden="true">
+              <span class="eq-stem s1"></span>
+              <span class="eq-stem s2"></span>
+              <span class="eq-stem s3"></span>
+              <span class="eq-stem s4"></span>
+              <span class="eq-stem s5"></span>
+            </div>
+
+            <!-- [SKILL: /design-spells] Chú tinh linh Kodama gật gù theo nhịp điệu bài hát -->
+            <div class="kodama-beat-buddy" id="kodamaBeatBuddy" title="Kodama đang lắng nghe..." aria-hidden="true">
+              <svg viewBox="0 0 28 34" width="22" height="26" class="kodama-svg">
+                <g class="kodama-head-group">
+                  <ellipse cx="14" cy="12" rx="10" ry="9.5" fill="#f8fcf4" stroke="#394f38" stroke-width="1.6"/>
+                  <circle cx="10" cy="11" r="1.8" fill="#2d3b2b"/>
+                  <circle cx="18" cy="11" r="1.8" fill="#2d3b2b"/>
+                  <ellipse cx="14" cy="16" rx="1.5" ry="2" fill="#2d3b2b"/>
+                </g>
+                <path d="M9 21 Q14 20 19 21 Q20 30 14 31 Q8 30 9 21 Z" fill="#ebf5e8" stroke="#394f38" stroke-width="1.6"/>
+              </svg>
+            </div>
           </div>
           <span id="trackArtist" class="track-artist-text">Ghibli Music Home</span>
           <span id="trackAlbum" class="track-album-text">Khu vườn âm nhạc</span>
@@ -711,6 +742,109 @@
 
   </div>
 
+  <!-- 
+    ==========================================================================
+    [SKILL: /mobile-design & /hig-patterns]
+    5. MOBILE BOTTOM NAVIGATION BAR (CÔNG THÁI HỌC NGÓN CÁI TRÊN DI ĐỘNG)
+    ==========================================================================
+  -->
+  <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Thanh điều hướng di động">
+    <button class="mobile-nav-item active" data-tab="home" id="mobTabHome" title="Khám phá">
+      <span class="mob-icon">🏡</span>
+      <span class="mob-label">Khám Phá</span>
+    </button>
+    <button class="mobile-nav-item" data-tab="search" id="mobTabSearch" title="Tìm kiếm">
+      <span class="mob-icon">🔍</span>
+      <span class="mob-label">Tìm Kiếm</span>
+    </button>
+    <button class="mobile-nav-item" data-tab="library" id="mobTabLibrary" title="Yêu thích">
+      <span class="mob-icon">💚</span>
+      <span class="mob-label">Yêu Thích</span>
+    </button>
+    <button class="mobile-nav-item" data-tab="playlists" id="mobTabPlaylists" title="Album EP">
+      <span class="mob-icon">💿</span>
+      <span class="mob-label">Album EP</span>
+    </button>
+    <button class="mobile-nav-item" data-tab="create" id="mobTabCreate" title="Thả nhạc">
+      <span class="mob-icon">🎨</span>
+      <span class="mob-label">Thả Nhạc</span>
+    </button>
+  </nav>
+
+  <!-- 
+    ==========================================================================
+    [SKILL: /apple-design & /design-spells]
+    6. MOBILE FULLSCREEN NOW PLAYING SHEET (ĐĨA THAN TOÀN MÀN HÌNH SIÊU ĐẸP)
+    ==========================================================================
+  -->
+  <div class="mobile-fullscreen-sheet hidden" id="mobileFullscreenSheet" aria-modal="true" role="dialog">
+    <!-- Thanh kéo vuốt đóng sheet -->
+    <div class="sheet-drag-handle-bar" id="sheetDragHandle">
+      <div class="sheet-drag-pill"></div>
+    </div>
+
+    <!-- Header của sheet -->
+    <div class="sheet-top-header">
+      <button class="sheet-minimize-btn" id="sheetMinimizeBtn" aria-label="Thu nhỏ trình phát" title="Thu nhỏ">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="sheet-header-title-wrap">
+        <span class="sheet-now-playing-sub">ĐANG PHÁT TỪ KHU VƯỜN GHIBLI</span>
+        <span class="sheet-playlist-name" id="sheetPlaylistName">Bảng Xếp Hạng Thịnh Hành</span>
+      </div>
+      <button class="sheet-queue-btn" id="sheetQueueBtn" aria-label="Xem hàng đợi" title="Hàng đợi">🌰</button>
+    </div>
+
+    <!-- Sân khấu đĩa than xoay tròn nghệ thuật -->
+    <div class="sheet-vinyl-stage">
+      <div class="sheet-vinyl-record" id="sheetVinylRecord">
+        <div class="sheet-vinyl-grooves"></div>
+        <img id="sheetTrackCover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><rect width='120' height='120' rx='60' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='32' fill='%23fefae0'>🎵</text></svg>" alt="Vinyl Label" class="sheet-vinyl-label">
+      </div>
+    </div>
+
+    <!-- Thông tin bài hát & nút Thích -->
+    <div class="sheet-info-and-actions">
+      <div class="sheet-meta">
+        <h2 class="sheet-title" id="sheetTitle">Chưa có bài hát</h2>
+        <p class="sheet-artist" id="sheetArtist">Studio Ghibli</p>
+      </div>
+      <button class="sheet-like-btn" id="sheetLikeBtn" title="Thích bài hát này">💚</button>
+    </div>
+
+    <!-- Thanh tiến trình bài hát trên Sheet -->
+    <div class="sheet-scrubber">
+      <div class="sheet-progress-bar-wrap" id="sheetProgressWrap" title="Tua nhạc">
+        <div class="sheet-progress-fill" id="sheetProgressFill"></div>
+        <div class="sheet-progress-thumb" id="sheetProgressThumb"></div>
+      </div>
+      <div class="sheet-time-row">
+        <span id="sheetCurrentTime">00:00</span>
+        <span id="sheetTotalTime">00:00</span>
+      </div>
+    </div>
+
+    <!-- Cụm nút điều khiển to bản công thái học ngón cái -->
+    <div class="sheet-main-controls">
+      <button class="sheet-ctrl-btn" id="sheetShuffleBtn" title="Phát ngẫu nhiên">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+      </button>
+      <button class="sheet-ctrl-btn sheet-prev-btn" id="sheetPrevBtn" title="Bài trước">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5a1 1 0 0 0-1 1v12a1 1 0 0 0 2 0V6a1 1 0 0 0-1-1Zm12.4 1.2a1 1 0 0 0-1.5-.86l-9 5.5a1 1 0 0 0 0 1.72l9 5.5A1 1 0 0 0 19 17.2V6.8a1 1 0 0 0-.6-.6Z"/></svg>
+      </button>
+      <button class="sheet-play-btn" id="sheetPlayPauseBtn" title="Phát / Tạm dừng">
+        <span id="sheetPlayIcon">▶</span>
+        <span id="sheetPauseIcon" class="hidden">⏸</span>
+      </button>
+      <button class="sheet-ctrl-btn sheet-next-btn" id="sheetNextBtn" title="Bài tiếp theo">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M18 5a1 1 0 0 1 1 1v12a1 1 0 0 1-2 0V6a1 1 0 0 1 1-1ZM5.6 6.2A1 1 0 0 1 7.1 5.34l9 5.5a1 1 0 0 1 0 1.72l-9 5.5A1 1 0 0 1 5 17.2V6.8a1 1 0 0 1 .6-.6Z"/></svg>
+      </button>
+      <button class="sheet-ctrl-btn" id="sheetLoopBtn" title="Chế độ lặp">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m17 2 4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+      </button>
+    </div>
+  </div>
+
   <!-- Thẻ Audio cốt lõi cho track preview / direct audio / VisionOS background stream -->
   <audio id="audioElement" preload="auto" playsinline webkit-playsinline></audio>
 
@@ -722,13 +856,13 @@
 
   <!-- Scripts: YouTube Engine & Ghibli App -->
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script src="app.js?v=2.2"></script>
+  <script src="app.js?v=3.0"></script>
 
   <!-- PWA Offline Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=2.2')
+        navigator.serviceWorker.register('./sw.js?v=3.0')
           .then((reg) => {
             console.log('🍃 [PWA] Service Worker registered:', reg.scope);
             reg.update().catch(() => {});

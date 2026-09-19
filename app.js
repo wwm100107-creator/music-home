@@ -168,6 +168,41 @@
     communityTracksGrid: document.getElementById('communityTracksGrid'),
     communityEmptyState: document.getElementById('communityEmptyState'),
 
+    // World-Class Ghibli Spells & Visuals
+    magicCursorCanvas: document.getElementById('magicCursorCanvas'),
+    playerAmbientAura: document.getElementById('playerAmbientAura'),
+    playerMiniVinyl: document.getElementById('playerMiniVinyl'),
+    natureWaveformEq: document.getElementById('natureWaveformEq'),
+    kodamaBeatBuddy: document.getElementById('kodamaBeatBuddy'),
+
+    // Mobile Bottom Navigation Bar (< 768px)
+    mobileBottomNav: document.getElementById('mobileBottomNav'),
+    mobileNavItems: document.querySelectorAll('.mobile-nav-item'),
+
+    // Mobile Fullscreen Now Playing Sheet
+    mobileFullscreenSheet: document.getElementById('mobileFullscreenSheet'),
+    sheetDragHandle: document.getElementById('sheetDragHandle'),
+    sheetMinimizeBtn: document.getElementById('sheetMinimizeBtn'),
+    sheetPlaylistName: document.getElementById('sheetPlaylistName'),
+    sheetQueueBtn: document.getElementById('sheetQueueBtn'),
+    sheetVinylRecord: document.getElementById('sheetVinylRecord'),
+    sheetTrackCover: document.getElementById('sheetTrackCover'),
+    sheetTitle: document.getElementById('sheetTitle'),
+    sheetArtist: document.getElementById('sheetArtist'),
+    sheetLikeBtn: document.getElementById('sheetLikeBtn'),
+    sheetProgressWrap: document.getElementById('sheetProgressWrap'),
+    sheetProgressFill: document.getElementById('sheetProgressFill'),
+    sheetProgressThumb: document.getElementById('sheetProgressThumb'),
+    sheetCurrentTime: document.getElementById('sheetCurrentTime'),
+    sheetTotalTime: document.getElementById('sheetTotalTime'),
+    sheetShuffleBtn: document.getElementById('sheetShuffleBtn'),
+    sheetPrevBtn: document.getElementById('sheetPrevBtn'),
+    sheetPlayPauseBtn: document.getElementById('sheetPlayPauseBtn'),
+    sheetPlayIcon: document.getElementById('sheetPlayIcon'),
+    sheetPauseIcon: document.getElementById('sheetPauseIcon'),
+    sheetNextBtn: document.getElementById('sheetNextBtn'),
+    sheetLoopBtn: document.getElementById('sheetLoopBtn'),
+
     toast: document.getElementById('toast')
   };
 
@@ -210,6 +245,382 @@
   }
 
   // ==========================================================================
+  // [SKILLS: /design-spells & /apple-design]
+  // WORLD-CLASS GHIBLI INTERACTION CONTROLLERS & HAPTIC ENGINE
+  // ==========================================================================
+  function triggerHaptic(duration = 8) {
+    if ('vibrate' in navigator && typeof navigator.vibrate === 'function') {
+      try {
+        navigator.vibrate(duration);
+      } catch (_) {}
+    }
+  }
+
+  // 1.1. Magic Cursor Dust (PC Only)
+  function initMagicCursorDust() {
+    const canvas = dom.magicCursorCanvas || document.getElementById('magicCursorCanvas');
+    if (!canvas) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches || window.innerWidth < 768) {
+      canvas.style.display = 'none';
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }, { passive: true });
+
+    const particles = [];
+    const MAX_PARTICLES = 36;
+    const colors = [
+      'rgba(255, 209, 102, ', // ấm áp ghibli
+      'rgba(167, 201, 87, ',  // xanh thảo mộc
+      'rgba(242, 232, 207, ', // kem ấm
+      'rgba(128, 237, 153, '  // đom đóm sáng
+    ];
+
+    let isRunning = false;
+    let lastSpawn = 0;
+
+    function spawnParticle(x, y) {
+      if (particles.length >= MAX_PARTICLES) return;
+      const baseColor = colors[Math.floor(Math.random() * colors.length)];
+      particles.push({
+        x,
+        y,
+        vx: (Math.random() - 0.5) * 1.1,
+        vy: -Math.random() * 1.4 - 0.4,
+        size: Math.random() * 2.4 + 1.2,
+        color: baseColor,
+        alpha: 0.85,
+        decay: Math.random() * 0.025 + 0.02
+      });
+    }
+
+    function loop() {
+      ctx.clearRect(0, 0, width, height);
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= p.decay;
+
+        if (p.alpha <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + p.alpha.toFixed(2) + ')';
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = p.color + '0.6)';
+        ctx.fill();
+      }
+
+      if (particles.length > 0) {
+        requestAnimationFrame(loop);
+      } else {
+        isRunning = false;
+        ctx.clearRect(0, 0, width, height);
+      }
+    }
+
+    window.addEventListener('pointermove', (e) => {
+      const now = performance.now();
+      if (now - lastSpawn > 25) {
+        lastSpawn = now;
+        spawnParticle(e.clientX, e.clientY);
+        if (Math.random() > 0.55) {
+          spawnParticle(e.clientX + (Math.random() - 0.5) * 8, e.clientY + (Math.random() - 0.5) * 8);
+        }
+        if (!isRunning) {
+          isRunning = true;
+          requestAnimationFrame(loop);
+        }
+      }
+    }, { passive: true });
+  }
+
+  // 1.2. 3D Kinetic Card Tilt & Specular Glare (PC Only)
+  function attach3DTiltEffect(cardEl) {
+    if (!cardEl) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches || window.innerWidth < 768) {
+      return;
+    }
+
+    const glareEl = cardEl.querySelector('.card-glare');
+    let isHovered = false;
+    let rafId = null;
+    let targetRotX = 0;
+    let targetRotY = 0;
+    let currentRotX = 0;
+    let currentRotY = 0;
+    let glareX = 50;
+    let glareY = 0;
+
+    function updateTilt() {
+      if (!isHovered && Math.abs(currentRotX) < 0.05 && Math.abs(currentRotY) < 0.05) {
+        cardEl.style.transform = '';
+        rafId = null;
+        return;
+      }
+
+      currentRotX += (targetRotX - currentRotX) * 0.18;
+      currentRotY += (targetRotY - currentRotY) * 0.18;
+
+      cardEl.style.transform = `perspective(1000px) rotateX(${currentRotX.toFixed(2)}deg) rotateY(${currentRotY.toFixed(2)}deg) translateY(-4px) scale3d(1.02, 1.02, 1.02)`;
+
+      if (glareEl) {
+        glareEl.style.background = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.45) 0%, transparent 60%)`;
+      }
+
+      rafId = requestAnimationFrame(updateTilt);
+    }
+
+    cardEl.addEventListener('pointerenter', () => {
+      isHovered = true;
+      if (!rafId) rafId = requestAnimationFrame(updateTilt);
+    });
+
+    cardEl.addEventListener('pointermove', (e) => {
+      const rect = cardEl.getBoundingClientRect();
+      const nx = (e.clientX - rect.left) / rect.width - 0.5;
+      const ny = (e.clientY - rect.top) / rect.height - 0.5;
+
+      targetRotX = -ny * 14;
+      targetRotY = nx * 14;
+      glareX = Math.round((nx + 0.5) * 100);
+      glareY = Math.round((ny + 0.5) * 100);
+
+      if (!rafId) rafId = requestAnimationFrame(updateTilt);
+    });
+
+    cardEl.addEventListener('pointerleave', () => {
+      isHovered = false;
+      targetRotX = 0;
+      targetRotY = 0;
+      glareX = 50;
+      glareY = 0;
+    });
+  }
+
+  // 1.3. Ambient Artwork Aura Glow
+  function updatePlayerAmbientAura(track) {
+    if (!dom.playerAmbientAura || !track) return;
+    let hash = 0;
+    const str = (track.title || '') + (track.artist || '');
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0;
+    }
+    const hue1 = (Math.abs(hash) % 120) + 70;
+    const hue2 = (hue1 + 40) % 360;
+
+    dom.playerAmbientAura.style.background = `
+      radial-gradient(circle at 25% 60%, hsla(${hue1}, 58%, 52%, 0.35), transparent 60%),
+      radial-gradient(circle at 75% 50%, hsla(${hue2}, 68%, 58%, 0.28), transparent 55%)
+    `;
+  }
+
+  // 1.4. Mobile Fullscreen Sheet Management
+  function openMobileFullscreenSheet() {
+    if (!dom.mobileFullscreenSheet) return;
+    dom.mobileFullscreenSheet.classList.remove('hidden');
+    document.body.classList.add('sheet-open');
+    triggerHaptic(12);
+    if (state.currentTrack) {
+      updateNowPlayingUI(state.currentTrack);
+    }
+  }
+
+  function closeMobileFullscreenSheet() {
+    if (!dom.mobileFullscreenSheet) return;
+    dom.mobileFullscreenSheet.classList.add('hidden');
+    document.body.classList.remove('sheet-open');
+    triggerHaptic(8);
+  }
+
+  function initMobileBottomNav() {
+    if (!dom.mobileNavItems) return;
+    dom.mobileNavItems.forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        const tab = item.dataset.tab;
+        triggerHaptic(8);
+        switchTab(tab);
+        closeMobileFullscreenSheet();
+      });
+    });
+  }
+
+  function initMobileFullscreenSheet() {
+    // Open sheet when bottom player capsule is tapped on mobile
+    if (dom.bottomPlayer) {
+      dom.bottomPlayer.addEventListener('click', (e) => {
+        if (window.innerWidth > 768) return;
+        if (e.target.closest('button, input, a, .leaf-heart-btn, .wood-disc-play-btn, .nature-ctrl-btn')) return;
+        openMobileFullscreenSheet();
+      });
+    }
+
+    // Close button
+    if (dom.sheetMinimizeBtn) {
+      dom.sheetMinimizeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeMobileFullscreenSheet();
+      });
+    }
+
+    // Drag down to dismiss
+    if (dom.sheetDragHandle) {
+      let startY = 0;
+      let currentY = 0;
+      let isDragging = false;
+
+      dom.sheetDragHandle.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].clientY;
+        currentY = startY;
+        isDragging = true;
+      }, { passive: true });
+
+      dom.sheetDragHandle.addEventListener('touchmove', (e) => {
+        if (!isDragging || !dom.mobileFullscreenSheet) return;
+        currentY = e.touches[0].clientY;
+        const diff = currentY - startY;
+        if (diff > 0) {
+          dom.mobileFullscreenSheet.style.transform = `translateY(${diff}px)`;
+        }
+      }, { passive: true });
+
+      dom.sheetDragHandle.addEventListener('touchend', () => {
+        if (!isDragging || !dom.mobileFullscreenSheet) return;
+        isDragging = false;
+        const diff = currentY - startY;
+        dom.mobileFullscreenSheet.style.transform = '';
+        if (diff > 80) {
+          closeMobileFullscreenSheet();
+        }
+      });
+    }
+
+    // Sheet playback controls
+    if (dom.sheetPlayPauseBtn) {
+      dom.sheetPlayPauseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic(10);
+        togglePlayPause();
+      });
+    }
+
+    if (dom.sheetPrevBtn) {
+      dom.sheetPrevBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic(10);
+        playPrevTrack();
+      });
+    }
+
+    if (dom.sheetNextBtn) {
+      dom.sheetNextBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic(10);
+        playNextTrack();
+      });
+    }
+
+    if (dom.sheetShuffleBtn) {
+      dom.sheetShuffleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic(10);
+        if (dom.shuffleBtn) dom.shuffleBtn.click();
+        dom.sheetShuffleBtn.classList.toggle('active', state.isShuffle);
+      });
+    }
+
+    if (dom.sheetLoopBtn) {
+      dom.sheetLoopBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic(10);
+        cycleLoopMode();
+      });
+    }
+
+    if (dom.sheetLikeBtn) {
+      dom.sheetLikeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic(15);
+        if (state.currentTrack) toggleFavorite(state.currentTrack);
+      });
+    }
+
+    if (dom.sheetQueueBtn) {
+      dom.sheetQueueBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeMobileFullscreenSheet();
+        if (dom.playlistDrawer) {
+          dom.playlistDrawer.classList.remove('hidden');
+          renderQueueDrawer();
+        }
+      });
+    }
+
+    // Scrubber on sheet
+    if (dom.sheetProgressWrap) {
+      const handleSheetScrub = (e) => {
+        if (!dom.sheetProgressWrap) return;
+        const rect = dom.sheetProgressWrap.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clickX = clientX - rect.left;
+        const percent = Math.max(0, Math.min(1, clickX / rect.width));
+
+        updateProgressUI(percent * 100);
+
+        if (state.activeEngine === 'audio' || state.currentTrack?.previewUrl) {
+          if (dom.audio && dom.audio.duration) {
+            dom.audio.currentTime = percent * dom.audio.duration;
+            const t = formatTime(dom.audio.currentTime);
+            if (dom.currentTime) dom.currentTime.textContent = t;
+            if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = t;
+          }
+        } else if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.getDuration === 'function') {
+          const dur = ytPlayer.getDuration();
+          if (dur && dur > 0) {
+            const targetTime = percent * dur;
+            ytPlayer.seekTo(targetTime, true);
+            const t = formatTime(targetTime);
+            if (dom.currentTime) dom.currentTime.textContent = t;
+            if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = t;
+          }
+        }
+      };
+
+      dom.sheetProgressWrap.addEventListener('pointerdown', handleSheetScrub);
+      dom.sheetProgressWrap.addEventListener('touchmove', handleSheetScrub, { passive: true });
+    }
+
+    // Kodama buddy greeting easter egg
+    if (dom.kodamaBeatBuddy) {
+      dom.kodamaBeatBuddy.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic(12);
+        dom.kodamaBeatBuddy.style.transform = 'scale(1.35) rotate(18deg)';
+        showToast('🌱 Chú Kodama khẽ lắc đầu lách cách chào bạn!');
+        setTimeout(() => {
+          dom.kodamaBeatBuddy.style.transform = '';
+        }, 400);
+      });
+    }
+  }
+
+  // ==========================================================================
   // 1. SEGMENTED CONTROL: THANH TRƯỢT GỖ & CHUYỂN TAB
   // ==========================================================================
   function moveWoodSliderToItem(targetItem, animate = true) {
@@ -249,6 +660,16 @@
     const targetNavItem = document.querySelector(`.sidebar-nav-item[data-tab="${tabKey}"]`);
     if (targetNavItem) {
       moveWoodSliderToItem(targetNavItem, true);
+    }
+
+    if (dom.mobileNavItems) {
+      dom.mobileNavItems.forEach(item => {
+        item.classList.toggle('active', item.dataset.tab === tabKey);
+      });
+    }
+
+    if (window.innerWidth <= 768) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     if (tabKey === 'playlists') {
@@ -294,6 +715,16 @@
       dom.totalDuration.textContent = track.duration || '00:00';
     }
 
+    // World-class ambient aura & mobile fullscreen sheet sync
+    updatePlayerAmbientAura(track);
+    if (dom.sheetTitle) dom.sheetTitle.textContent = track.title;
+    if (dom.sheetArtist) dom.sheetArtist.textContent = track.artist || 'Studio Ghibli';
+    if (dom.sheetTrackCover) dom.sheetTrackCover.src = upgradeThumbnailUrl(track.thumbnail);
+    if (dom.sheetTotalTime) dom.sheetTotalTime.textContent = track.duration || '00:00';
+    if (dom.sheetPlaylistName) {
+      dom.sheetPlaylistName.textContent = track.album || (state.activeGenre !== 'all' ? state.activeGenre : 'Bảng Xếp Hạng Thịnh Hành');
+    }
+
     updateLikeButtonUI(track.id);
     highlightActiveCard(track.id);
     updateMediaSession(track);
@@ -302,6 +733,21 @@
   function setPlaybackVisualState(isPlaying) {
     state.isPlaying = !!isPlaying;
     updateMediaSessionPlaybackState(isPlaying);
+
+    // Dynamic 33 RPM mini vinyl spin, ambient aura, botanical EQ, and Kodama wobble
+    if (dom.bottomPlayer) {
+      dom.bottomPlayer.classList.toggle('is-playing', isPlaying);
+    }
+    if (dom.sheetVinylRecord) {
+      dom.sheetVinylRecord.classList.toggle('is-playing', isPlaying);
+    }
+    if (dom.sheetPlayIcon) {
+      dom.sheetPlayIcon.classList.toggle('hidden', isPlaying);
+    }
+    if (dom.sheetPauseIcon) {
+      dom.sheetPauseIcon.classList.toggle('hidden', !isPlaying);
+    }
+
     if (isPlaying) {
       document.body.classList.add('music-playing');
       if (dom.playIcon) dom.playIcon.classList.add('hidden');
@@ -412,6 +858,8 @@
           updateProgressUI(percent);
           if (dom.currentTime) dom.currentTime.textContent = formatTime(dom.audio.currentTime);
           if (dom.totalDuration) dom.totalDuration.textContent = formatTime(dom.audio.duration);
+          if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = formatTime(dom.audio.currentTime);
+          if (dom.sheetTotalTime) dom.sheetTotalTime.textContent = formatTime(dom.audio.duration);
         }
       } else if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.getCurrentTime === 'function') {
         const cur = ytPlayer.getCurrentTime();
@@ -421,6 +869,8 @@
           updateProgressUI(percent);
           if (dom.currentTime) dom.currentTime.textContent = formatTime(cur);
           if (dom.totalDuration) dom.totalDuration.textContent = formatTime(dur);
+          if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = formatTime(cur);
+          if (dom.sheetTotalTime) dom.sheetTotalTime.textContent = formatTime(dur);
 
           // Tự động đồng bộ thời lượng thực tế của Official Music Video với danh sách bài hát
           if (state.currentTrack && state.currentTrack.durationSec !== Math.round(dur)) {
@@ -639,6 +1089,12 @@
       dom.vineProgressFill.style.strokeDasharray = totalLen;
       dom.vineProgressFill.style.strokeDashoffset = offset;
     }
+    if (dom.sheetProgressFill) {
+      dom.sheetProgressFill.style.width = `${clamped}%`;
+    }
+    if (dom.sheetProgressThumb) {
+      dom.sheetProgressThumb.style.left = `${clamped}%`;
+    }
   }
 
   function handleScrub(e) {
@@ -652,14 +1108,18 @@
     if (state.activeEngine === 'audio' || state.currentTrack?.previewUrl) {
       if (dom.audio && dom.audio.duration) {
         dom.audio.currentTime = percent * dom.audio.duration;
-        if (dom.currentTime) dom.currentTime.textContent = formatTime(dom.audio.currentTime);
+        const t = formatTime(dom.audio.currentTime);
+        if (dom.currentTime) dom.currentTime.textContent = t;
+        if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = t;
       }
     } else if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.getDuration === 'function') {
       const dur = ytPlayer.getDuration();
       if (dur && dur > 0) {
         const targetTime = percent * dur;
         ytPlayer.seekTo(targetTime, true);
-        if (dom.currentTime) dom.currentTime.textContent = formatTime(targetTime);
+        const t = formatTime(targetTime);
+        if (dom.currentTime) dom.currentTime.textContent = t;
+        if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = t;
       }
     }
   }
@@ -769,6 +1229,8 @@
       : '';
 
     card.innerHTML = `
+      <div class="card-glare" aria-hidden="true"></div>
+      <div class="track-card-vinyl-disc" aria-hidden="true"></div>
       <div class="track-card-thumb-shell">
         <img src="${track.thumbnail || 'wood_2.jpg'}" alt="${track.title}" class="track-card-img" loading="lazy">
         ${rankHtml}
@@ -787,6 +1249,7 @@
     `;
 
     card.addEventListener('click', () => clickHandler(track));
+    attach3DTiltEffect(card);
     return card;
   }
 
@@ -1126,6 +1589,7 @@
       });
 
       dom.albumsGrid.appendChild(card);
+      attach3DTiltEffect(card);
     });
   }
 
@@ -1778,9 +2242,9 @@
   }
 
   function updateLikeButtonUI(trackId) {
-    if (!dom.likeBtn) return;
     const isFav = state.favorites.some(t => t.id === trackId);
-    dom.likeBtn.textContent = isFav ? '💚' : '🤍';
+    if (dom.likeBtn) dom.likeBtn.textContent = isFav ? '💚' : '🤍';
+    if (dom.sheetLikeBtn) dom.sheetLikeBtn.textContent = isFav ? '💚' : '🤍';
   }
 
   function renderFavorites() {
@@ -2375,6 +2839,9 @@
   function init() {
     setVolume(0.8);
     initAmbientMode();
+    initMagicCursorDust();
+    initMobileBottomNav();
+    initMobileFullscreenSheet();
     setupMediaSessionHandlers();
     setupEvents();
     initDropYourMusicEvents();
