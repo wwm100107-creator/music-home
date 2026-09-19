@@ -881,38 +881,113 @@
   <div class="ghibli-lyrics-stage hidden" id="ghibliLyricsStage" aria-modal="true" role="dialog">
     <div class="lyrics-stage-backdrop" id="lyricsStageBackdrop"></div>
     <div class="lyrics-stage-window">
-      <!-- Header sân khấu lời nhạc -->
+      <!-- Header thanh công cụ trên cùng -->
       <div class="lyrics-stage-header">
-        <div class="lyrics-stage-meta">
-          <div class="lyrics-album-art-wrap">
-            <img id="lyricsTrackCover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><rect width='80' height='80' rx='40' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='24' fill='%23fefae0'>🎵</text></svg>" alt="Album Cover" class="lyrics-album-art">
-          </div>
-          <div class="lyrics-meta-text">
-            <h3 class="lyrics-title" id="lyricsTrackTitle">Chưa có bài hát</h3>
-            <p class="lyrics-artist" id="lyricsTrackArtist">Studio Ghibli</p>
-          </div>
+        <div class="stage-header-left">
+          <span class="stage-ghibli-badge">🍃 GHIBLI STUDIO NOW PLAYING</span>
+          <span class="stage-quality-badge">24-BIT / 96KHZ LOSSLESS MASTER</span>
         </div>
-
-        <div class="lyrics-stage-controls">
+        <div class="stage-header-right">
           <span class="lyrics-sync-badge" id="lyricsSyncBadge">✨ Đồng bộ thời gian thực</span>
-          <button class="lyrics-close-btn" id="lyricsCloseBtn" aria-label="Đóng lời bài hát" title="Đóng lời bài hát [Esc / Y]">✕</button>
+          <button class="lyrics-close-btn" id="lyricsCloseBtn" aria-label="Thu nhỏ về trang chủ" title="Thu nhỏ về trang chủ [Esc / Y]">✕</button>
         </div>
       </div>
 
-      <!-- Khung cuộn lời bài hát chính -->
-      <div class="lyrics-scroll-box" id="lyricsScrollBox">
-        <div class="lyrics-lines-container" id="lyricsLinesContainer">
-          <!-- Render danh sách câu hát ở đây -->
-          <div class="lyrics-loading-state">
-            <div class="lyrics-sparkle-icon">🍃</div>
-            <p>Đang lắng nghe giai điệu và tải lời bài hát...</p>
+      <!-- Khung thân 2 Cột Split-Screen trên Desktop PC (Khoảng trống bên trái nay là Sân khấu Đĩa Than 3D) -->
+      <div class="lyrics-stage-split-body">
+        
+        <!-- CỘT TRÁI: SÂN KHẤU NGHỆ THUẬT ĐĨA THAN 3D, KIM MÁY HÁT & THẺ UP NEXT -->
+        <div class="stage-left-panel" id="stageLeftPanel">
+          <!-- Cụm Đĩa Than 3D Siêu Thực -->
+          <div class="stage-vinyl-stage">
+            <div class="stage-vinyl-wrapper" id="stageVinylWrapper">
+              <!-- Vỏ bọc đĩa Album Jacket -->
+              <div class="stage-album-jacket">
+                <img id="stageJacketCover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='280' viewBox='0 0 280 280'><rect width='280' height='280' rx='20' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fefae0'>🎵</text></svg>" alt="Album Jacket" class="stage-jacket-img">
+                <div class="stage-jacket-glare"></div>
+                <div class="stage-jacket-badge">GHIBLI MASTER</div>
+              </div>
+
+              <!-- Đĩa than Vinyl 33 RPM trượt ra từ vỏ đĩa -->
+              <div class="stage-vinyl-disc" id="stageVinylDisc">
+                <div class="stage-vinyl-grooves"></div>
+                <div class="stage-vinyl-reflection"></div>
+                <img id="stageVinylLabel" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='24' fill='%23fefae0'>🎵</text></svg>" alt="Vinyl Label" class="stage-vinyl-label-img">
+                <div class="stage-vinyl-spindle"></div>
+              </div>
+
+              <!-- Kim máy hát cổ điển (Tone Arm) tự động hạ/nhấc theo nhạc -->
+              <div class="stage-tone-arm" id="stageToneArm" aria-hidden="true">
+                <div class="tone-arm-base"></div>
+                <div class="tone-arm-rod"></div>
+                <div class="tone-arm-head"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Thông tin bài hát & Thao tác nghệ thuật -->
+          <div class="stage-track-info-card">
+            <div class="stage-track-meta">
+              <h2 class="stage-track-title" id="stageTrackTitle">Chưa có bài hát</h2>
+              <div class="stage-track-subline">
+                <span class="stage-track-artist" id="stageTrackArtist">Studio Ghibli</span>
+                <span class="stage-dot-sep">•</span>
+                <span class="stage-track-album" id="stageTrackAlbum">Home Music Session</span>
+              </div>
+            </div>
+
+            <div class="stage-actions-row">
+              <button class="stage-action-btn" id="stageLikeBtn" title="Yêu thích bài hát này">
+                <span class="stage-action-icon" id="stageLikeIcon">🤍</span>
+                <span class="stage-action-text" id="stageLikeText">Yêu thích</span>
+              </button>
+              <button class="stage-action-btn" id="stageQueueAddBtn" title="Thêm vào danh sách chờ hạt dẻ">
+                <span class="stage-action-icon">🌰</span>
+                <span class="stage-action-text">Hạt dẻ</span>
+              </button>
+              <div class="stage-audio-spec-pill">
+                <span class="spec-dot"></span> Hi-Res Lossless • FLAC 320kbps
+              </div>
+            </div>
+          </div>
+
+          <!-- Thẻ Xem Trước Bài Hát Tiếp Theo (Up Next Preview Card) -->
+          <div class="stage-up-next-card" id="stageUpNextCard">
+            <div class="up-next-thumb-wrap">
+              <img id="stageUpNextThumb" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'><rect width='50' height='50' rx='8' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='20' fill='%23fefae0'>⏭️</text></svg>" alt="Up Next" class="up-next-thumb">
+            </div>
+            <div class="up-next-meta">
+              <span class="up-next-sub">TIẾP THEO TRONG HÀNG ĐỢI</span>
+              <span class="up-next-title" id="stageUpNextTitle">Tự động chọn bài phù hợp</span>
+              <span class="up-next-artist" id="stageUpNextArtist">Studio Ghibli</span>
+            </div>
+            <button class="up-next-play-btn" id="stageUpNextPlayBtn" title="Chuyển sang bài này ngay">
+              ⏭
+            </button>
           </div>
         </div>
+
+        <!-- CỘT PHẢI: KHUNG HIỂN THỊ LỜI BÀI HÁT SPOTIFY CHUẨN NHƯ ẢNH MOCKUP -->
+        <div class="stage-right-panel" id="stageRightPanel">
+          <div class="stage-lyrics-card-wrapper">
+            <!-- Khung cuộn lời bài hát chính -->
+            <div class="lyrics-scroll-box" id="lyricsScrollBox">
+              <div class="lyrics-lines-container" id="lyricsLinesContainer">
+                <!-- Render danh sách câu hát ở đây -->
+                <div class="lyrics-loading-state">
+                  <div class="lyrics-sparkle-icon">🍃</div>
+                  <p>Đang lắng nghe giai điệu và tải lời bài hát...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      <!-- Footer gợi ý tương tác -->
+      <!-- Footer thanh trạng thái & hướng dẫn tương tác -->
       <div class="lyrics-stage-footer">
-        <span class="lyrics-hint-text">💡 Nhấp vào bất kỳ câu hát nào để tua nhạc đến đúng đoạn đó</span>
+        <span class="lyrics-hint-text">💡 Nhấp vào bất kỳ câu hát nào để tua nhạc • Nhấn Esc hoặc phím Y để đóng/mở</span>
       </div>
     </div>
   </div>

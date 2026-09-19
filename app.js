@@ -227,6 +227,25 @@
     sheetLyricsActiveText: document.getElementById('sheetLyricsActiveText'),
     sheetLyricsNextText: document.getElementById('sheetLyricsNextText'),
 
+    // Split-Screen Stage Left Panel (3D Vinyl, Tone Arm, Up Next)
+    stageLeftPanel: document.getElementById('stageLeftPanel'),
+    stageJacketCover: document.getElementById('stageJacketCover'),
+    stageVinylDisc: document.getElementById('stageVinylDisc'),
+    stageVinylLabel: document.getElementById('stageVinylLabel'),
+    stageToneArm: document.getElementById('stageToneArm'),
+    stageTrackTitle: document.getElementById('stageTrackTitle'),
+    stageTrackArtist: document.getElementById('stageTrackArtist'),
+    stageTrackAlbum: document.getElementById('stageTrackAlbum'),
+    stageLikeBtn: document.getElementById('stageLikeBtn'),
+    stageLikeIcon: document.getElementById('stageLikeIcon'),
+    stageLikeText: document.getElementById('stageLikeText'),
+    stageQueueAddBtn: document.getElementById('stageQueueAddBtn'),
+    stageUpNextCard: document.getElementById('stageUpNextCard'),
+    stageUpNextThumb: document.getElementById('stageUpNextThumb'),
+    stageUpNextTitle: document.getElementById('stageUpNextTitle'),
+    stageUpNextArtist: document.getElementById('stageUpNextArtist'),
+    stageUpNextPlayBtn: document.getElementById('stageUpNextPlayBtn'),
+
     toast: document.getElementById('toast')
   };
 
@@ -748,9 +767,38 @@
       dom.sheetPlaylistName.textContent = track.album || (state.activeGenre !== 'all' ? state.activeGenre : 'Bảng Xếp Hạng Thịnh Hành');
     }
 
+    // Cập nhật Sân khấu Toàn Cảnh Split-Screen Desktop (Cột Trái 3D Vinyl)
+    if (dom.stageTrackTitle) dom.stageTrackTitle.textContent = track.title;
+    if (dom.stageTrackArtist) dom.stageTrackArtist.textContent = track.artist || 'Studio Ghibli';
+    if (dom.stageTrackAlbum) dom.stageTrackAlbum.textContent = track.album || 'Home Music Session';
+    const upgradedThumb = upgradeThumbnailUrl(track.thumbnail);
+    if (dom.stageJacketCover) dom.stageJacketCover.src = upgradedThumb;
+    if (dom.stageVinylLabel) dom.stageVinylLabel.src = upgradedThumb;
+    updateStageUpNext();
+
     updateLikeButtonUI(track.id);
     highlightActiveCard(track.id);
     updateMediaSession(track);
+  }
+
+  function updateStageUpNext() {
+    if (!dom.stageUpNextCard) return;
+    let nextTrack = null;
+    if (state.queue && state.queue.length > 0) {
+      if (state.queueIndex >= 0 && state.queueIndex < state.queue.length - 1) {
+        nextTrack = state.queue[state.queueIndex + 1];
+      } else if (state.loopMode === 'all' && state.queue.length > 1) {
+        nextTrack = state.queue[0];
+      }
+    }
+    if (nextTrack) {
+      if (dom.stageUpNextThumb) dom.stageUpNextThumb.src = upgradeThumbnailUrl(nextTrack.thumbnail);
+      if (dom.stageUpNextTitle) dom.stageUpNextTitle.textContent = nextTrack.title;
+      if (dom.stageUpNextArtist) dom.stageUpNextArtist.textContent = nextTrack.artist || 'Studio Ghibli';
+    } else {
+      if (dom.stageUpNextTitle) dom.stageUpNextTitle.textContent = 'Đang phát danh sách hiện tại';
+      if (dom.stageUpNextArtist) dom.stageUpNextArtist.textContent = 'Studio Ghibli Radio';
+    }
   }
 
   function setPlaybackVisualState(isPlaying) {
@@ -763,6 +811,12 @@
     }
     if (dom.sheetVinylRecord) {
       dom.sheetVinylRecord.classList.toggle('is-playing', isPlaying);
+    }
+    if (dom.stageVinylDisc) {
+      dom.stageVinylDisc.classList.toggle('is-spinning', isPlaying);
+    }
+    if (dom.stageToneArm) {
+      dom.stageToneArm.classList.toggle('is-playing', isPlaying);
     }
     if (dom.sheetPlayIcon) {
       dom.sheetPlayIcon.classList.toggle('hidden', isPlaying);
@@ -2613,6 +2667,9 @@
     const isFav = state.favorites.some(t => t.id === trackId);
     if (dom.likeBtn) dom.likeBtn.textContent = isFav ? '💚' : '🤍';
     if (dom.sheetLikeBtn) dom.sheetLikeBtn.textContent = isFav ? '💚' : '🤍';
+    if (dom.stageLikeIcon) dom.stageLikeIcon.textContent = isFav ? '💚' : '🤍';
+    if (dom.stageLikeText) dom.stageLikeText.textContent = isFav ? 'Đã thích' : 'Yêu thích';
+    if (dom.stageLikeBtn) dom.stageLikeBtn.classList.toggle('active', isFav);
   }
 
   function renderFavorites() {
@@ -3034,6 +3091,27 @@
     }
     if (dom.sheetLyricsCard) {
       dom.sheetLyricsCard.addEventListener('click', openLyricsStage);
+    }
+
+    // Split-Screen Stage Left Panel Actions
+    if (dom.stageLikeBtn) {
+      dom.stageLikeBtn.addEventListener('click', () => {
+        if (state.currentTrack) {
+          toggleFavorite(state.currentTrack);
+        }
+      });
+    }
+    if (dom.stageQueueAddBtn) {
+      dom.stageQueueAddBtn.addEventListener('click', () => {
+        if (state.currentTrack) {
+          toggleCustomLoopAcorn(state.currentTrack.id);
+        }
+      });
+    }
+    if (dom.stageUpNextPlayBtn) {
+      dom.stageUpNextPlayBtn.addEventListener('click', () => {
+        playNextTrack();
+      });
     }
 
     // Keyboard Shortcuts
