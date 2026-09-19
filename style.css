@@ -39,6 +39,9 @@ button, input, select, textarea {
 
 html, body {
   -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
 }
 
 :root {
@@ -6019,29 +6022,30 @@ body.twilight-mode .nature-waveform-eq .eq-stem {
     cursor: pointer;
   }
 
-  /* Mobile Bottom Nav Bar */
+  /* Mobile Bottom Nav Bar (Tràn viền Edge-to-Edge chuẩn đa thiết bị) */
   .mobile-bottom-nav {
     display: flex !important;
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    height: calc(60px + var(--sab));
+    width: 100vw;
+    height: calc(64px + var(--sab));
     padding-bottom: var(--sab);
-    background: rgba(255, 253, 245, 0.92);
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
-    border-top: 1px solid rgba(181, 137, 87, 0.3);
-    box-shadow: 0 -4px 20px rgba(25, 45, 25, 0.12);
+    background: rgba(255, 253, 245, 0.94);
+    backdrop-filter: blur(28px) saturate(140%);
+    -webkit-backdrop-filter: blur(28px) saturate(140%);
+    border-top: 1.5px solid rgba(181, 137, 87, 0.28);
+    box-shadow: 0 -4px 24px rgba(25, 45, 25, 0.14);
     z-index: 9995;
     justify-content: space-around;
     align-items: center;
   }
 
   body.twilight-mode .mobile-bottom-nav {
-    background: rgba(12, 24, 16, 0.94);
+    background: rgba(12, 24, 16, 0.95);
     border-top-color: rgba(82, 183, 136, 0.28);
-    box-shadow: 0 -4px 24px rgba(5, 15, 8, 0.5);
+    box-shadow: 0 -4px 28px rgba(0, 0, 0, 0.55);
   }
 
   .mobile-nav-item {
@@ -6049,34 +6053,69 @@ body.twilight-mode .nature-waveform-eq .eq-stem {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 2px;
     background: transparent;
     border: none;
-    color: var(--theme-text-muted);
+    color: #6b4c3e;
     font-size: 0.72rem;
     font-weight: 600;
     cursor: pointer;
     flex: 1;
     height: 100%;
-    transition: all 0.2s ease;
-    padding: 4px 0;
+    transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+    padding: 6px 0 4px 0;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .mobile-nav-item .mob-icon {
-    font-size: 1.25rem;
-    transition: transform 0.2s var(--ease-out-spring);
+  body.twilight-mode .mobile-nav-item {
+    color: #a8c5b2;
+  }
+
+  .mob-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    position: relative;
+  }
+
+  .mob-nav-icon {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.18));
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s ease;
+  }
+
+  .mobile-nav-item .mob-label {
+    font-size: 0.73rem;
+    font-weight: 600;
+    color: #5c3d2e;
+    transition: color 0.2s ease, font-weight 0.2s ease;
+    letter-spacing: -0.01em;
+  }
+
+  body.twilight-mode .mobile-nav-item .mob-label {
+    color: #b7cebe;
   }
 
   .mobile-nav-item.active {
-    color: var(--theme-accent-bright, #2d6a4f);
+    color: #2d6a4f;
   }
 
-  .mobile-nav-item.active .mob-icon {
-    transform: scale(1.18);
+  .mobile-nav-item.active .mob-nav-icon {
+    transform: scale(1.18) translateY(-2px);
+    filter: drop-shadow(0 4px 10px rgba(45, 106, 79, 0.5));
   }
 
   .mobile-nav-item.active .mob-label {
-    font-weight: 700;
+    color: #2d6a4f;
+    font-weight: 800;
+  }
+
+  body.twilight-mode .mobile-nav-item.active .mob-label {
+    color: #7fc95e;
   }
 }
 
@@ -7228,46 +7267,36 @@ body.twilight-mode .mode-status-chip {
   color: #95d5b2;
 }
 
-/* Responsive trên Mobile / Tablet */
+/* ==========================================================================
+   RESPONSIVE TOÀN DIỆN: SÂN KHẤU LỜI BÀI HÁT & ĐĨA THAN 3D CHUẨN PC CHO MOBILE & TABLET
+   (TRÀN VIỀN EDGE-TO-EDGE 100% THEO YÊU CẦU NGƯỜI DÙNG)
+   ========================================================================== */
+
+/* 1. Thiết bị Di Động & Màn Hình Dọc (Phones & Portrait Tablets < 992px) */
 @media (max-width: 991px) {
-  .lyrics-stage-split-body {
-    grid-template-columns: 1fr;
-    gap: 16px;
-    padding: 16px 20px;
-  }
-
-  .stage-left-panel {
-    display: none;
-  }
-
   .lyrics-stage-window {
-    width: 100%;
-    max-width: 100%;
-    height: 94vh;
-    max-height: 94vh;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    border-left: none;
-    border-right: none;
-    border-bottom: none;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    display: flex;
+    flex-direction: column;
   }
 
-  .stage-lyrics-card-wrapper .lyric-line {
-    font-size: 1.35rem;
-  }
-
-  .stage-lyrics-card-wrapper .lyric-line.active {
-    font-size: 1.55rem;
-  }
-}
-
-@media (max-width: 768px) {
   .lyrics-stage-header {
-    padding: 14px 18px;
+    padding: calc(10px + var(--sat)) 16px 10px 16px;
+    flex-shrink: 0;
   }
 
   .stage-ghibli-badge {
-    font-size: 0.75rem;
+    font-size: 0.76rem;
   }
 
   .stage-quality-badge {
@@ -7275,15 +7304,243 @@ body.twilight-mode .mode-status-chip {
   }
 
   .lyrics-sync-badge {
-    display: none;
+    font-size: 0.72rem;
+    padding: 3px 8px;
+  }
+
+  .lyrics-stage-split-body {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    flex: 1;
+    gap: 16px;
+    padding: 10px 14px calc(24px + var(--sab)) 14px;
+  }
+
+  /* Hiển thị trọn vẹn Sân khấu Đĩa Than 3D trên Mobile giống như trên PC */
+  .stage-left-panel {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 440px;
+    margin: 0 auto;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  /* Thu nhỏ tỉ lệ Đĩa than 3D vừa vặn màn hình điện thoại */
+  .stage-vinyl-stage {
+    width: 270px;
+    height: 170px;
+    margin: 4px auto 0 auto;
+  }
+
+  .stage-album-jacket {
+    width: 140px;
+    height: 140px;
+    border-radius: 14px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  }
+
+  .stage-jacket-badge {
+    font-size: 0.58rem;
+    padding: 2px 7px;
+    bottom: 6px;
+    right: 6px;
+  }
+
+  .stage-vinyl-disc {
+    width: 132px;
+    height: 132px;
+    left: 68px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .stage-vinyl-label-img {
+    width: 46px;
+    height: 46px;
+  }
+
+  .stage-tone-arm {
+    width: 60px;
+    height: 86px;
+    right: 14px;
+    top: -4px;
+    transform-origin: 12px 6px;
+  }
+
+  .stage-tone-arm.is-playing {
+    transform: rotate(24deg);
+  }
+
+  .tone-arm-base {
+    width: 22px;
+    height: 22px;
+  }
+
+  .tone-arm-rod {
+    width: 4px;
+    height: 60px;
+    left: 9px;
+    top: 13px;
+  }
+
+  .tone-arm-head {
+    width: 12px;
+    height: 20px;
+    left: 5px;
+    top: 68px;
+  }
+
+  /* Thẻ thông tin bài hát & Thao tác trên Mobile */
+  .stage-track-info-card {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 18px;
+    gap: 10px;
+    background: rgba(22, 38, 28, 0.7);
+    border: 1px solid rgba(127, 201, 94, 0.18);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .stage-track-title {
+    font-size: 1.15rem;
+    text-align: center;
+    line-height: 1.35;
+  }
+
+  .stage-track-subline {
+    justify-content: center;
+    font-size: 0.85rem;
+    gap: 6px;
+  }
+
+  .stage-actions-row {
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .stage-action-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  .stage-audio-spec-pill {
+    font-size: 0.68rem;
+    padding: 4px 10px;
+  }
+
+  .stage-up-next-card {
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 14px;
+    background: rgba(14, 26, 18, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .up-next-thumb-wrap {
+    width: 38px;
+    height: 38px;
+  }
+
+  .up-next-title {
+    font-size: 0.82rem;
+  }
+
+  .up-next-artist {
+    font-size: 0.72rem;
+  }
+
+  .up-next-play-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 0.88rem;
+  }
+
+  /* Cột Phải: Thẻ Lời Bài Hát Spotify trên Mobile */
+  .stage-right-panel {
+    width: 100%;
+    min-height: 340px;
+    flex: 1;
+  }
+
+  .stage-lyrics-card-wrapper {
+    border-radius: 20px;
+    height: 52vh;
+    min-height: 340px;
+    background: rgba(14, 28, 19, 0.85);
+    border: 1px solid rgba(127, 201, 94, 0.2);
   }
 
   .stage-lyrics-card-wrapper .lyrics-scroll-box {
-    padding: 30vh 16px;
+    padding: 20vh 14px;
+  }
+
+  .stage-lyrics-card-wrapper .lyric-line {
+    font-size: 1.15rem;
+    margin-bottom: 16px;
+    line-height: 1.55;
+  }
+
+  .stage-lyrics-card-wrapper .lyric-line.active {
+    font-size: 1.38rem;
+    color: #7fc95e;
+    text-shadow: 0 0 20px rgba(127, 201, 94, 0.6);
+    transform: scale(1.03);
+  }
+
+  .lyrics-stage-footer {
+    padding: 8px 16px;
+    flex-shrink: 0;
   }
 
   .lyrics-hint-text {
-    font-size: 0.74rem;
+    font-size: 0.72rem;
+  }
+}
+
+/* 2. Thiết bị Máy Tính Bảng Nằm Ngang & Màn Hình Vừa (Tablets / iPad 769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .lyrics-stage-split-body {
+    display: grid !important;
+    grid-template-columns: 1fr 1.15fr !important;
+    gap: 18px !important;
+    padding: 16px 20px !important;
+    overflow-y: hidden !important;
+  }
+
+  .stage-left-panel {
+    max-width: 100% !important;
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+
+  .stage-vinyl-stage {
+    width: 300px !important;
+    height: 195px !important;
+  }
+
+  .stage-album-jacket {
+    width: 160px !important;
+    height: 160px !important;
+  }
+
+  .stage-vinyl-disc {
+    width: 150px !important;
+    height: 150px !important;
+    left: 75px !important;
+  }
+
+  .stage-right-panel {
+    height: 100% !important;
+  }
+
+  .stage-lyrics-card-wrapper {
+    height: 100% !important;
   }
 }
 
