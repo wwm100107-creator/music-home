@@ -185,6 +185,7 @@ const searchCache = new BoundedCache(300, 30 * 60 * 1000);
 const streamCache = new BoundedCache(300, 45 * 60 * 1000);
 const trendingCache = new BoundedCache(50, 60 * 60 * 1000);
 const albumCache = new BoundedCache(80, 60 * 60 * 1000);
+const lyricsCache = new BoundedCache(300, 60 * 60 * 1000);
 
 // ============================================================================
 // 5. CIRCUIT BREAKER
@@ -1738,6 +1739,163 @@ apiRouter.get('/info/:videoId', async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch video info', message: err.message });
+  }
+});
+
+// ============================================================================
+// 10.6. SPOTIFY-STYLE REAL-TIME SYNCED LYRICS (LRCLIB Integration)
+// ============================================================================
+function cleanTitleForLyrics(rawTitle) {
+  if (!rawTitle) return '';
+  return rawTitle
+    .replace(/\s*[\(\[](official\s*(music\s*)?(video|audio|mv|lyric|lyrics|visualizer)?|mv|video\s*lyric|audio|hd|4k|remix|cover|live|vietsub|karaoke|beat|instrumental)[\)\]]/gi, '')
+    .replace(/\s*-\s*(official|mv|audio|remix|cover|lyric video|lyrics).*/gi, '')
+    .replace(/\|\s*(vie channel|yeah1|metub|mv|official).*/gi, '')
+    .replace(/[\(\[].*?[\)\]]/g, '')
+    .trim();
+}
+
+function parseDurationToSeconds(duration) {
+  if (!duration) return null;
+  if (typeof duration === 'number') return Math.round(duration);
+  const parts = String(duration).split(':').map(p => parseInt(p, 10));
+  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+    return parts[0] * 60 + parts[1];
+  }
+  if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  }
+  const num = parseInt(duration, 10);
+  return isNaN(num) ? null : num;
+}
+
+function parseLRC(lrcText) {
+  if (!lrcText || typeof lrcText !== 'string') return [];
+  const lines = lrcText.split(/\r?\n/);
+  const parsed = [];
+  const timeRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\](.*)/;
+
+  for (const line of lines) {
+    const match = line.match(timeRegex);
+    if (match) {
+      const minutes = parseInt(match[1], 10);
+      const seconds = parseInt(match[2], 10);
+      const fraction = match[3] ? parseFloat('0.' + match[3]) : 0;
+      const totalSeconds = parseFloat((minutes * 60 + seconds + fraction).toFixed(2));
+      const text = match[4].trim();
+      parsed.push({ time: totalSeconds, text });
+    }
+  }
+  return parsed.sort((a, b) => a.time - b.time);
+}
+
+apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpointName: 'lyrics' }), async (req, res) => {
+  const rawTitle = req.query.title || req.query.track || '';
+  const rawArtist = req.query.artist || '';
+  const durationRaw = req.query.duration;
+
+  if (!rawTitle) {
+    return res.status(400).json({ success: false, error: 'Thiếu tham số title' });
+  }
+
+  const cleanTitle = cleanTitleForLyrics(rawTitle);
+  const cleanArtist = (rawArtist || '').replace(/\s*-\s*topic/gi, '').trim();
+  const durSec = parseDurationToSeconds(durationRaw);
+
+  const cacheKey = `lyrics:${cleanTitle.toLowerCase()}:${cleanArtist.toLowerCase()}`;
+  const cached = lyricsCache.get(cacheKey);
+  if (cached) {
+    return res.json({ ...cached, cached: true });
+  }
+
+  const LRCLIB_HEADERS = {
+    'User-Agent': 'MusicHome/1.0 (https://github.com/wwm100107-creator/music-home)'
+  };
+
+  try {
+    let lyricData = null;
+
+    // 1. Thử lấy chính xác bằng LRCLIB /api/get
+    if (cleanTitle && cleanArtist) {
+      try {
+        let getUrl = `https://lrclib.net/api/get?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(cleanArtist)}`;
+        if (durSec) getUrl += `&duration=${durSec}`;
+        const resp = await fetch(getUrl, { headers: LRCLIB_HEADERS });
+        if (resp.ok) {
+          lyricData = await resp.json();
+        }
+      } catch {
+        // bỏ qua để thử fallback search
+      }
+    }
+
+    // 2. Fallback search: tìm theo cả tên bài hát + nghệ sĩ
+    if (!lyricData || (!lyricData.syncedLyrics && !lyricData.plainLyrics && !lyricData.instrumental)) {
+      try {
+        const searchQuery = cleanArtist ? `${cleanTitle} ${cleanArtist}` : cleanTitle;
+        const searchResp = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(searchQuery)}`, {
+          headers: LRCLIB_HEADERS
+        });
+        if (searchResp.ok) {
+          const results = await searchResp.json();
+          if (Array.isArray(results) && results.length > 0) {
+            lyricData = results.find(r => r.syncedLyrics) || results[0];
+          }
+        }
+      } catch {
+        // Tiếp tục thử fallback 3
+      }
+    }
+
+    // 3. Fallback search chỉ theo tên bài hát đã làm sạch
+    if (!lyricData || (!lyricData.syncedLyrics && !lyricData.plainLyrics && !lyricData.instrumental)) {
+      try {
+        const searchResp = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(cleanTitle)}`, {
+          headers: LRCLIB_HEADERS
+        });
+        if (searchResp.ok) {
+          const results = await searchResp.json();
+          if (Array.isArray(results) && results.length > 0) {
+            lyricData = results.find(r => r.syncedLyrics) || results[0];
+          }
+        }
+      } catch {
+        // Không tìm thấy
+      }
+    }
+
+    if (!lyricData) {
+      const notFoundPayload = {
+        success: false,
+        synced: false,
+        instrumental: false,
+        lines: [],
+        plain: '',
+        message: 'Chưa có lời cho bài hát này'
+      };
+      lyricsCache.set(cacheKey, notFoundPayload, 10 * 60 * 1000);
+      return res.json(notFoundPayload);
+    }
+
+    const isInstrumental = Boolean(lyricData.instrumental);
+    const hasSynced = Boolean(lyricData.syncedLyrics);
+    const parsedLines = hasSynced ? parseLRC(lyricData.syncedLyrics) : [];
+
+    const payload = {
+      success: true,
+      synced: hasSynced && parsedLines.length > 0,
+      instrumental: isInstrumental,
+      trackName: lyricData.trackName || cleanTitle,
+      artistName: lyricData.artistName || cleanArtist,
+      lines: parsedLines,
+      plain: lyricData.plainLyrics || ''
+    };
+
+    lyricsCache.set(cacheKey, payload);
+    return res.json(payload);
+  } catch (err) {
+    console.error('[Lyrics Fetch Error]:', err.message);
+    res.status(500).json({ success: false, error: 'Không thể tải lời bài hát: ' + err.message });
   }
 });
 

@@ -32,7 +32,12 @@
     albumsLoadedCountry: null,
     communityTracks: [],
     communityLoaded: false,
-    currentTimeframe: 'daily'
+    currentTimeframe: 'daily',
+    lyrics: [],
+    activeLyricIndex: -1,
+    isLyricsOpen: false,
+    lyricsLoading: false,
+    lyricsTrackId: null
   };
 
   // Cache DOM
@@ -205,6 +210,22 @@
     sheetLoopBadge: document.getElementById('sheetLoopBadge'),
     sheetLoopStatusChip: document.getElementById('sheetLoopStatusChip'),
     sheetShuffleStatusChip: document.getElementById('sheetShuffleStatusChip'),
+
+    // Spotify-Style Real-Time Synced Lyrics Elements
+    lyricsToggleBtn: document.getElementById('lyricsToggleBtn'),
+    ghibliLyricsStage: document.getElementById('ghibliLyricsStage'),
+    lyricsStageBackdrop: document.getElementById('lyricsStageBackdrop'),
+    lyricsTrackCover: document.getElementById('lyricsTrackCover'),
+    lyricsTrackTitle: document.getElementById('lyricsTrackTitle'),
+    lyricsTrackArtist: document.getElementById('lyricsTrackArtist'),
+    lyricsSyncBadge: document.getElementById('lyricsSyncBadge'),
+    lyricsCloseBtn: document.getElementById('lyricsCloseBtn'),
+    lyricsScrollBox: document.getElementById('lyricsScrollBox'),
+    lyricsLinesContainer: document.getElementById('lyricsLinesContainer'),
+    sheetLyricsCard: document.getElementById('sheetLyricsCard'),
+    sheetLyricsExpandBtn: document.getElementById('sheetLyricsExpandBtn'),
+    sheetLyricsActiveText: document.getElementById('sheetLyricsActiveText'),
+    sheetLyricsNextText: document.getElementById('sheetLyricsNextText'),
 
     toast: document.getElementById('toast')
   };
@@ -851,6 +872,283 @@
     }
   };
 
+  // ==========================================================================
+  // SPOTIFY-STYLE REAL-TIME SYNCED LYRICS ENGINE (LRCLIB & KARAOKE STAGE)
+  // ==========================================================================
+  let lyricsAbortController = null;
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function openLyricsStage() {
+    if (!dom.ghibliLyricsStage) return;
+    state.isLyricsOpen = true;
+    dom.ghibliLyricsStage.classList.remove('hidden');
+    if (dom.lyricsToggleBtn) dom.lyricsToggleBtn.classList.add('active');
+    scrollActiveLyricIntoView();
+  }
+
+  function closeLyricsStage() {
+    if (!dom.ghibliLyricsStage) return;
+    state.isLyricsOpen = false;
+    dom.ghibliLyricsStage.classList.add('hidden');
+    if (dom.lyricsToggleBtn) dom.lyricsToggleBtn.classList.remove('active');
+  }
+
+  function toggleLyricsStage() {
+    if (state.isLyricsOpen) {
+      closeLyricsStage();
+    } else {
+      openLyricsStage();
+    }
+  }
+
+  function seekToSeconds(targetSeconds) {
+    if (state.activeEngine === 'audio') {
+      if (dom.audio) {
+        dom.audio.currentTime = targetSeconds;
+        syncLyricsWithTime(targetSeconds);
+      }
+    } else if (state.activeEngine === 'youtube' && ytPlayer && typeof ytPlayer.seekTo === 'function') {
+      ytPlayer.seekTo(targetSeconds, true);
+      syncLyricsWithTime(targetSeconds);
+    }
+  }
+
+  function scrollActiveLyricIntoView() {
+    if (!dom.lyricsLinesContainer) return;
+    const activeEl = dom.lyricsLinesContainer.querySelector('.lyric-line.active');
+    if (activeEl) {
+      activeEl.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  }
+
+  function renderLyricsLines(lines) {
+    if (!dom.lyricsLinesContainer) return;
+    dom.lyricsLinesContainer.innerHTML = lines.map((item, idx) => {
+      return `<div class="lyric-line" data-index="${idx}" data-time="${item.time}">${escapeHtml(item.text || '♪')}</div>`;
+    }).join('');
+
+    // Bấm vào câu hát bất kỳ để tua nhạc đến đúng đoạn đó (Click-to-seek)
+    const lineEls = dom.lyricsLinesContainer.querySelectorAll('.lyric-line');
+    lineEls.forEach(el => {
+      el.addEventListener('click', () => {
+        const time = parseFloat(el.getAttribute('data-time'));
+        if (!isNaN(time)) {
+          seekToSeconds(time);
+          showToast(`⏩ Tua đến: ${formatTime(time)}`);
+        }
+      });
+    });
+  }
+
+  function syncLyricsWithTime(currentTime) {
+    if (!state.lyrics || state.lyrics.length === 0) return;
+
+    let currentIdx = -1;
+    for (let i = 0; i < state.lyrics.length; i++) {
+      if (currentTime >= state.lyrics[i].time) {
+        currentIdx = i;
+      } else {
+        break;
+      }
+    }
+
+    if (currentIdx === state.activeLyricIndex) return;
+    state.activeLyricIndex = currentIdx;
+
+    // Cập nhật giao diện trên Sân Khấu Lời Nhạc
+    if (dom.lyricsLinesContainer) {
+      const lineEls = dom.lyricsLinesContainer.children;
+      for (let i = 0; i < lineEls.length; i++) {
+        const el = lineEls[i];
+        if (i === currentIdx) {
+          el.classList.add('active');
+          el.classList.remove('past');
+        } else if (i < currentIdx) {
+          el.classList.remove('active');
+          el.classList.add('past');
+        } else {
+          el.classList.remove('active', 'past');
+        }
+      }
+
+      if (currentIdx >= 0 && lineEls[currentIdx]) {
+        lineEls[currentIdx].scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }
+    }
+
+    // Cập nhật thẻ Lời bài hát trên Mobile Fullscreen Sheet
+    if (currentIdx >= 0 && state.lyrics[currentIdx]) {
+      if (dom.sheetLyricsActiveText) {
+        dom.sheetLyricsActiveText.textContent = state.lyrics[currentIdx].text;
+      }
+      if (dom.sheetLyricsNextText) {
+        dom.sheetLyricsNextText.textContent = state.lyrics[currentIdx + 1]?.text || '';
+      }
+    }
+  }
+
+  async function fetchAndRenderLyrics(track) {
+    if (!track || !track.title) return;
+
+    if (lyricsAbortController) {
+      lyricsAbortController.abort();
+    }
+    lyricsAbortController = new AbortController();
+
+    state.lyrics = [];
+    state.activeLyricIndex = -1;
+    state.lyricsTrackId = track.id;
+    state.lyricsLoading = true;
+
+    // Cập nhật thông tin bài hát trên Sân khấu Lời Nhạc
+    if (dom.lyricsTrackTitle) dom.lyricsTrackTitle.textContent = track.title;
+    if (dom.lyricsTrackArtist) dom.lyricsTrackArtist.textContent = track.artist || 'Studio Ghibli';
+    if (dom.lyricsTrackCover) dom.lyricsTrackCover.src = upgradeThumbnailUrl(track.thumbnail);
+    if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '⏳ Đang nạp lời bài hát...';
+
+    // Cập nhật trên thẻ Mobile Sheet
+    if (dom.sheetLyricsActiveText) dom.sheetLyricsActiveText.textContent = 'Đang lắng nghe giai điệu và tải lời...';
+    if (dom.sheetLyricsNextText) dom.sheetLyricsNextText.textContent = '';
+
+    // Render trạng thái loading trên sân khấu
+    if (dom.lyricsLinesContainer) {
+      dom.lyricsLinesContainer.innerHTML = `
+        <div class="lyrics-loading-state">
+          <div class="lyrics-sparkle-icon">🍃</div>
+          <p>Đang tìm kiếm lời bài hát <strong>${escapeHtml(track.title)}</strong>...</p>
+        </div>
+      `;
+    }
+
+    // Tự động mở mục Lyrics trên tất cả thiết bị theo đúng mong muốn của người dùng
+    openLyricsStage();
+
+    try {
+      const params = new URLSearchParams({
+        title: track.title,
+        artist: track.artist || '',
+        duration: track.duration || ''
+      });
+
+      const response = await fetch(`/api/lyrics?${params.toString()}`, {
+        signal: lyricsAbortController.signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server returned status ${response.status}`);
+      }
+
+      const data = await response.json();
+      state.lyricsLoading = false;
+
+      // Đảm bảo vẫn đúng bài hát hiện tại
+      if (state.currentTrack?.id !== track.id) return;
+
+      if (data.instrumental) {
+        state.lyrics = [];
+        if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '🍃 Bản nhạc hòa tấu không lời';
+        if (dom.lyricsLinesContainer) {
+          dom.lyricsLinesContainer.innerHTML = `
+            <div class="lyrics-instrumental-state">
+              <div class="lyrics-sparkle-icon">🎹</div>
+              <h4>Giai Điệu Hòa Tấu Không Lời</h4>
+              <p>Bản nhạc không lời mộc mạc từ Khu Vườn Ghibli. Hãy nhắm mắt và hòa mình vào từng nốt nhạc êm dịu.</p>
+            </div>
+          `;
+        }
+        if (dom.sheetLyricsActiveText) {
+          dom.sheetLyricsActiveText.textContent = '🍃 Giai điệu hòa tấu không lời của Khu Vườn Ghibli';
+        }
+        return;
+      }
+
+      if (data.synced && Array.isArray(data.lines) && data.lines.length > 0) {
+        state.lyrics = data.lines;
+        if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '✨ Đồng bộ thời gian thực (Karaoke)';
+
+        renderLyricsLines(state.lyrics);
+
+        if (dom.sheetLyricsActiveText) {
+          dom.sheetLyricsActiveText.textContent = state.lyrics[0]?.text || 'Giai điệu bắt đầu...';
+        }
+        if (dom.sheetLyricsNextText) {
+          dom.sheetLyricsNextText.textContent = state.lyrics[1]?.text || '';
+        }
+
+        // Đồng bộ ngay với thời điểm hiện tại của bài nếu đang phát
+        let curTime = 0;
+        if (state.activeEngine === 'audio' && dom.audio) {
+          curTime = dom.audio.currentTime || 0;
+        } else if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.getCurrentTime === 'function') {
+          curTime = ytPlayer.getCurrentTime() || 0;
+        }
+        if (curTime > 0) {
+          syncLyricsWithTime(curTime);
+        }
+      } else if (data.plain) {
+        state.lyrics = [];
+        if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '📜 Lời bài hát (Chưa đồng bộ nhịp)';
+
+        const plainLines = data.plain.split(/\r?\n/).filter(l => l.trim().length > 0);
+        if (dom.lyricsLinesContainer) {
+          dom.lyricsLinesContainer.innerHTML = plainLines.map(line => `
+            <div class="lyric-line past" style="opacity: 0.85; font-size: 1.5rem; text-align: center;">
+              ${escapeHtml(line)}
+            </div>
+          `).join('');
+        }
+        if (dom.sheetLyricsActiveText) {
+          dom.sheetLyricsActiveText.textContent = plainLines[0] || 'Lời bài hát có sẵn';
+        }
+      } else {
+        state.lyrics = [];
+        if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '🌱 Chưa có lời';
+        if (dom.lyricsLinesContainer) {
+          dom.lyricsLinesContainer.innerHTML = `
+            <div class="lyrics-empty-state">
+              <div class="lyrics-sparkle-icon">🎵</div>
+              <p>Chưa có lời đồng bộ cho bài hát này trong kho dữ liệu cộng đồng.<br>Hãy tận hưởng trọn vẹn giai điệu tuyệt vời này nhé!</p>
+            </div>
+          `;
+        }
+        if (dom.sheetLyricsActiveText) {
+          dom.sheetLyricsActiveText.textContent = 'Chưa có lời đồng bộ cho bài hát này.';
+        }
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.warn('[Lyrics Fetch Error]:', err.message);
+      state.lyricsLoading = false;
+      if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '⚠️ Chưa thể nạp lời';
+      if (dom.lyricsLinesContainer) {
+        dom.lyricsLinesContainer.innerHTML = `
+          <div class="lyrics-empty-state">
+            <div class="lyrics-sparkle-icon">🍃</div>
+            <p>Không thể kết nối máy chủ lời nhạc lúc này. Đang phát nhạc bình thường...</p>
+          </div>
+        `;
+      }
+      if (dom.sheetLyricsActiveText) {
+        dom.sheetLyricsActiveText.textContent = 'Không thể nạp lời bài hát lúc này.';
+      }
+    }
+  }
+
   // Đồng bộ ngọn lửa Calcifer và thanh tiến trình liên tục (250ms)
   setInterval(() => {
     if (state.isPlaying && !state.isScrubbing) {
@@ -862,6 +1160,7 @@
           if (dom.totalDuration) dom.totalDuration.textContent = formatTime(dom.audio.duration);
           if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = formatTime(dom.audio.currentTime);
           if (dom.sheetTotalTime) dom.sheetTotalTime.textContent = formatTime(dom.audio.duration);
+          syncLyricsWithTime(dom.audio.currentTime);
         }
       } else if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.getCurrentTime === 'function') {
         const cur = ytPlayer.getCurrentTime();
@@ -873,6 +1172,7 @@
           if (dom.totalDuration) dom.totalDuration.textContent = formatTime(dur);
           if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = formatTime(cur);
           if (dom.sheetTotalTime) dom.sheetTotalTime.textContent = formatTime(dur);
+          syncLyricsWithTime(cur);
 
           // Tự động đồng bộ thời lượng thực tế của Official Music Video với danh sách bài hát
           if (state.currentTrack && state.currentTrack.durationSec !== Math.round(dur)) {
@@ -897,6 +1197,7 @@
     state.currentTrack = track;
     activatePlayerBar();
     updateNowPlayingUI(track);
+    fetchAndRenderLyrics(track);
 
     if (addOrFindInQueue) {
       const existingIdx = state.queue.findIndex(t => t.id === track.id);
@@ -2561,6 +2862,7 @@
           updateProgressUI(percent);
           if (dom.currentTime) dom.currentTime.textContent = formatTime(dom.audio.currentTime);
           updateMediaSessionPosition(dom.audio.currentTime, dom.audio.duration);
+          syncLyricsWithTime(dom.audio.currentTime);
         }
       });
 
@@ -2714,6 +3016,26 @@
       });
     }
 
+    // Spotify-Style Real-time Synced Lyrics Stage Events
+    if (dom.lyricsToggleBtn) {
+      dom.lyricsToggleBtn.addEventListener('click', toggleLyricsStage);
+    }
+    if (dom.lyricsCloseBtn) {
+      dom.lyricsCloseBtn.addEventListener('click', closeLyricsStage);
+    }
+    if (dom.lyricsStageBackdrop) {
+      dom.lyricsStageBackdrop.addEventListener('click', closeLyricsStage);
+    }
+    if (dom.sheetLyricsExpandBtn) {
+      dom.sheetLyricsExpandBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openLyricsStage();
+      });
+    }
+    if (dom.sheetLyricsCard) {
+      dom.sheetLyricsCard.addEventListener('click', openLyricsStage);
+    }
+
     // Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
@@ -2733,6 +3055,10 @@
         cycleLoopMode();
       } else if (e.key === 's' || e.key === 'S') {
         toggleShuffle();
+      } else if (e.key === 'y' || e.key === 'Y') {
+        toggleLyricsStage();
+      } else if (e.key === 'Escape' && state.isLyricsOpen) {
+        closeLyricsStage();
       }
     });
   }

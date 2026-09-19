@@ -733,6 +733,12 @@
           <span id="volumePercent" class="volume-percent-badge">80%</span>
         </div>
 
+        <!-- Nút bật/tắt lời bài hát (Spotify Style Lyrics) -->
+        <button id="lyricsToggleBtn" class="lyrics-toggle-btn" title="Xem lời bài hát (Karaoke) [Y]">
+          <span class="lyrics-mic-icon">🎤</span>
+          <span class="lyrics-btn-label">Lời bài hát</span>
+        </button>
+
         <!-- Nút bật/tắt ngăn kéo danh sách phát -->
         <button id="queueToggleBtn" class="queue-toggle-btn" title="Xem danh sách chờ & ô chọn hạt dẻ">
           <span>🌰 Danh Sách Chờ</span>
@@ -850,6 +856,64 @@
     <div class="sheet-mode-status" id="sheetModeStatus">
       <span class="mode-status-chip" id="sheetLoopStatusChip">🔁 Lặp vĩnh viễn (Toàn bộ)</span>
       <span class="mode-status-chip hidden" id="sheetShuffleStatusChip">🔀 Trộn nhạc: BẬT</span>
+    </div>
+
+    <!-- Thẻ Lời Bài Hát Chuẩn Spotify Trên Mobile Sheet -->
+    <div class="sheet-lyrics-card" id="sheetLyricsCard">
+      <div class="sheet-lyrics-card-header">
+        <span class="sheet-lyrics-badge">🎤 LỜI BÀI HÁT</span>
+        <button class="sheet-lyrics-fullscreen-trigger" id="sheetLyricsExpandBtn" title="Phóng to sân khấu lời nhạc">
+          Mở rộng ↗
+        </button>
+      </div>
+      <div class="sheet-lyrics-body" id="sheetLyricsBody">
+        <p class="sheet-lyrics-line current" id="sheetLyricsActiveText">Đang tải lời bài hát...</p>
+        <p class="sheet-lyrics-line next" id="sheetLyricsNextText"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 
+    ==========================================================================
+    7. SPOTIFY-STYLE GHIBLI LYRICS STAGE (SÂN KHẤU LỜI BÀI HÁT KARAOKE TOÀN DIỆN)
+    ==========================================================================
+  -->
+  <div class="ghibli-lyrics-stage hidden" id="ghibliLyricsStage" aria-modal="true" role="dialog">
+    <div class="lyrics-stage-backdrop" id="lyricsStageBackdrop"></div>
+    <div class="lyrics-stage-window">
+      <!-- Header sân khấu lời nhạc -->
+      <div class="lyrics-stage-header">
+        <div class="lyrics-stage-meta">
+          <div class="lyrics-album-art-wrap">
+            <img id="lyricsTrackCover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><rect width='80' height='80' rx='40' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='24' fill='%23fefae0'>🎵</text></svg>" alt="Album Cover" class="lyrics-album-art">
+          </div>
+          <div class="lyrics-meta-text">
+            <h3 class="lyrics-title" id="lyricsTrackTitle">Chưa có bài hát</h3>
+            <p class="lyrics-artist" id="lyricsTrackArtist">Studio Ghibli</p>
+          </div>
+        </div>
+
+        <div class="lyrics-stage-controls">
+          <span class="lyrics-sync-badge" id="lyricsSyncBadge">✨ Đồng bộ thời gian thực</span>
+          <button class="lyrics-close-btn" id="lyricsCloseBtn" aria-label="Đóng lời bài hát" title="Đóng lời bài hát [Esc / Y]">✕</button>
+        </div>
+      </div>
+
+      <!-- Khung cuộn lời bài hát chính -->
+      <div class="lyrics-scroll-box" id="lyricsScrollBox">
+        <div class="lyrics-lines-container" id="lyricsLinesContainer">
+          <!-- Render danh sách câu hát ở đây -->
+          <div class="lyrics-loading-state">
+            <div class="lyrics-sparkle-icon">🍃</div>
+            <p>Đang lắng nghe giai điệu và tải lời bài hát...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer gợi ý tương tác -->
+      <div class="lyrics-stage-footer">
+        <span class="lyrics-hint-text">💡 Nhấp vào bất kỳ câu hát nào để tua nhạc đến đúng đoạn đó</span>
+      </div>
     </div>
   </div>
 
