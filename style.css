@@ -5425,27 +5425,91 @@ body.twilight-mode .hero-main-title {
     grid-area: controls !important;
     display: flex !important;
     align-items: center !important;
-    gap: 8px !important;
+    gap: 5px !important;
   }
 
+  /* Hiển thị đầy đủ Trộn nhạc (Shuffle), Lặp nhạc (Loop), Bài trước (Prev), Play và Next trên Mobile */
   #shuffleBtn,
-  #loopBtn,
-  #prevBtn {
-    display: none !important;
+  #prevBtn,
+  #nextBtn,
+  #loopBtn {
+    display: flex !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    padding: 0 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+    position: relative !important;
+    background: rgba(43, 24, 16, 0.06) !important;
+    border: 1px solid rgba(181, 137, 87, 0.3) !important;
+    color: var(--theme-text-main) !important;
+  }
+
+  #shuffleBtn svg,
+  #loopBtn svg {
+    width: 17px !important;
+    height: 17px !important;
+  }
+
+  #prevBtn svg,
+  #nextBtn svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  #shuffleBtn.active,
+  #loopBtn.active {
+    color: #2d6a4f !important;
+    border-color: #2d6a4f !important;
+    background: rgba(45, 106, 79, 0.16) !important;
+    box-shadow: 0 0 10px rgba(45, 106, 79, 0.35) !important;
+  }
+
+  body.twilight-mode #shuffleBtn.active,
+  body.twilight-mode #loopBtn.active {
+    color: #7fc95e !important;
+    border-color: #7fc95e !important;
+    background: rgba(82, 183, 136, 0.22) !important;
+    box-shadow: 0 0 12px rgba(127, 201, 94, 0.45) !important;
+  }
+
+  #loopBadge {
+    position: absolute !important;
+    top: -4px !important;
+    right: -4px !important;
+    font-size: 0.65rem !important;
+    line-height: 1 !important;
+    min-width: 14px !important;
+    height: 14px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #2d6a4f !important;
+    color: #fff !important;
+    border: 1px solid #fff !important;
+  }
+
+  body.twilight-mode #loopBadge {
+    background: #40916c !important;
+    border-color: #122416 !important;
   }
 
   .wood-disc-play-btn {
-    min-width: 44px !important;
-    min-height: 44px !important;
-    width: 44px !important;
-    height: 44px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    width: 42px !important;
+    height: 42px !important;
   }
 
   #nextBtn {
-    min-width: 40px !important;
-    min-height: 40px !important;
-    width: 40px !important;
-    height: 40px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    width: 32px !important;
+    height: 32px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -6228,13 +6292,95 @@ body.twilight-mode .sheet-drag-pill {
 }
 
 .sheet-ctrl-btn {
-  background: transparent;
-  border: none;
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(43, 24, 16, 0.05);
+  border: 1.5px solid rgba(181, 137, 87, 0.25);
   color: var(--theme-text-main);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.2s var(--ease-out-spring);
+}
+
+body.twilight-mode .sheet-ctrl-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(82, 183, 136, 0.3);
+  color: #e8f5e9;
+}
+
+.sheet-ctrl-btn.active {
+  background: rgba(45, 106, 79, 0.16) !important;
+  border-color: #2d6a4f !important;
+  color: #2d6a4f !important;
+  box-shadow: 0 0 14px rgba(45, 106, 79, 0.35) !important;
+}
+
+body.twilight-mode .sheet-ctrl-btn.active {
+  background: rgba(82, 183, 136, 0.22) !important;
+  border-color: #7fc95e !important;
+  color: #7fc95e !important;
+  box-shadow: 0 0 16px rgba(127, 201, 94, 0.45) !important;
+}
+
+.sheet-ctrl-btn:active {
+  transform: scale(0.9);
+}
+
+.sheet-loop-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #2d6a4f;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+body.twilight-mode .sheet-loop-badge {
+  background: #40916c;
+  border-color: #122416;
+}
+
+.sheet-mode-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.mode-status-chip {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 12px;
+  background: rgba(45, 106, 79, 0.1);
+  color: #2d6a4f;
+  border: 1px solid rgba(45, 106, 79, 0.25);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  letter-spacing: 0.2px;
+}
+
+body.twilight-mode .mode-status-chip {
+  background: rgba(82, 183, 136, 0.16);
+  color: #7fc95e;
+  border-color: rgba(82, 183, 136, 0.35);
 }
 
 .sheet-play-btn {
@@ -6250,6 +6396,49 @@ body.twilight-mode .sheet-drag-pill {
   justify-content: center;
   box-shadow: 0 6px 18px rgba(43, 24, 16, 0.35);
   cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.sheet-play-btn:active {
+  transform: scale(0.92);
+}
+
+/* Gợi ý mở đĩa than trên Mobile Player Bar */
+.mobile-sheet-expand-hint {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-sheet-expand-hint {
+    display: flex;
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #2d6a4f;
+    color: #fff;
+    font-size: 0.55rem;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    animation: floatExpandHint 2s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  body.twilight-mode .mobile-sheet-expand-hint {
+    background: #52b788;
+    color: #0b1a10;
+    border-color: #0b1a10;
+  }
+
+  @keyframes floatExpandHint {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+  }
 }
 
 

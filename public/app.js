@@ -202,6 +202,9 @@
     sheetPauseIcon: document.getElementById('sheetPauseIcon'),
     sheetNextBtn: document.getElementById('sheetNextBtn'),
     sheetLoopBtn: document.getElementById('sheetLoopBtn'),
+    sheetLoopBadge: document.getElementById('sheetLoopBadge'),
+    sheetLoopStatusChip: document.getElementById('sheetLoopStatusChip'),
+    sheetShuffleStatusChip: document.getElementById('sheetShuffleStatusChip'),
 
     toast: document.getElementById('toast')
   };
@@ -540,8 +543,7 @@
       dom.sheetShuffleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         triggerHaptic(10);
-        if (dom.shuffleBtn) dom.shuffleBtn.click();
-        dom.sheetShuffleBtn.classList.toggle('active', state.isShuffle);
+        toggleShuffle();
       });
     }
 
@@ -1161,36 +1163,101 @@
   }
 
   // ==========================================================================
-  // 5. LOOP MODES (All -> One -> Acorn 🌰 -> Off)
+  // 5. PLAYBACK MODES: LOOP & SHUFFLE (ALL 🔁 / ONE 🔂 / ACORN 🌰 / OFF ➡ / SHUFFLE 🔀)
   // ==========================================================================
   function cycleLoopMode() {
     if (state.loopMode === 'all') {
       state.loopMode = 'one';
-      if (dom.loopBadge) {
-        dom.loopBadge.textContent = '1';
-        dom.loopBadge.classList.remove('hidden');
-      }
-      showToast('🔂 Chế độ: Lặp lại 1 bài');
+      showToast('🔂 Chế độ: Lặp lại 1 bài vĩnh viễn');
     } else if (state.loopMode === 'one') {
       state.loopMode = 'acorn';
-      if (dom.loopBadge) {
-        dom.loopBadge.textContent = '🌰';
-        dom.loopBadge.classList.remove('hidden');
-      }
-      if (dom.acornLoopActiveBadge) dom.acornLoopActiveBadge.classList.remove('hidden');
       showToast('🌰 Chế độ: Lặp theo danh sách Hạt Dẻ đã tích');
     } else if (state.loopMode === 'acorn') {
       state.loopMode = 'off';
-      if (dom.loopBadge) dom.loopBadge.classList.add('hidden');
-      if (dom.acornLoopActiveBadge) dom.acornLoopActiveBadge.classList.add('hidden');
       showToast('➡ Chế độ: Tắt lặp lại');
     } else {
       state.loopMode = 'all';
-      if (dom.loopBadge) {
+      showToast('🔁 Chế độ: Lặp toàn bộ danh sách (Vĩnh viễn)');
+    }
+    updateLoopUI();
+  }
+
+  function updateLoopUI() {
+    const isOff = state.loopMode === 'off';
+    const mode = state.loopMode;
+
+    // 1. Bottom Player Loop Button
+    if (dom.loopBtn) {
+      dom.loopBtn.classList.toggle('active', !isOff);
+    }
+    if (dom.loopBadge) {
+      if (mode === 'all') {
         dom.loopBadge.textContent = '🔁';
         dom.loopBadge.classList.remove('hidden');
+      } else if (mode === 'one') {
+        dom.loopBadge.textContent = '1';
+        dom.loopBadge.classList.remove('hidden');
+      } else if (mode === 'acorn') {
+        dom.loopBadge.textContent = '🌰';
+        dom.loopBadge.classList.remove('hidden');
+      } else {
+        dom.loopBadge.classList.add('hidden');
       }
-      showToast('🔁 Chế độ: Lặp toàn bộ danh sách');
+    }
+    if (dom.acornLoopActiveBadge) {
+      dom.acornLoopActiveBadge.classList.toggle('hidden', mode !== 'acorn');
+    }
+
+    // 2. Mobile Fullscreen Sheet Loop Button
+    if (dom.sheetLoopBtn) {
+      dom.sheetLoopBtn.classList.toggle('active', !isOff);
+    }
+    if (dom.sheetLoopBadge) {
+      if (mode === 'all') {
+        dom.sheetLoopBadge.textContent = '🔁';
+        dom.sheetLoopBadge.classList.remove('hidden');
+      } else if (mode === 'one') {
+        dom.sheetLoopBadge.textContent = '1';
+        dom.sheetLoopBadge.classList.remove('hidden');
+      } else if (mode === 'acorn') {
+        dom.sheetLoopBadge.textContent = '🌰';
+        dom.sheetLoopBadge.classList.remove('hidden');
+      } else {
+        dom.sheetLoopBadge.classList.add('hidden');
+      }
+    }
+    if (dom.sheetLoopStatusChip) {
+      if (mode === 'all') {
+        dom.sheetLoopStatusChip.textContent = '🔁 Lặp vĩnh viễn (Toàn bộ)';
+        dom.sheetLoopStatusChip.classList.remove('hidden');
+      } else if (mode === 'one') {
+        dom.sheetLoopStatusChip.textContent = '🔂 Lặp 1 bài vĩnh viễn';
+        dom.sheetLoopStatusChip.classList.remove('hidden');
+      } else if (mode === 'acorn') {
+        dom.sheetLoopStatusChip.textContent = '🌰 Lặp danh sách Hạt Dẻ';
+        dom.sheetLoopStatusChip.classList.remove('hidden');
+      } else {
+        dom.sheetLoopStatusChip.textContent = '➡ Tắt lặp lại';
+        dom.sheetLoopStatusChip.classList.remove('hidden');
+      }
+    }
+  }
+
+  function toggleShuffle(explicitVal = null) {
+    state.isShuffle = explicitVal !== null ? !!explicitVal : !state.isShuffle;
+    updateShuffleUI();
+    showToast(state.isShuffle ? '🔀 Chế độ: Trộn nhạc ngẫu nhiên BẬT' : '➡ Chế độ: Trộn nhạc ngẫu nhiên TẮT');
+  }
+
+  function updateShuffleUI() {
+    if (dom.shuffleBtn) {
+      dom.shuffleBtn.classList.toggle('active', state.isShuffle);
+    }
+    if (dom.sheetShuffleBtn) {
+      dom.sheetShuffleBtn.classList.toggle('active', state.isShuffle);
+    }
+    if (dom.sheetShuffleStatusChip) {
+      dom.sheetShuffleStatusChip.classList.toggle('hidden', !state.isShuffle);
     }
   }
 
@@ -2570,14 +2637,16 @@
     // Shuffle & Loop
     if (dom.shuffleBtn) {
       dom.shuffleBtn.addEventListener('click', () => {
-        state.isShuffle = !state.isShuffle;
-        dom.shuffleBtn.classList.toggle('active', state.isShuffle);
-        showToast(state.isShuffle ? '🔀 Chế độ: Phát ngẫu nhiên BẬT' : '➡ Chế độ: Phát ngẫu nhiên TẮT');
+        triggerHaptic(10);
+        toggleShuffle();
       });
     }
 
     if (dom.loopBtn) {
-      dom.loopBtn.addEventListener('click', cycleLoopMode);
+      dom.loopBtn.addEventListener('click', () => {
+        triggerHaptic(10);
+        cycleLoopMode();
+      });
     }
 
     // Like button
@@ -2663,7 +2732,7 @@
       } else if (e.key === 'l' || e.key === 'L') {
         cycleLoopMode();
       } else if (e.key === 's' || e.key === 'S') {
-        if (dom.shuffleBtn) dom.shuffleBtn.click();
+        toggleShuffle();
       }
     });
   }
@@ -2842,6 +2911,8 @@
     initMagicCursorDust();
     initMobileBottomNav();
     initMobileFullscreenSheet();
+    updateLoopUI();
+    updateShuffleUI();
     setupMediaSessionHandlers();
     setupEvents();
     initDropYourMusicEvents();
