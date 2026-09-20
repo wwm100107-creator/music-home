@@ -68,7 +68,10 @@
       } catch (_) {
         return true;
       }
-    })()
+    })(),
+    isBatterySaverActive: false,
+    wakeLockSentinel: null,
+    batteryClockInterval: null
   };
 
   // Cache DOM
@@ -249,6 +252,24 @@
     sheetShuffleStatusChip: document.getElementById('sheetShuffleStatusChip'),
     sheetBgPlaybackChip: document.getElementById('sheetBgPlaybackChip'),
     sheetBgPlaybackText: document.getElementById('sheetBgPlaybackText'),
+
+    // Battery Saver Mode Elements (OLED True Black)
+    batterySaverBtn: document.getElementById('batterySaverBtn'),
+    sheetBatterySaverBtn: document.getElementById('sheetBatterySaverBtn'),
+    sheetBatterySaverText: document.getElementById('sheetBatterySaverText'),
+    mobileBatterySaverQuickBtn: document.getElementById('mobileBatterySaverQuickBtn'),
+    batterySaverOverlay: document.getElementById('batterySaverOverlay'),
+    batterySaverClock: document.getElementById('batterySaverClock'),
+    batterySaverLevel: document.getElementById('batterySaverLevel'),
+    batterySaverTotoro: document.getElementById('batterySaverTotoro'),
+    batterySaverTitle: document.getElementById('batterySaverTitle'),
+    batterySaverArtist: document.getElementById('batterySaverArtist'),
+    batterySaverPrevBtn: document.getElementById('batterySaverPrevBtn'),
+    batterySaverPlayBtn: document.getElementById('batterySaverPlayBtn'),
+    batterySaverPlayIcon: document.getElementById('batterySaverPlayIcon'),
+    batterySaverPauseIcon: document.getElementById('batterySaverPauseIcon'),
+    batterySaverNextBtn: document.getElementById('batterySaverNextBtn'),
+    batterySaverExitBtn: document.getElementById('batterySaverExitBtn'),
 
     // Spotify-Style Real-Time Synced Lyrics Elements
     lyricsToggleBtn: document.getElementById('lyricsToggleBtn'),
@@ -571,6 +592,179 @@
     }
   }
 
+  // ==========================================================================
+  // CHẾ ĐỘ TIẾT KIỆM PIN OLED (TRUE BLACK BATTERY SAVER MODE)
+  // ==========================================================================
+  function updateBatterySaverUI() {
+    const isActive = !!state.isBatterySaverActive;
+    if (dom.batterySaverBtn) {
+      dom.batterySaverBtn.classList.toggle('active', isActive);
+      dom.batterySaverBtn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    }
+    if (dom.mobileBatterySaverQuickBtn) {
+      dom.mobileBatterySaverQuickBtn.classList.toggle('active', isActive);
+    }
+    if (dom.sheetBatterySaverBtn) {
+      dom.sheetBatterySaverBtn.classList.toggle('active', isActive);
+    }
+    if (dom.sheetBatterySaverText) {
+      dom.sheetBatterySaverText.innerHTML = `🔋 Tiết kiệm pin: <strong>${isActive ? 'BẬT' : 'TẮT'}</strong>`;
+    }
+  }
+
+  function updateBatterySaverTrackInfo(track) {
+    if (!dom.batterySaverTitle || !dom.batterySaverArtist) return;
+    if (track) {
+      dom.batterySaverTitle.textContent = track.title || 'Chưa có bài hát';
+      dom.batterySaverArtist.textContent = track.artist || 'Studio Ghibli';
+    } else {
+      dom.batterySaverTitle.textContent = 'Chưa có bài hát';
+      dom.batterySaverArtist.textContent = 'Studio Ghibli';
+    }
+    if (dom.batterySaverTotoro) {
+      if (state.currentUser && state.currentUser.avatar) {
+        if (state.currentUser.avatar.startsWith('data:') || state.currentUser.avatar.startsWith('http')) {
+          dom.batterySaverTotoro.innerHTML = `<img src="${state.currentUser.avatar}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; opacity: 0.6;" alt="avatar">`;
+        } else {
+          dom.batterySaverTotoro.textContent = state.currentUser.avatar;
+        }
+      } else {
+        dom.batterySaverTotoro.textContent = '🌰';
+      }
+    }
+  }
+
+  function updateBatterySaverPlayState(isPlaying) {
+    if (dom.batterySaverPlayIcon) {
+      dom.batterySaverPlayIcon.classList.toggle('hidden', isPlaying);
+    }
+    if (dom.batterySaverPauseIcon) {
+      dom.batterySaverPauseIcon.classList.toggle('hidden', !isPlaying);
+    }
+  }
+
+  function updateBatteryClock() {
+    if (!dom.batterySaverClock) return;
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    dom.batterySaverClock.textContent = `${hours}:${minutes}`;
+  }
+
+  function updateBatteryLevel() {
+    if (!dom.batterySaverLevel) return;
+    if (typeof navigator.getBattery === 'function') {
+      navigator.getBattery().then(battery => {
+        const level = Math.round(battery.level * 100);
+        const isCharging = battery.charging;
+        if (dom.batterySaverLevel) {
+          dom.batterySaverLevel.textContent = `OLED Eco • ${level}%${isCharging ? ' ⚡' : ''}`;
+        }
+      }).catch(() => {
+        if (dom.batterySaverLevel) dom.batterySaverLevel.textContent = 'OLED Eco Mode';
+      });
+    } else {
+      dom.batterySaverLevel.textContent = 'OLED Eco Mode';
+    }
+  }
+
+  async function requestWakeLock() {
+    if ('wakeLock' in navigator) {
+      try {
+        state.wakeLockSentinel = await navigator.wakeLock.request('screen');
+        state.wakeLockSentinel.addEventListener('release', () => {
+          state.wakeLockSentinel = null;
+        });
+      } catch (err) {
+        console.log('WakeLock not granted or supported:', err);
+      }
+    }
+  }
+
+  function releaseWakeLock() {
+    if (state.wakeLockSentinel) {
+      try {
+        state.wakeLockSentinel.release();
+      } catch (_) {}
+      state.wakeLockSentinel = null;
+    }
+  }
+
+  async function activateBatterySaverMode() {
+    if (state.isBatterySaverActive) return;
+    state.isBatterySaverActive = true;
+    document.body.classList.add('eco-mode-active');
+
+    // Tạm dừng video nền để tiết kiệm năng lượng tối đa
+    const bgVideo = document.querySelector('.bg-video');
+    if (bgVideo && !bgVideo.paused) {
+      try {
+        bgVideo.pause();
+      } catch (_) {}
+    }
+
+    // Hiển thị giao diện OLED đen tuyệt đối
+    if (dom.batterySaverOverlay) {
+      dom.batterySaverOverlay.classList.remove('hidden');
+      dom.batterySaverOverlay.setAttribute('aria-hidden', 'false');
+    }
+
+    if (state.currentTrack) {
+      updateBatterySaverTrackInfo(state.currentTrack);
+    }
+    updateBatterySaverPlayState(state.isPlaying);
+    updateBatteryClock();
+    updateBatteryLevel();
+
+    if (state.batteryClockInterval) clearInterval(state.batteryClockInterval);
+    state.batteryClockInterval = setInterval(updateBatteryClock, 10000);
+
+    // Kích hoạt WakeLock giữ màn hình đen không bị hệ điều hành tắt ngắt luồng phát YouTube
+    await requestWakeLock();
+
+    updateBatterySaverUI();
+    triggerHaptic(15);
+    showToast('🔋 Đã BẬT Tiết kiệm pin OLED: Tắt 98% pixel đen, giữ nhạc chạy liên tục!');
+  }
+
+  function deactivateBatterySaverMode() {
+    if (!state.isBatterySaverActive) return;
+    state.isBatterySaverActive = false;
+    document.body.classList.remove('eco-mode-active');
+
+    // Tiếp tục phát video nền nếu không ở chế độ đêm
+    const bgVideo = document.querySelector('.bg-video');
+    if (bgVideo && state.ambientMode !== 'twilight') {
+      try {
+        bgVideo.play().catch(() => {});
+      } catch (_) {}
+    }
+
+    // Ẩn lớp phủ OLED
+    if (dom.batterySaverOverlay) {
+      dom.batterySaverOverlay.classList.add('hidden');
+      dom.batterySaverOverlay.setAttribute('aria-hidden', 'true');
+    }
+
+    if (state.batteryClockInterval) {
+      clearInterval(state.batteryClockInterval);
+      state.batteryClockInterval = null;
+    }
+
+    releaseWakeLock();
+    updateBatterySaverUI();
+    triggerHaptic(10);
+    showToast('☀️ Đã thoát Chế độ Tiết kiệm pin.');
+  }
+
+  function toggleBatterySaverMode() {
+    if (state.isBatterySaverActive) {
+      deactivateBatterySaverMode();
+    } else {
+      activateBatterySaverMode();
+    }
+  }
+
   // 1.5. Mobile Fullscreen Sheet Management
   function openMobileFullscreenSheet() {
     if (!dom.mobileFullscreenSheet) return;
@@ -578,6 +772,7 @@
     document.body.classList.add('sheet-open');
     triggerHaptic(12);
     updateBgPlaybackUI();
+    updateBatterySaverUI();
     if (state.currentTrack) {
       updateNowPlayingUI(state.currentTrack);
     }
@@ -709,6 +904,15 @@
         } else {
           showToast('⏸️ Đã TẮT tính năng phát nền khi tắt màn hình.');
         }
+      });
+    }
+
+    if (dom.sheetBatterySaverBtn) {
+      updateBatterySaverUI();
+      dom.sheetBatterySaverBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic(12);
+        toggleBatterySaverMode();
       });
     }
 
@@ -896,6 +1100,7 @@
     updateLikeButtonUI(track.id);
     highlightActiveCard(track.id);
     updateMediaSession(track);
+    updateBatterySaverTrackInfo(track);
   }
 
   function updateStageUpNext() {
@@ -959,6 +1164,8 @@
         dom.calciferFlame.classList.add('calcifer-sleeping');
       }
     }
+
+    updateBatterySaverPlayState(isPlaying);
   }
 
   // ==========================================================================
@@ -3349,6 +3556,73 @@
       });
     }
 
+    // OLED True Black Battery Saver Events
+    if (dom.batterySaverBtn) {
+      dom.batterySaverBtn.addEventListener('click', () => {
+        triggerHaptic(12);
+        toggleBatterySaverMode();
+      });
+    }
+    if (dom.mobileBatterySaverQuickBtn) {
+      dom.mobileBatterySaverQuickBtn.addEventListener('click', () => {
+        triggerHaptic(12);
+        toggleBatterySaverMode();
+      });
+    }
+    if (dom.batterySaverExitBtn) {
+      dom.batterySaverExitBtn.addEventListener('click', () => {
+        triggerHaptic(10);
+        deactivateBatterySaverMode();
+      });
+    }
+
+    // Double tap anywhere on battery saver overlay to wake screen
+    if (dom.batterySaverOverlay) {
+      let lastTapTime = 0;
+      dom.batterySaverOverlay.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        const now = Date.now();
+        const tapGap = now - lastTapTime;
+        if (tapGap < 350 && tapGap > 40) {
+          triggerHaptic(12);
+          deactivateBatterySaverMode();
+          lastTapTime = 0;
+        } else {
+          lastTapTime = now;
+        }
+      });
+    }
+
+    // Eco controls inside OLED overlay
+    if (dom.batterySaverPrevBtn) {
+      dom.batterySaverPrevBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic(10);
+        playPrevTrack();
+      });
+    }
+    if (dom.batterySaverPlayBtn) {
+      dom.batterySaverPlayBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic(12);
+        togglePlayPause();
+      });
+    }
+    if (dom.batterySaverNextBtn) {
+      dom.batterySaverNextBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic(10);
+        playNextTrack();
+      });
+    }
+
+    // Visibility change wakeLock re-request
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible' && state.isBatterySaverActive) {
+        await requestWakeLock();
+      }
+    });
+
     // Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
@@ -3370,8 +3644,14 @@
         toggleShuffle();
       } else if (e.key === 'y' || e.key === 'Y') {
         toggleLyricsStage();
-      } else if (e.key === 'Escape' && state.isLyricsOpen) {
-        closeLyricsStage();
+      } else if (e.key === 'b' || e.key === 'B') {
+        toggleBatterySaverMode();
+      } else if (e.key === 'Escape') {
+        if (state.isBatterySaverActive) {
+          deactivateBatterySaverMode();
+        } else if (state.isLyricsOpen) {
+          closeLyricsStage();
+        }
       }
     });
   }
@@ -4315,6 +4595,7 @@
     loadFavorites();
     loadCommunityTracks();
     initUserAccounts();
+    updateBatterySaverUI();
 
     // Khởi tạo tab Home
     const defaultTab = document.getElementById('tabHome') || dom.sidebarNavItems[0];
@@ -4334,6 +4615,9 @@
   window.playTrack = playTrack;
   window.openAccountModal = openAccountModal;
   window.syncUserDataToCloud = syncUserDataToCloud;
+  window.toggleBatterySaverMode = toggleBatterySaverMode;
+  window.activateBatterySaverMode = activateBatterySaverMode;
+  window.deactivateBatterySaverMode = deactivateBatterySaverMode;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

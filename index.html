@@ -190,6 +190,9 @@
           <span class="mobile-header-title">Home Music</span>
         </div>
         <div class="mobile-top-right-actions">
+          <button class="mobile-battery-btn" id="mobileBatterySaverQuickBtn" aria-label="Tiết kiệm pin OLED" title="Chế độ tiết kiệm pin OLED">
+            🔋
+          </button>
           <button class="mobile-account-btn" id="mobileAccountBtn" aria-label="Tài khoản & Đồng bộ" title="Tài khoản & Đồng bộ">
             <span id="mobileAccountAvatar">🌰</span>
           </button>
@@ -786,6 +789,12 @@
           <span class="lyrics-btn-label">Lời bài hát</span>
         </button>
 
+        <!-- Nút bật/tắt chế độ tiết kiệm pin OLED -->
+        <button id="batterySaverBtn" class="battery-saver-btn" title="Chế độ tiết kiệm pin OLED [B]">
+          <span class="battery-icon">🔋</span>
+          <span class="battery-btn-label">Tiết kiệm pin</span>
+        </button>
+
         <!-- Nút bật/tắt ngăn kéo danh sách phát -->
         <button id="queueToggleBtn" class="queue-toggle-btn" title="Xem danh sách chờ & ô chọn hạt dẻ">
           <span>🌰 Danh Sách Chờ</span>
@@ -916,6 +925,10 @@
       <button type="button" class="mode-status-chip bg-playback-chip active" id="sheetBgPlaybackChip" title="Chạm để bật/tắt phát nhạc khi tắt màn hình">
         <span class="bg-playback-dot"></span>
         <span id="sheetBgPlaybackText">🎧 Phát nền (Tắt màn hình): <strong>BẬT</strong></span>
+      </button>
+      <button type="button" class="mode-status-chip battery-saver-chip" id="sheetBatterySaverBtn" title="Bật chế độ tiết kiệm pin màn hình đen OLED">
+        <span class="battery-saver-dot"></span>
+        <span id="sheetBatterySaverText">🔋 Tiết kiệm pin: <strong>TẮT</strong></span>
       </button>
     </div>
 
@@ -1239,6 +1252,59 @@
 
   <!-- Container YouTube IFrame Engine ngầm (đảm bảo phát nhạc 100% không bao giờ lỗi luồng trên Vercel) -->
   <div id="ytPlayerContainer" style="position: fixed; width: 2px; height: 2px; bottom: 0; right: 0; opacity: 0.02; pointer-events: none; z-index: 1;"></div>
+
+  <!-- 
+    ============================================================================
+    CHẾ ĐỘ TIẾT KIỆM PIN OLED (TRUE BLACK BATTERY SAVER MODE)
+    Tối ưu hóa năng lượng màn hình OLED: Tắt 98%+ pixel, giữ nhạc ngân vang
+    ============================================================================
+  -->
+  <div id="batterySaverOverlay" class="battery-saver-overlay hidden" aria-hidden="true">
+    <div class="battery-saver-topbar">
+      <div class="battery-saver-clock" id="batterySaverClock">00:00</div>
+      <div class="battery-saver-status" id="batterySaverStatus">
+        <span class="eco-leaf-icon">🍃</span>
+        <span id="batterySaverLevel">OLED Eco Mode</span>
+      </div>
+    </div>
+
+    <div class="battery-saver-center">
+      <div class="battery-saver-totoro-icon" id="batterySaverTotoro">🌰</div>
+      <div class="battery-saver-track-info">
+        <h3 class="battery-saver-title" id="batterySaverTitle">Chưa có bài hát</h3>
+        <p class="battery-saver-artist" id="batterySaverArtist">Studio Ghibli</p>
+      </div>
+
+      <!-- Cụm phím điều khiển tối giản tiết kiệm năng lượng -->
+      <div class="battery-saver-controls">
+        <button id="batterySaverPrevBtn" class="eco-ctrl-btn" aria-label="Bài trước" title="Bài trước">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
+            <path d="M6 5a1 1 0 0 0-1 1v12a1 1 0 0 0 2 0V6a1 1 0 0 0-1-1Zm12.4 1.2a1 1 0 0 0-1.5-.86l-9 5.5a1 1 0 0 0 0 1.72l9 5.5A1 1 0 0 0 19 17.2V6.8a1 1 0 0 0-.6-.6Z"/>
+          </svg>
+        </button>
+        <button id="batterySaverPlayBtn" class="eco-ctrl-btn eco-play-btn" aria-label="Phát / Dừng" title="Phát / Dừng">
+          <svg id="batterySaverPlayIcon" viewBox="0 0 24 24" width="30" height="30" fill="currentColor">
+            <path d="M7 4.5v15a1 1 0 0 0 1.5.86l13-7.5a1 1 0 0 0 0-1.72l-13-7.5A1 1 0 0 0 7 4.5Z"/>
+          </svg>
+          <svg id="batterySaverPauseIcon" class="hidden" viewBox="0 0 24 24" width="30" height="30" fill="currentColor">
+            <path d="M6 5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5Zm8 0a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3a1 1 0 0 1-1-1V5Z"/>
+          </svg>
+        </button>
+        <button id="batterySaverNextBtn" class="eco-ctrl-btn" aria-label="Bài tiếp theo" title="Bài tiếp theo">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
+            <path d="M18 5a1 1 0 0 1 1 1v12a1 1 0 0 1-2 0V6a1 1 0 0 1 1-1ZM5.6 6.2A1 1 0 0 1 7.1 5.34l9 5.5a1 1 0 0 1 0 1.72l-9 5.5A1 1 0 0 1 5 17.2V6.8a1 1 0 0 1 .6-.6Z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="battery-saver-footer">
+      <p class="battery-saver-hint">💡 Chạm đúp 2 lần bất kỳ để đánh thức màn hình</p>
+      <button id="batterySaverExitBtn" class="battery-saver-exit-btn">
+        ✕ Đánh Thức Màn Hình
+      </button>
+    </div>
+  </div>
 
   <!-- Thông báo Toast kiểu gỗ thông Ghibli -->
   <div id="toast" class="ghibli-toast hidden"></div>

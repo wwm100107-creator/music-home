@@ -8832,3 +8832,347 @@ body.twilight-mode .ghibli-btn-action:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   CHẾ ĐỘ TIẾT KIỆM PIN OLED (TRUE BLACK BATTERY SAVER MODE)
+   Tối ưu năng lượng cho màn hình OLED (iPhone 14 Pro Max): Tắt 98%+ pixel,
+   loại bỏ tải GPU/CPU của video nền và hạt đom đóm, giữ nhạc phát liên tục.
+   ========================================================================== */
+
+/* 1. Nút trên thanh phát nhạc PC & Mobile */
+.battery-saver-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 14px;
+  color: #2b1810;
+  font-family: var(--font-ghibli-nav, 'Plus Jakarta Sans', sans-serif);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  backdrop-filter: blur(8px);
+}
+
+.ghibli-app-body.twilight-mode .battery-saver-btn {
+  background: rgba(45, 106, 79, 0.25);
+  border-color: rgba(82, 183, 136, 0.35);
+  color: #d8f3dc;
+}
+
+.battery-saver-btn:hover {
+  background: rgba(45, 106, 79, 0.3);
+  transform: translateY(-1px);
+  border-color: #52b788;
+}
+
+.battery-saver-btn.active {
+  background: #2d6a4f !important;
+  color: #ffffff !important;
+  border-color: #52b788 !important;
+  box-shadow: 0 0 12px rgba(82, 183, 136, 0.45);
+}
+
+.battery-saver-btn .battery-icon {
+  font-size: 0.95rem;
+}
+
+/* 2. Nút nhanh trên Topbar di động */
+.mobile-battery-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.ghibli-app-body.twilight-mode .mobile-battery-btn {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(82, 183, 136, 0.3);
+}
+
+.mobile-battery-btn:active {
+  transform: scale(0.92);
+}
+
+.mobile-battery-btn.active {
+  background: #2d6a4f !important;
+  border-color: #52b788 !important;
+  box-shadow: 0 0 10px rgba(82, 183, 136, 0.5);
+}
+
+/* 3. Chip trên Fullscreen Player Sheet */
+.battery-saver-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 14px;
+  color: #2b1810;
+  font-family: var(--font-ghibli-meta, sans-serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.ghibli-app-body.twilight-mode .battery-saver-chip {
+  background: rgba(20, 30, 24, 0.55);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #e8f5e9;
+}
+
+.battery-saver-chip .battery-saver-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #94a3b8;
+  display: inline-block;
+  transition: all 0.3s ease;
+}
+
+.battery-saver-chip.active {
+  background: rgba(45, 106, 79, 0.4) !important;
+  border-color: #52b788 !important;
+  color: #2d6a4f !important;
+}
+
+.ghibli-app-body.twilight-mode .battery-saver-chip.active {
+  color: #a7f3d0 !important;
+}
+
+.battery-saver-chip.active .battery-saver-dot {
+  background: #22c55e !important;
+  box-shadow: 0 0 8px #22c55e;
+  animation: pulseEcoDot 2s infinite ease-in-out;
+}
+
+@keyframes pulseEcoDot {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; }
+}
+
+/* 4. Toàn màn hình đen OLED (True Black Overlay) */
+.battery-saver-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background-color: #000000 !important;
+  color: #888888;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: calc(env(safe-area-inset-top, 24px) + 16px) 24px calc(env(safe-area-inset-bottom, 24px) + 16px);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  opacity: 1;
+  transition: opacity 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: hidden;
+}
+
+.battery-saver-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+  display: none !important;
+}
+
+/* Chống lưu ảnh OLED (Anti Burn-in subtle float) */
+@keyframes oledSubtleShift {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(1px, -1px); }
+  50% { transform: translate(-1px, 1px); }
+  75% { transform: translate(1px, 1px); }
+}
+
+.battery-saver-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 90%;
+  animation: oledSubtleShift 120s infinite ease-in-out;
+}
+
+.battery-saver-topbar {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  color: #555555;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.battery-saver-clock {
+  font-size: 1.8rem;
+  font-weight: 300;
+  color: #777777;
+  letter-spacing: 1px;
+}
+
+.battery-saver-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #444444;
+}
+
+.battery-saver-status .eco-leaf-icon {
+  font-size: 0.9rem;
+  filter: grayscale(40%);
+}
+
+.battery-saver-totoro-icon {
+  font-size: 2.8rem;
+  margin-bottom: 18px;
+  opacity: 0.35;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.05));
+  animation: totoroBreathe 6s infinite ease-in-out;
+}
+
+@keyframes totoroBreathe {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.06); opacity: 0.45; }
+}
+
+.battery-saver-track-info {
+  margin-bottom: 28px;
+}
+
+.battery-saver-title {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #aaaaaa;
+  margin: 0 0 6px 0;
+  max-width: 340px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.battery-saver-artist {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  font-size: 0.95rem;
+  color: #555555;
+  margin: 0;
+}
+
+/* Nút điều khiển tối giản tiết kiệm điện */
+.battery-saver-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+}
+
+.eco-ctrl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  background: #080808;
+  border: 1px solid #222222;
+  border-radius: 50%;
+  color: #777777;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.eco-ctrl-btn:active {
+  background: #141414;
+  color: #ffffff;
+  border-color: #444444;
+  transform: scale(0.94);
+}
+
+.eco-play-btn {
+  width: 64px;
+  height: 64px;
+  background: #101010;
+  border-color: #2a2a2a;
+  color: #999999;
+}
+
+.eco-play-btn:active {
+  background: #1c1c1c;
+  border-color: #555555;
+}
+
+.battery-saver-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.battery-saver-hint {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  font-size: 0.8rem;
+  color: #444444;
+  margin: 0;
+  letter-spacing: 0.3px;
+}
+
+.battery-saver-exit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 24px;
+  background: #111111;
+  border: 1px solid #282828;
+  border-radius: 22px;
+  color: #777777;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.battery-saver-exit-btn:hover,
+.battery-saver-exit-btn:active {
+  background: #1a1a1a;
+  color: #cccccc;
+  border-color: #444444;
+  transform: scale(0.97);
+}
+
+/* 5. Khóa các tác vụ đồ họa tốn năng lượng khi bật Chế độ Tiết kiệm Pin */
+body.eco-mode-active .bg-video {
+  display: none !important;
+}
+
+body.eco-mode-active .fireflies-layer {
+  display: none !important;
+}
+
+body.eco-mode-active .nature-overlay {
+  display: none !important;
+}
+
+body.eco-mode-active .magic-cursor-canvas {
+  display: none !important;
+}
+
