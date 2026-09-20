@@ -1648,6 +1648,30 @@ apiRouter.get('/album/:albumId', rateLimit({ maxRequests: 80, windowMs: 60000, e
 // 10.5. Audio Stream Proxy (VisionOS Unthrottled Audio Stream)
 const VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{10,12}$/;
 
+apiRouter.get('/stream-debug/:videoId', async (req, res) => {
+  const { videoId } = req.params;
+  const results = {};
+  for (const name of ['IOS', 'ANDROID_VR', 'ANDROID', 'YTMUSIC', 'WEB_EMBEDDED']) {
+    try {
+      const yt = await Innertube.create({
+        client_type: ClientType[name],
+        generate_session_locally: true,
+        cache: new UniversalCache(false)
+      });
+      const info = await yt.getBasicInfo(videoId);
+      results[name] = {
+        status: info.playability_status?.status,
+        reason: info.playability_status?.reason,
+        hasStreamingData: !!info.streaming_data,
+        adaptiveCount: info.streaming_data?.adaptive_formats?.length || 0
+      };
+    } catch (e) {
+      results[name] = { error: e.message };
+    }
+  }
+  res.json(results);
+});
+
 apiRouter.get('/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000, endpointName: 'stream' }), async (req, res) => {
   const { videoId } = req.params;
 
