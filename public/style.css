@@ -6982,6 +6982,201 @@ body.twilight-mode .bg-playback-chip.disabled {
   transform: rotate(90deg) scale(1.1);
 }
 
+/* ==========================================================================
+   BỘ CÂN CHỈNH ĐỘ TRỄ LỜI BÀI HÁT THỜI GIAN THỰC (LYRIC SYNC OFFSET BAR)
+   ========================================================================== */
+.lyrics-sync-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 28px;
+  background: rgba(18, 32, 24, 0.75);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  gap: 16px;
+  flex-wrap: wrap;
+  z-index: 5;
+}
+
+.sync-bar-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sync-bar-label {
+  font-family: var(--font-ghibli-brand, 'Comfortaa', sans-serif);
+  font-size: 0.8rem;
+  color: #c5dac7;
+  font-weight: 600;
+}
+
+.sync-offset-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #7fc95e;
+  background: rgba(127, 201, 94, 0.15);
+  border: 1px solid rgba(127, 201, 94, 0.35);
+  transition: all 0.2s ease;
+}
+
+.sync-offset-badge.is-offset {
+  color: #ffe170;
+  background: rgba(255, 225, 112, 0.2);
+  border-color: rgba(255, 225, 112, 0.5);
+  box-shadow: 0 0 10px rgba(255, 225, 112, 0.25);
+}
+
+.sync-saved-chip {
+  font-size: 0.72rem;
+  color: #7fc95e;
+  background: rgba(127, 201, 94, 0.12);
+  border: 1px solid rgba(127, 201, 94, 0.25);
+  border-radius: 10px;
+  padding: 2px 8px;
+  animation: fadeIn 0.3s ease;
+}
+
+.sync-bar-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sync-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #fefae0;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  user-select: none;
+}
+
+.sync-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.sync-btn:active {
+  transform: scale(0.94);
+}
+
+.sync-btn-sub {
+  color: #89cff0;
+  border-color: rgba(137, 207, 240, 0.3);
+  background: rgba(137, 207, 240, 0.08);
+}
+.sync-btn-sub:hover {
+  background: rgba(137, 207, 240, 0.18);
+  border-color: rgba(137, 207, 240, 0.5);
+}
+
+.sync-btn-add {
+  color: #a3e635;
+  border-color: rgba(163, 230, 53, 0.3);
+  background: rgba(163, 230, 53, 0.08);
+}
+.sync-btn-add:hover {
+  background: rgba(163, 230, 53, 0.18);
+  border-color: rgba(163, 230, 53, 0.5);
+}
+
+.sync-btn-reset {
+  color: #ff9f43;
+  border-color: rgba(255, 159, 67, 0.3);
+  background: rgba(255, 159, 67, 0.08);
+}
+.sync-btn-reset:hover {
+  background: rgba(255, 159, 67, 0.2);
+}
+
+/* Nút neo đồng bộ 🎯 trên từng câu hát (One-Tap Sync Anchor) */
+.lyric-line {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 36px 12px 16px;
+  cursor: pointer;
+  transition: color 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
+}
+
+.line-sync-anchor-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.4);
+  color: #ffe170;
+  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.lyric-line:hover .line-sync-anchor-btn {
+  opacity: 0.75;
+}
+
+.line-sync-anchor-btn:hover {
+  opacity: 1 !important;
+  transform: translateY(-50%) scale(1.18);
+  background: rgba(127, 201, 94, 0.35);
+  border-color: #7fc95e;
+}
+
+/* Nút cân chỉnh nhanh trên Mobile Sheet Card */
+.sheet-lyrics-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sheet-sync-quick-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 3px 8px;
+  color: #c5dac7;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.sheet-sync-quick-btn:active {
+  background: rgba(255, 255, 255, 0.18);
+}
+
 /* KHUNG THÂN 2 CỘT SPLIT-SCREEN TRÊN DESKTOP PC */
 .lyrics-stage-split-body {
   display: grid;
@@ -7544,6 +7739,33 @@ body.twilight-mode .bg-playback-chip.disabled {
   .lyrics-sync-badge {
     font-size: 0.72rem;
     padding: 3px 8px;
+  }
+
+  .lyrics-sync-bar {
+    padding: 6px 12px;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .sync-bar-info {
+    font-size: 0.75rem;
+    gap: 6px;
+  }
+
+  .sync-bar-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .sync-btn {
+    height: 25px;
+    padding: 0 8px;
+    font-size: 0.72rem;
+  }
+
+  .line-sync-anchor-btn {
+    opacity: 0.65;
   }
 
   .lyrics-stage-split-body {

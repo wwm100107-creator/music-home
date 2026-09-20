@@ -1810,20 +1810,61 @@ function parseLRC(lrcText) {
   if (!lrcText || typeof lrcText !== 'string') return [];
   const lines = lrcText.split(/\r?\n/);
   const parsed = [];
-  const timeRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\](.*)/;
+  let fileOffsetSec = 0;
+
+  // Trích xuất thẻ [offset:+/-millisec] nếu có trong file LRC chuẩn
+  for (const line of lines) {
+    const offsetMatch = line.match(/^\[offset:\s*([+-]?\d+)\s*\]/i);
+    if (offsetMatch) {
+      const ms = parseInt(offsetMatch[1], 10);
+      if (!isNaN(ms)) {
+        fileOffsetSec = ms / 1000;
+      }
+    }
+  }
+
+  // Regex trích xuất toàn bộ timestamp tags [mm:ss.xx] (hỗ trợ nhiều tag trên 1 câu)
+  const timeTagRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g;
 
   for (const line of lines) {
-    const match = line.match(timeRegex);
-    if (match) {
-      const minutes = parseInt(match[1], 10);
-      const seconds = parseInt(match[2], 10);
-      const fraction = match[3] ? parseFloat('0.' + match[3]) : 0;
-      const totalSeconds = parseFloat((minutes * 60 + seconds + fraction).toFixed(2));
-      const text = match[4].trim();
-      parsed.push({ time: totalSeconds, text });
+    // Bỏ qua các thẻ siêu dữ liệu thông tin tác giả [ar:], [ti:], [offset:], v.v.
+    if (/^\[[a-zA-Z]+:/.test(line)) continue;
+
+    const matches = [...line.matchAll(timeTagRegex)];
+    if (matches.length > 0) {
+      // Lấy toàn bộ phần văn bản sau khi bóc tách tất cả thẻ thời gian
+      const text = line.replace(timeTagRegex, '').trim();
+      for (const m of matches) {
+        const minutes = parseInt(m[1], 10);
+        const seconds = parseInt(m[2], 10);
+        const fraction = m[3] ? parseFloat('0.' + m[3]) : 0;
+        let totalSeconds = minutes * 60 + seconds + fraction;
+        if (fileOffsetSec) {
+          totalSeconds = Math.max(0, totalSeconds + fileOffsetSec);
+        }
+        totalSeconds = parseFloat(totalSeconds.toFixed(2));
+        parsed.push({ time: totalSeconds, text });
+      }
     }
   }
   return parsed.sort((a, b) => a.time - b.time);
+}
+
+function selectBestLyricCandidate(results, targetDur) {
+  if (!Array.isArray(results) || results.length === 0) return null;
+  const syncedList = results.filter(r => r && r.syncedLyrics);
+  if (syncedList.length > 0) {
+    if (targetDur && targetDur > 0) {
+      // Sắp xếp theo độ chênh lệch thời lượng nhỏ nhất so với bài hát đang phát thực tế
+      syncedList.sort((a, b) => {
+        const diffA = Math.abs((a.duration || 0) - targetDur);
+        const diffB = Math.abs((b.duration || 0) - targetDur);
+        return diffA - diffB;
+      });
+    }
+    return syncedList[0];
+  }
+  return results[0];
 }
 
 apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpointName: 'lyrics' }), async (req, res) => {
@@ -1839,7 +1880,7 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
   const cleanArtist = (rawArtist || '').replace(/\s*-\s*topic/gi, '').trim();
   const durSec = parseDurationToSeconds(durationRaw);
 
-  const cacheKey = `lyrics:${cleanTitle.toLowerCase()}:${cleanArtist.toLowerCase()}`;
+  const cacheKey = `lyrics:${cleanTitle.toLowerCase()}:${cleanArtist.toLowerCase()}:${durSec || 0}`;
   const cached = lyricsCache.get(cacheKey);
   if (cached) {
     return res.json({ ...cached, cached: true });
@@ -1866,7 +1907,7 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
       }
     }
 
-    // 2. Fallback search: tìm theo cả tên bài hát + nghệ sĩ
+    // 2. Fallback search: tìm theo cả tên bài hát + nghệ sĩ và so khớp thời lượng sát nhất
     if (!lyricData || (!lyricData.syncedLyrics && !lyricData.plainLyrics && !lyricData.instrumental)) {
       try {
         const searchQuery = cleanArtist ? `${cleanTitle} ${cleanArtist}` : cleanTitle;
@@ -1875,16 +1916,14 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
         });
         if (searchResp.ok) {
           const results = await searchResp.json();
-          if (Array.isArray(results) && results.length > 0) {
-            lyricData = results.find(r => r.syncedLyrics) || results[0];
-          }
+          lyricData = selectBestLyricCandidate(results, durSec);
         }
       } catch {
         // Tiếp tục thử fallback 3
       }
     }
 
-    // 3. Fallback search chỉ theo tên bài hát đã làm sạch
+    // 3. Fallback search chỉ theo tên bài hát đã làm sạch và so khớp thời lượng
     if (!lyricData || (!lyricData.syncedLyrics && !lyricData.plainLyrics && !lyricData.instrumental)) {
       try {
         const searchResp = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(cleanTitle)}`, {
@@ -1892,9 +1931,7 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
         });
         if (searchResp.ok) {
           const results = await searchResp.json();
-          if (Array.isArray(results) && results.length > 0) {
-            lyricData = results.find(r => r.syncedLyrics) || results[0];
-          }
+          lyricData = selectBestLyricCandidate(results, durSec);
         }
       } catch {
         // Không tìm thấy
@@ -1924,6 +1961,7 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
       instrumental: isInstrumental,
       trackName: lyricData.trackName || cleanTitle,
       artistName: lyricData.artistName || cleanArtist,
+      duration: lyricData.duration || null,
       lines: parsedLines,
       plain: lyricData.plainLyrics || ''
     };

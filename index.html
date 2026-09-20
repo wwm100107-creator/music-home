@@ -936,9 +936,14 @@
     <div class="sheet-lyrics-card" id="sheetLyricsCard">
       <div class="sheet-lyrics-card-header">
         <span class="sheet-lyrics-badge">🎤 LỜI BÀI HÁT</span>
-        <button class="sheet-lyrics-fullscreen-trigger" id="sheetLyricsExpandBtn" title="Phóng to sân khấu lời nhạc">
-          Mở rộng ↗
-        </button>
+        <div class="sheet-lyrics-header-actions">
+          <button type="button" class="sheet-sync-quick-btn" id="sheetSyncQuickBtn" title="Cân chỉnh độ lệch lời">
+            ⏱️ <span id="sheetLyricsOffsetLabel">0.0s</span>
+          </button>
+          <button type="button" class="sheet-lyrics-fullscreen-trigger" id="sheetLyricsExpandBtn" title="Phóng to sân khấu lời nhạc">
+            Mở rộng ↗
+          </button>
+        </div>
       </div>
       <div class="sheet-lyrics-body" id="sheetLyricsBody">
         <p class="sheet-lyrics-line current" id="sheetLyricsActiveText">Đang tải lời bài hát...</p>
@@ -964,6 +969,32 @@
         <div class="stage-header-right">
           <span class="lyrics-sync-badge" id="lyricsSyncBadge">✨ Đồng bộ thời gian thực</span>
           <button class="lyrics-close-btn" id="lyricsCloseBtn" aria-label="Thu nhỏ về trang chủ" title="Thu nhỏ về trang chủ [Esc / Y]">✕</button>
+        </div>
+      </div>
+
+      <!-- Thanh Cân Chỉnh Độ Trễ Lời Bài Hát Thời Gian Thực (Lyric Sync Offset Calibrator) -->
+      <div class="lyrics-sync-bar" id="lyricsSyncBar">
+        <div class="sync-bar-info">
+          <span class="sync-bar-label">⏱️ Cân chỉnh đồng bộ:</span>
+          <span class="sync-offset-badge" id="lyricsOffsetBadge" title="Độ lệch hiện tại so với âm thanh gốc">0.0s</span>
+          <span class="sync-saved-chip hidden" id="lyricsOffsetSavedChip">✓ Đã nhớ cho bài này</span>
+        </div>
+        <div class="sync-bar-controls">
+          <button type="button" class="sync-btn sync-btn-sub" id="lyricOffsetMinusHalfBtn" title="Lời chậm lại 0.5 giây (Lùi lời) [Phím [ ]">
+            ⏪ -0.5s
+          </button>
+          <button type="button" class="sync-btn sync-btn-sub" id="lyricOffsetMinusTenthBtn" title="Lời chậm lại 0.1 giây">
+            -0.1s
+          </button>
+          <button type="button" class="sync-btn sync-btn-reset" id="lyricOffsetResetBtn" title="Đặt lại độ lệch về 0.0s">
+            ↺ Đặt lại
+          </button>
+          <button type="button" class="sync-btn sync-btn-add" id="lyricOffsetPlusTenthBtn" title="Lời nhanh lên 0.1 giây">
+            +0.1s
+          </button>
+          <button type="button" class="sync-btn sync-btn-add" id="lyricOffsetPlusHalfBtn" title="Lời nhanh lên 0.5 giây (Tiến lời) [Phím ] ]">
+            ⏩ +0.5s
+          </button>
         </div>
       </div>
 
@@ -1061,7 +1092,7 @@
 
       <!-- Footer thanh trạng thái & hướng dẫn tương tác -->
       <div class="lyrics-stage-footer">
-        <span class="lyrics-hint-text">💡 Nhấp vào bất kỳ câu hát nào để tua nhạc • Nhấn Esc hoặc phím Y để đóng/mở</span>
+        <span class="lyrics-hint-text">💡 Nhấp câu hát để tua nhạc • Bấm 🎯 để căn chuẩn câu đang hát • Phím [ / ] để chỉnh độ trễ • Esc / Y để đóng</span>
       </div>
     </div>
   </div>

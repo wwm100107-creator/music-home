@@ -71,7 +71,16 @@
     })(),
     isBatterySaverActive: false,
     wakeLockSentinel: null,
-    batteryClockInterval: null
+    batteryClockInterval: null,
+    lyricOffset: 0,
+    lyricOffsetStore: (() => {
+      try {
+        const raw = localStorage.getItem('ghibli_lyric_offsets');
+        return raw ? JSON.parse(raw) : {};
+      } catch (_) {
+        return {};
+      }
+    })()
   };
 
   // Cache DOM
@@ -286,6 +295,16 @@
     sheetLyricsExpandBtn: document.getElementById('sheetLyricsExpandBtn'),
     sheetLyricsActiveText: document.getElementById('sheetLyricsActiveText'),
     sheetLyricsNextText: document.getElementById('sheetLyricsNextText'),
+    lyricsSyncBar: document.getElementById('lyricsSyncBar'),
+    lyricsOffsetBadge: document.getElementById('lyricsOffsetBadge'),
+    lyricsOffsetSavedChip: document.getElementById('lyricsOffsetSavedChip'),
+    lyricOffsetMinusHalfBtn: document.getElementById('lyricOffsetMinusHalfBtn'),
+    lyricOffsetMinusTenthBtn: document.getElementById('lyricOffsetMinusTenthBtn'),
+    lyricOffsetResetBtn: document.getElementById('lyricOffsetResetBtn'),
+    lyricOffsetPlusTenthBtn: document.getElementById('lyricOffsetPlusTenthBtn'),
+    lyricOffsetPlusHalfBtn: document.getElementById('lyricOffsetPlusHalfBtn'),
+    sheetSyncQuickBtn: document.getElementById('sheetSyncQuickBtn'),
+    sheetLyricsOffsetLabel: document.getElementById('sheetLyricsOffsetLabel'),
 
     // Split-Screen Stage Left Panel (3D Vinyl, Tone Arm, Up Next)
     stageLeftPanel: document.getElementById('stageLeftPanel'),
@@ -1311,20 +1330,136 @@
     }
   }
 
+  // ==========================================================================
+  // BỘ QUẢN LÝ ĐỘ LỆCH & ĐỒNG BỘ LỜI BÀI HÁT (LYRIC SYNC CALIBRATION)
+  // ==========================================================================
+  function getStoredLyricOffset(trackId) {
+    if (!trackId || !state.lyricOffsetStore) return 0;
+    const val = state.lyricOffsetStore[trackId];
+    return typeof val === 'number' ? val : 0;
+  }
+
+  function saveTrackLyricOffset(trackId, offset) {
+    if (!trackId) return;
+    if (!state.lyricOffsetStore) state.lyricOffsetStore = {};
+    if (Math.abs(offset) < 0.05) {
+      delete state.lyricOffsetStore[trackId];
+    } else {
+      state.lyricOffsetStore[trackId] = offset;
+    }
+    try {
+      localStorage.setItem('ghibli_lyric_offsets', JSON.stringify(state.lyricOffsetStore));
+    } catch (_) {}
+    if (typeof debouncedCloudSync === 'function') {
+      debouncedCloudSync();
+    }
+  }
+
+  function updateLyricOffsetUI() {
+    const offset = state.lyricOffset || 0;
+    const sign = offset > 0 ? '+' : '';
+    const formatted = `${sign}${offset.toFixed(1)}s`;
+
+    if (dom.lyricsOffsetBadge) {
+      dom.lyricsOffsetBadge.textContent = formatted;
+      dom.lyricsOffsetBadge.classList.toggle('is-offset', Math.abs(offset) >= 0.05);
+    }
+    if (dom.sheetLyricsOffsetLabel) {
+      dom.sheetLyricsOffsetLabel.textContent = formatted;
+    }
+    if (dom.lyricsOffsetSavedChip) {
+      const isCustomized = state.currentTrack && Math.abs(getStoredLyricOffset(state.currentTrack.id)) >= 0.05;
+      dom.lyricsOffsetSavedChip.classList.toggle('hidden', !isCustomized);
+    }
+  }
+
+  function getCurrentAudioTime() {
+    if (state.activeEngine === 'audio' && dom.audio) {
+      return dom.audio.currentTime || 0;
+    } else if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.getCurrentTime === 'function') {
+      return ytPlayer.getCurrentTime() || 0;
+    }
+    return 0;
+  }
+
+  function setLyricOffset(newOffset, showFeedback = true) {
+    const rounded = parseFloat((Math.round(newOffset * 10) / 10).toFixed(1));
+    state.lyricOffset = rounded;
+    if (state.currentTrack) {
+      saveTrackLyricOffset(state.currentTrack.id, rounded);
+    }
+    updateLyricOffsetUI();
+
+    // Đồng bộ lại tức thì vị trí câu hát với độ lệch mới
+    const curTime = getCurrentAudioTime();
+    syncLyricsWithTime(curTime);
+
+    if (showFeedback) {
+      triggerHaptic(8);
+      const sign = rounded > 0 ? '+' : '';
+      if (rounded === 0) {
+        showToast('↺ Đã đặt lại độ trễ lời bài hát về 0.0s (Mặc định).');
+      } else {
+        showToast(`⏱️ Đã lưu độ lệch lời: ${sign}${rounded.toFixed(1)}s cho bài hát này`);
+      }
+    }
+  }
+
+  function adjustLyricOffset(delta) {
+    const current = state.lyricOffset || 0;
+    setLyricOffset(current + delta, true);
+  }
+
+  function resetLyricOffset() {
+    setLyricOffset(0, true);
+  }
+
+  function syncCurrentLineToNow(lineTime) {
+    const curTime = getCurrentAudioTime();
+    if (curTime <= 0) {
+      showToast('⚠️ Hãy bấm phát nhạc trước khi căn chuẩn mốc câu hát!');
+      return;
+    }
+    // effectiveTime = curTime + offset = lineTime => offset = lineTime - curTime
+    const calculatedOffset = parseFloat((lineTime - curTime).toFixed(1));
+    setLyricOffset(calculatedOffset, false);
+    triggerHaptic(15);
+    const sign = calculatedOffset > 0 ? '+' : '';
+    showToast(`🎯 Đã căn chuẩn câu hát này khớp với thời điểm ${formatTime(curTime)} (Độ lệch: ${sign}${calculatedOffset.toFixed(1)}s)`);
+  }
+
   function renderLyricsLines(lines) {
     if (!dom.lyricsLinesContainer) return;
     dom.lyricsLinesContainer.innerHTML = lines.map((item, idx) => {
-      return `<div class="lyric-line" data-index="${idx}" data-time="${item.time}">${escapeHtml(item.text || '♪')}</div>`;
+      return `
+        <div class="lyric-line" data-index="${idx}" data-time="${item.time}">
+          <span class="lyric-text">${escapeHtml(item.text || '♪')}</span>
+          <button type="button" class="line-sync-anchor-btn" data-time="${item.time}" title="🎯 Chạm để căn chuẩn bài hát theo câu này">🎯</button>
+        </div>
+      `;
     }).join('');
 
     // Bấm vào câu hát bất kỳ để tua nhạc đến đúng đoạn đó (Click-to-seek)
     const lineEls = dom.lyricsLinesContainer.querySelectorAll('.lyric-line');
     lineEls.forEach(el => {
-      el.addEventListener('click', () => {
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('.line-sync-anchor-btn')) return;
         const time = parseFloat(el.getAttribute('data-time'));
         if (!isNaN(time)) {
           seekToSeconds(time);
           showToast(`⏩ Tua đến: ${formatTime(time)}`);
+        }
+      });
+    });
+
+    // Bấm vào nút căn chuẩn 🎯 để đồng bộ toàn bài ngay lập tức theo câu đang nghe
+    const anchorBtns = dom.lyricsLinesContainer.querySelectorAll('.line-sync-anchor-btn');
+    anchorBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const time = parseFloat(btn.getAttribute('data-time'));
+        if (!isNaN(time)) {
+          syncCurrentLineToNow(time);
         }
       });
     });
@@ -1333,9 +1468,12 @@
   function syncLyricsWithTime(currentTime) {
     if (!state.lyrics || state.lyrics.length === 0) return;
 
+    // Áp dụng độ lệch cân chỉnh (lyricOffset)
+    const effectiveTime = Math.max(0, currentTime + (state.lyricOffset || 0));
+
     let currentIdx = -1;
     for (let i = 0; i < state.lyrics.length; i++) {
-      if (currentTime >= state.lyrics[i].time) {
+      if (effectiveTime >= state.lyrics[i].time) {
         currentIdx = i;
       } else {
         break;
@@ -1384,17 +1522,38 @@
     if (!lrcText || typeof lrcText !== 'string') return [];
     const lines = lrcText.split(/\r?\n/);
     const parsed = [];
-    const timeRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\](.*)/;
+    let fileOffsetSec = 0;
+
+    // Trích xuất thẻ [offset:+/-millisec] nếu có trong file LRC chuẩn
+    for (const line of lines) {
+      const offsetMatch = line.match(/^\[offset:\s*([+-]?\d+)\s*\]/i);
+      if (offsetMatch) {
+        const ms = parseInt(offsetMatch[1], 10);
+        if (!isNaN(ms)) {
+          fileOffsetSec = ms / 1000;
+        }
+      }
+    }
+
+    const timeTagRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g;
 
     for (const line of lines) {
-      const match = line.match(timeRegex);
-      if (match) {
-        const minutes = parseInt(match[1], 10);
-        const seconds = parseInt(match[2], 10);
-        const fraction = match[3] ? parseFloat('0.' + match[3]) : 0;
-        const totalSeconds = parseFloat((minutes * 60 + seconds + fraction).toFixed(2));
-        const text = match[4].trim();
-        parsed.push({ time: totalSeconds, text });
+      if (/^\[[a-zA-Z]+:/.test(line)) continue;
+
+      const matches = [...line.matchAll(timeTagRegex)];
+      if (matches.length > 0) {
+        const text = line.replace(timeTagRegex, '').trim();
+        for (const m of matches) {
+          const minutes = parseInt(m[1], 10);
+          const seconds = parseInt(m[2], 10);
+          const fraction = m[3] ? parseFloat('0.' + m[3]) : 0;
+          let totalSeconds = minutes * 60 + seconds + fraction;
+          if (fileOffsetSec) {
+            totalSeconds = Math.max(0, totalSeconds + fileOffsetSec);
+          }
+          totalSeconds = parseFloat(totalSeconds.toFixed(2));
+          parsed.push({ time: totalSeconds, text });
+        }
       }
     }
     return parsed.sort((a, b) => a.time - b.time);
@@ -1412,6 +1571,8 @@
     state.activeLyricIndex = -1;
     state.lyricsTrackId = track.id;
     state.lyricsLoading = true;
+    state.lyricOffset = getStoredLyricOffset(track.id);
+    updateLyricOffsetUI();
 
     // Cập nhật thông tin bài hát trên Sân khấu Lời Nhạc
     if (dom.lyricsTrackTitle) dom.lyricsTrackTitle.textContent = track.title;
@@ -1496,7 +1657,7 @@
       const params = new URLSearchParams({
         title: track.title,
         artist: track.artist || '',
-        duration: track.duration || ''
+        duration: track.durationSec || track.duration || ''
       });
 
       const response = await fetch(`/api/lyrics?${params.toString()}`, {
@@ -3535,6 +3696,47 @@
       dom.sheetLyricsCard.addEventListener('click', openLyricsStage);
     }
 
+    // Lyric Sync Calibration Bar Events
+    if (dom.lyricOffsetMinusHalfBtn) {
+      dom.lyricOffsetMinusHalfBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        adjustLyricOffset(-0.5);
+      });
+    }
+    if (dom.lyricOffsetMinusTenthBtn) {
+      dom.lyricOffsetMinusTenthBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        adjustLyricOffset(-0.1);
+      });
+    }
+    if (dom.lyricOffsetResetBtn) {
+      dom.lyricOffsetResetBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        resetLyricOffset();
+      });
+    }
+    if (dom.lyricOffsetPlusTenthBtn) {
+      dom.lyricOffsetPlusTenthBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        adjustLyricOffset(+0.1);
+      });
+    }
+    if (dom.lyricOffsetPlusHalfBtn) {
+      dom.lyricOffsetPlusHalfBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        adjustLyricOffset(+0.5);
+      });
+    }
+    if (dom.sheetSyncQuickBtn) {
+      dom.sheetSyncQuickBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openLyricsStage();
+        if (dom.lyricsSyncBar) {
+          dom.lyricsSyncBar.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    }
+
     // Split-Screen Stage Left Panel Actions
     if (dom.stageLikeBtn) {
       dom.stageLikeBtn.addEventListener('click', () => {
@@ -3646,6 +3848,10 @@
         toggleLyricsStage();
       } else if (e.key === 'b' || e.key === 'B') {
         toggleBatterySaverMode();
+      } else if (e.key === '[') {
+        adjustLyricOffset(-0.5);
+      } else if (e.key === ']') {
+        adjustLyricOffset(+0.5);
       } else if (e.key === 'Escape') {
         if (state.isBatterySaverActive) {
           deactivateBatterySaverMode();
@@ -4116,6 +4322,16 @@
           updateBgPlaybackUI();
         }
 
+        // Khôi phục cài đặt Lyric Offsets từ Cloud
+        if (data.user.settings && data.user.settings.lyricOffsets && typeof data.user.settings.lyricOffsets === 'object') {
+          state.lyricOffsetStore = { ...state.lyricOffsetStore, ...data.user.settings.lyricOffsets };
+          try { localStorage.setItem('ghibli_lyric_offsets', JSON.stringify(state.lyricOffsetStore)); } catch (_) {}
+          if (state.currentTrack) {
+            state.lyricOffset = getStoredLyricOffset(state.currentTrack.id);
+          }
+          updateLyricOffsetUI();
+        }
+
         updateAccountUI();
         // Tự động đồng bộ ngược lại các bài hát vừa hợp nhất lên cloud
         debouncedCloudSync();
@@ -4297,7 +4513,8 @@
         theme: document.body.classList.contains('twilight-mode') ? 'twilight' : 'day',
         loopMode: state.loopMode || 'all',
         volume: state.volume || 0.8,
-        backgroundPlayback: state.backgroundPlayback !== false
+        backgroundPlayback: state.backgroundPlayback !== false,
+        lyricOffsets: state.lyricOffsetStore || {}
       },
       customPlaylists: []
     };
@@ -4353,6 +4570,7 @@
       } : { username: 'guest', displayName: 'Khách', avatar: '🌰' },
       favorites: state.favorites || [],
       myDroppedMusic: localDrops,
+      lyricOffsets: state.lyricOffsetStore || {},
       settings: {
         theme: document.body.classList.contains('twilight-mode') ? 'twilight' : 'day',
         loopMode: state.loopMode || 'all',
@@ -4392,6 +4610,18 @@
           } catch (_) {}
           if (dom.favCounter) dom.favCounter.textContent = `${state.favorites.length} bài`;
           renderFavorites();
+        }
+
+        // Khôi phục Lyric Offsets (Độ lệch lời bài hát đã cân chỉnh)
+        if (json.lyricOffsets && typeof json.lyricOffsets === 'object') {
+          state.lyricOffsetStore = json.lyricOffsets;
+          try {
+            localStorage.setItem('ghibli_lyric_offsets', JSON.stringify(state.lyricOffsetStore));
+          } catch (_) {}
+          if (state.currentTrack) {
+            state.lyricOffset = getStoredLyricOffset(state.currentTrack.id);
+          }
+          updateLyricOffsetUI();
         }
 
         // Khôi phục My Dropped Music
@@ -4618,6 +4848,8 @@
   window.toggleBatterySaverMode = toggleBatterySaverMode;
   window.activateBatterySaverMode = activateBatterySaverMode;
   window.deactivateBatterySaverMode = deactivateBatterySaverMode;
+  window.adjustLyricOffset = adjustLyricOffset;
+  window.resetLyricOffset = resetLyricOffset;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
