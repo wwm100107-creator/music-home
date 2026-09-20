@@ -705,16 +705,9 @@
         } catch (_) {}
         updateBgPlaybackUI();
         if (state.backgroundPlayback) {
-          showToast('🎧 Đã BẬT Phát Chạy Nền! Nhạc vẫn ngân vang khi bạn tắt màn hình hoặc đổi ứng dụng 🍃');
-          if (state.isPlaying && state.activeEngine === 'youtube' && state.currentTrack) {
-            const cur = (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') ? ytPlayer.getCurrentTime() : 0;
-            state.activeEngine = 'audio';
-            dom.audio.src = `/api/stream/${state.currentTrack.id}`;
-            dom.audio.currentTime = cur;
-            dom.audio.play().catch(() => {});
-          }
+          showToast('🎧 Đã BẬT Phát Nền! Khóa màn hình và bấm nút Play trên Màn hình khóa để tiếp tục nghe.');
         } else {
-          showToast('⏸️ Đã TẮT Phát Chạy Nền');
+          showToast('⏸️ Đã TẮT tính năng phát nền khi tắt màn hình.');
         }
       });
     }
@@ -1474,18 +1467,13 @@
       dom.audio.pause();
     }
 
-    // 1. Luồng âm thanh trực tiếp (Drop Your Music, file tải lên, iTunes preview) hoặc Background Playback trên Di động
+    // 1. Luồng âm thanh trực tiếp (Drop Your Music, file tải lên, iTunes preview)
     const directAudioSource = track.audioUrl || track.streamUrl || track.previewUrl;
-    // Trên thiết bị di động (đặc biệt iOS Safari & PWA Standalone trên iPhone) hoặc khi bật Background Playback:
-    // BẮT BUỘC phát qua thẻ HTML5 <audio> để iOS WebKit cấp quyền duy trì âm thanh nền khi tắt màn hình.
-    // YouTube IFrame (<video>) trên iOS WebKit luôn bị hệ điều hành cưỡng chế dừng khi màn hình tắt.
-    const preferNativeAudio = directAudioSource || (state.isMobile && state.backgroundPlayback);
 
-    if (preferNativeAudio) {
-      // Ưu tiên phát qua HTML5 Audio cho file âm thanh trực tiếp hoặc Background Playback trên di động
+    if (directAudioSource) {
+      // Ưu tiên phát qua HTML5 Audio cho file âm thanh trực tiếp (chạy nền 100% trên iOS PWA & Safari)
       state.activeEngine = 'audio';
-      const audioSource = directAudioSource || `/api/stream/${track.id}`;
-      dom.audio.src = audioSource;
+      dom.audio.src = directAudioSource;
       dom.audio.load();
       const playPromise = dom.audio.play();
       if (playPromise !== undefined) {
@@ -1496,21 +1484,11 @@
         }).catch(audioErr => {
           if (audioErr.name === 'AbortError') return;
           console.warn('[Native Audio Engine Warning]:', audioErr.message);
-          // Fallback sang YouTube Engine nếu có sẵn
-          if (!directAudioSource && ytPlayer && isYtReady && typeof ytPlayer.loadVideoById === 'function') {
-            console.log('🔄 Đang chuyển sang YouTube Engine fallback...');
-            state.activeEngine = 'youtube';
-            ytPlayer.loadVideoById(track.id);
-            ytPlayer.playVideo();
-            setPlaybackVisualState(true);
-            updateMediaSession(track);
-          } else {
-            setPlaybackVisualState(false);
-          }
+          setPlaybackVisualState(false);
         });
       }
     } else {
-      // 2. Nhạc YouTube trên PC: Phát tức thì qua YouTube Engine chính thức (Zero Delay, 100% mượt mà)
+      // 2. Nhạc YouTube: Phát tức thì qua YouTube Engine chính thức (Zero Delay, 100% mượt mà)
       if (ytPlayer && isYtReady && typeof ytPlayer.loadVideoById === 'function') {
         state.activeEngine = 'youtube';
         ytPlayer.loadVideoById(track.id);
@@ -1519,17 +1497,7 @@
         state.consecutiveErrors = 0;
         updateMediaSession(track);
       } else {
-        // Fallback qua audio element nếu player chưa sẵn sàng
-        state.activeEngine = 'audio';
-        dom.audio.src = `/api/stream/${track.id}`;
-        dom.audio.load();
-        dom.audio.play().then(() => {
-          setPlaybackVisualState(true);
-          state.consecutiveErrors = 0;
-          updateMediaSession(track);
-        }).catch(() => {
-          setPlaybackVisualState(false);
-        });
+        setPlaybackVisualState(false);
       }
     }
   }
@@ -3597,20 +3565,10 @@
     }
   }
 
-  // Lắng nghe sự kiện Tắt màn hình / Chuyển Tab / Chuyển ứng dụng (Mobile Background Handoff)
+  // Lắng nghe sự kiện Tắt màn hình / Chuyển Tab / Chuyển ứng dụng (Mobile Background State Sync)
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-      // Khi người dùng khóa màn hình hoặc chuyển sang ứng dụng khác (chỉ kích hoạt trên di động)
-      if (state.isMobile && state.isPlaying && state.backgroundPlayback && state.currentTrack) {
-        if (state.activeEngine === 'youtube' && ytPlayer) {
-          try {
-            const curTime = (typeof ytPlayer.getCurrentTime === 'function') ? ytPlayer.getCurrentTime() : 0;
-            state.activeEngine = 'audio';
-            dom.audio.src = `/api/stream/${state.currentTrack.id}`;
-            dom.audio.currentTime = curTime;
-            dom.audio.play().catch(e => console.warn('[Background Playback Handoff Warning]:', e.message));
-          } catch (_) {}
-        }
+      if (state.isPlaying) {
         updateMediaSessionPlaybackState(true);
       }
     } else if (document.visibilityState === 'visible') {
