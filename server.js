@@ -1651,7 +1651,7 @@ const VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{10,12}$/;
 apiRouter.get('/stream-debug/:videoId', async (req, res) => {
   const { videoId } = req.params;
   const results = {};
-  for (const name of ['IOS', 'ANDROID_VR', 'ANDROID', 'YTMUSIC', 'WEB_EMBEDDED']) {
+  for (const name of ['TV', 'TV_SIMPLY', 'KIDS', 'MUSIC', 'MWEB']) {
     try {
       const yt = await Innertube.create({
         client_type: ClientType[name],
