@@ -37,7 +37,10 @@
     activeLyricIndex: -1,
     isLyricsOpen: false,
     lyricsLoading: false,
-    lyricsTrackId: null
+    lyricsTrackId: null,
+    currentUser: null,
+    authToken: (() => { try { return localStorage.getItem('ghibli_auth_token') || null; } catch (_) { return null; } })(),
+    isSyncing: false
   };
 
   // Cache DOM
@@ -251,6 +254,51 @@
     stageUpNextTitle: document.getElementById('stageUpNextTitle'),
     stageUpNextArtist: document.getElementById('stageUpNextArtist'),
     stageUpNextPlayBtn: document.getElementById('stageUpNextPlayBtn'),
+    
+    // User Accounts & Multi-Device Cloud Sync
+    sidebarUserCard: document.getElementById('sidebarUserCard'),
+    sidebarUserAvatar: document.getElementById('sidebarUserAvatar'),
+    sidebarUserName: document.getElementById('sidebarUserName'),
+    sidebarUserStatus: document.getElementById('sidebarUserStatus'),
+    sidebarAccountBtn: document.getElementById('sidebarAccountBtn'),
+    topBarAccountBtn: document.getElementById('topBarAccountBtn'),
+    topBarUserAvatar: document.getElementById('topBarUserAvatar'),
+    topBarUserName: document.getElementById('topBarUserName'),
+    mobileAccountBtn: document.getElementById('mobileAccountBtn'),
+    mobileAccountAvatar: document.getElementById('mobileAccountAvatar'),
+    ghibliAccountModal: document.getElementById('ghibliAccountModal'),
+    accountModalBackdrop: document.getElementById('accountModalBackdrop'),
+    accountModalCloseBtn: document.getElementById('accountModalCloseBtn'),
+    accountModalAlert: document.getElementById('accountModalAlert'),
+    accountTabsBar: document.getElementById('accountTabsBar'),
+    tabBtnLogin: document.getElementById('tabBtnLogin'),
+    tabBtnRegister: document.getElementById('tabBtnRegister'),
+    viewAccountLogin: document.getElementById('viewAccountLogin'),
+    viewAccountRegister: document.getElementById('viewAccountRegister'),
+    viewAccountProfile: document.getElementById('viewAccountProfile'),
+    loginUsername: document.getElementById('loginUsername'),
+    loginPassword: document.getElementById('loginPassword'),
+    toggleLoginPasswordBtn: document.getElementById('toggleLoginPasswordBtn'),
+    loginSubmitBtn: document.getElementById('loginSubmitBtn'),
+    linkSwitchToRegister: document.getElementById('linkSwitchToRegister'),
+    registerDisplayName: document.getElementById('registerDisplayName'),
+    registerUsername: document.getElementById('registerUsername'),
+    registerPassword: document.getElementById('registerPassword'),
+    toggleRegisterPasswordBtn: document.getElementById('toggleRegisterPasswordBtn'),
+    registerAvatarPicker: document.getElementById('registerAvatarPicker'),
+    registerSubmitBtn: document.getElementById('registerSubmitBtn'),
+    linkSwitchToLogin: document.getElementById('linkSwitchToLogin'),
+    profileAvatar: document.getElementById('profileAvatar'),
+    profileDisplayName: document.getElementById('profileDisplayName'),
+    profileUsername: document.getElementById('profileUsername'),
+    profileSyncStatusText: document.getElementById('profileSyncStatusText'),
+    syncFavCount: document.getElementById('syncFavCount'),
+    syncDropCount: document.getElementById('syncDropCount'),
+    syncThemeLabel: document.getElementById('syncThemeLabel'),
+    manualSyncBtn: document.getElementById('manualSyncBtn'),
+    exportBackupBtn: document.getElementById('exportBackupBtn'),
+    backupFileInput: document.getElementById('backupFileInput'),
+    logoutBtn: document.getElementById('logoutBtn'),
 
     toast: document.getElementById('toast')
   };
@@ -2662,6 +2710,7 @@
             } catch (e) {
               // ignore
             }
+            debouncedCloudSync();
 
             // Tự động phát ngay bài vừa đăng
             playTrack(data.track);
@@ -2791,6 +2840,7 @@
     if (dom.favCounter) dom.favCounter.textContent = `${state.favorites.length} bài`;
     updateLikeButtonUI(track.id);
     renderFavorites();
+    debouncedCloudSync();
   }
 
   function updateLikeButtonUI(trackId) {
@@ -3298,8 +3348,10 @@
         try {
           localStorage.setItem('ghibli_ambient_mode', isTwilight ? 'twilight' : 'day');
         } catch (_) {}
+        debouncedCloudSync();
       }
     }
+    window.__applyAmbientMode = applyMode;
 
     let savedMode = null;
     try {
@@ -3438,6 +3490,590 @@
     }
   }
 
+  // ==========================================================================
+  // 14. USER ACCOUNTS & MULTI-DEVICE CLOUD SYNCHRONIZATION
+  // ==========================================================================
+  let syncDebounceTimer = null;
+  let selectedRegisterAvatar = '🌰';
+
+  function debouncedCloudSync() {
+    if (!state.authToken) return;
+    clearTimeout(syncDebounceTimer);
+    syncDebounceTimer = setTimeout(() => {
+      syncUserDataToCloud(true);
+    }, 1500);
+  }
+
+  function setAccountModalAlert(message, type = 'error') {
+    if (!dom.accountModalAlert) return;
+    if (!message) {
+      dom.accountModalAlert.className = 'account-modal-alert hidden';
+      dom.accountModalAlert.textContent = '';
+      return;
+    }
+    dom.accountModalAlert.className = `account-modal-alert ${type}`;
+    dom.accountModalAlert.textContent = message;
+  }
+
+  function updateAccountUI() {
+    const user = state.currentUser;
+    const isLogged = !!user;
+
+    // 1. Sidebar Card
+    if (dom.sidebarUserName) {
+      dom.sidebarUserName.textContent = isLogged ? (user.displayName || user.username) : 'Khách (Guest)';
+    }
+    if (dom.sidebarUserStatus) {
+      dom.sidebarUserStatus.textContent = isLogged ? '☁️ Đã kết nối Đám Mây' : 'Chạm để đăng nhập';
+    }
+    if (dom.sidebarUserAvatar) {
+      dom.sidebarUserAvatar.textContent = isLogged ? (user.avatar || '🌰') : '🌰';
+    }
+
+    // 2. PC Topbar Button
+    if (dom.topBarUserName) {
+      dom.topBarUserName.textContent = isLogged ? (user.displayName || user.username) : 'Đăng nhập';
+    }
+    if (dom.topBarUserAvatar) {
+      dom.topBarUserAvatar.textContent = isLogged ? (user.avatar || '🌰') : '🌰';
+    }
+
+    // 3. Mobile Topbar Button
+    if (dom.mobileAccountAvatar) {
+      dom.mobileAccountAvatar.textContent = isLogged ? (user.avatar || '🌰') : '🌰';
+    }
+
+    // 4. Modal Views
+    if (isLogged) {
+      if (dom.accountTabsBar) dom.accountTabsBar.style.display = 'none';
+      if (dom.viewAccountLogin) dom.viewAccountLogin.classList.add('hidden');
+      if (dom.viewAccountRegister) dom.viewAccountRegister.classList.add('hidden');
+      if (dom.viewAccountProfile) dom.viewAccountProfile.classList.remove('hidden');
+
+      // Update Profile elements
+      if (dom.profileAvatar) dom.profileAvatar.textContent = user.avatar || '🌰';
+      if (dom.profileDisplayName) dom.profileDisplayName.textContent = user.displayName || user.username;
+      if (dom.profileUsername) dom.profileUsername.textContent = `@${user.username}`;
+      if (dom.syncFavCount) dom.syncFavCount.textContent = state.favorites.length;
+      
+      let dropCount = 0;
+      try {
+        dropCount = JSON.parse(localStorage.getItem('my_dropped_music') || '[]').filter(t => t.id !== 'drop_preset_1').length;
+      } catch (_) {}
+      if (dom.syncDropCount) dom.syncDropCount.textContent = dropCount;
+
+      if (dom.syncThemeLabel) {
+        const isTw = document.body.classList.contains('twilight-mode');
+        dom.syncThemeLabel.textContent = isTw ? 'Đêm Rừng' : 'Ban Ngày';
+      }
+    } else {
+      if (dom.accountTabsBar) dom.accountTabsBar.style.display = 'grid';
+      if (dom.viewAccountProfile) dom.viewAccountProfile.classList.add('hidden');
+      // Default to Login view
+      switchAccountTab('login');
+    }
+  }
+
+  function switchAccountTab(target) {
+    setAccountModalAlert(null);
+    if (target === 'register') {
+      if (dom.tabBtnRegister) dom.tabBtnRegister.classList.add('active');
+      if (dom.tabBtnLogin) dom.tabBtnLogin.classList.remove('active');
+      if (dom.viewAccountRegister) dom.viewAccountRegister.classList.remove('hidden');
+      if (dom.viewAccountLogin) dom.viewAccountLogin.classList.add('hidden');
+    } else {
+      if (dom.tabBtnLogin) dom.tabBtnLogin.classList.add('active');
+      if (dom.tabBtnRegister) dom.tabBtnRegister.classList.remove('active');
+      if (dom.viewAccountLogin) dom.viewAccountLogin.classList.remove('hidden');
+      if (dom.viewAccountRegister) dom.viewAccountRegister.classList.add('hidden');
+    }
+  }
+
+  function openAccountModal(preferredTab = 'login') {
+    setAccountModalAlert(null);
+    updateAccountUI();
+    if (!state.currentUser) {
+      switchAccountTab(preferredTab);
+    }
+    if (dom.ghibliAccountModal) {
+      dom.ghibliAccountModal.classList.remove('hidden');
+    }
+  }
+
+  function closeAccountModal() {
+    if (dom.ghibliAccountModal) {
+      dom.ghibliAccountModal.classList.add('hidden');
+    }
+    setAccountModalAlert(null);
+  }
+
+  async function checkExistingSession() {
+    const token = state.authToken;
+    if (!token) {
+      updateAccountUI();
+      return;
+    }
+
+    try {
+      if (dom.sidebarUserStatus) dom.sidebarUserStatus.textContent = '☁️ Đang kết nối...';
+      const res = await fetch('/api/auth/me', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.user) {
+        state.currentUser = data.user;
+
+        // Tự động hợp nhất (Merge) bài hát yêu thích giữa Cloud và Local
+        if (Array.isArray(data.user.favorites) && data.user.favorites.length > 0) {
+          const favMap = new Map();
+          state.favorites.forEach(t => { if (t && t.id) favMap.set(t.id, t); });
+          data.user.favorites.forEach(t => { if (t && t.id) favMap.set(t.id, t); });
+          state.favorites = Array.from(favMap.values());
+          try {
+            localStorage.setItem('ghibli_favorites', JSON.stringify(state.favorites));
+          } catch (_) {}
+          if (dom.favCounter) dom.favCounter.textContent = `${state.favorites.length} bài`;
+          renderFavorites();
+        }
+
+        // Tự động hợp nhất nhạc đã tải lên (My Dropped Music)
+        if (Array.isArray(data.user.myDroppedMusic) && data.user.myDroppedMusic.length > 0) {
+          const dropMap = new Map();
+          let localDrops = [];
+          try {
+            localDrops = JSON.parse(localStorage.getItem('my_dropped_music') || '[]').filter(t => t.id !== 'drop_preset_1');
+          } catch (_) {}
+          localDrops.forEach(t => { if (t && t.id) dropMap.set(t.id, t); });
+          data.user.myDroppedMusic.forEach(t => { if (t && t.id) dropMap.set(t.id, t); });
+          const mergedDrops = Array.from(dropMap.values());
+          try {
+            localStorage.setItem('my_dropped_music', JSON.stringify(mergedDrops));
+          } catch (_) {}
+        }
+
+        // Khôi phục cài đặt Theme nếu có
+        if (data.user.settings && data.user.settings.theme && window.__applyAmbientMode) {
+          const shouldBeTwilight = data.user.settings.theme === 'twilight';
+          window.__applyAmbientMode(shouldBeTwilight, false);
+        }
+
+        updateAccountUI();
+        // Tự động đồng bộ ngược lại các bài hát vừa hợp nhất lên cloud
+        debouncedCloudSync();
+      } else {
+        // Token không hợp lệ hoặc đã hết hạn
+        state.authToken = null;
+        state.currentUser = null;
+        try { localStorage.removeItem('ghibli_auth_token'); } catch (_) {}
+        updateAccountUI();
+      }
+    } catch (err) {
+      console.warn('⚠️ [Auth] Không thể kết nối phiên đăng nhập:', err);
+      updateAccountUI();
+    }
+  }
+
+  async function handleLoginSubmit(e) {
+    if (e) e.preventDefault();
+    const username = (dom.loginUsername ? dom.loginUsername.value : '').trim();
+    const password = (dom.loginPassword ? dom.loginPassword.value : '').trim();
+
+    if (!username || !password) {
+      setAccountModalAlert('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!');
+      return;
+    }
+
+    const btn = dom.loginSubmitBtn;
+    const oldHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>Đang xác thực...</span> ⏳';
+    }
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        state.authToken = data.token;
+        state.currentUser = data.user;
+        try { localStorage.setItem('ghibli_auth_token', data.token); } catch (_) {}
+
+        // Hợp nhất danh sách yêu thích
+        if (Array.isArray(data.user.favorites)) {
+          const favMap = new Map();
+          state.favorites.forEach(t => { if (t && t.id) favMap.set(t.id, t); });
+          data.user.favorites.forEach(t => { if (t && t.id) favMap.set(t.id, t); });
+          state.favorites = Array.from(favMap.values());
+          try { localStorage.setItem('ghibli_favorites', JSON.stringify(state.favorites)); } catch (_) {}
+          if (dom.favCounter) dom.favCounter.textContent = `${state.favorites.length} bài`;
+          renderFavorites();
+        }
+
+        // Hợp nhất nhạc Drop
+        if (Array.isArray(data.user.myDroppedMusic)) {
+          const dropMap = new Map();
+          let localDrops = [];
+          try { localDrops = JSON.parse(localStorage.getItem('my_dropped_music') || '[]').filter(t => t.id !== 'drop_preset_1'); } catch (_) {}
+          localDrops.forEach(t => { if (t && t.id) dropMap.set(t.id, t); });
+          data.user.myDroppedMusic.forEach(t => { if (t && t.id) dropMap.set(t.id, t); });
+          try { localStorage.setItem('my_dropped_music', JSON.stringify(Array.from(dropMap.values()))); } catch (_) {}
+        }
+
+        // Cập nhật giao diện
+        updateAccountUI();
+        showToast(`🎉 ${data.message || 'Đăng nhập thành công!'}`);
+
+        // Đồng bộ dữ liệu hiện có lên cloud
+        syncUserDataToCloud(true);
+
+        if (dom.loginPassword) dom.loginPassword.value = '';
+      } else {
+        setAccountModalAlert(data.error || 'Tên đăng nhập hoặc mật khẩu không đúng!');
+      }
+    } catch (err) {
+      setAccountModalAlert('Lỗi kết nối máy chủ: ' + err.message);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+      }
+    }
+  }
+
+  async function handleRegisterSubmit(e) {
+    if (e) e.preventDefault();
+    const displayName = (dom.registerDisplayName ? dom.registerDisplayName.value : '').trim();
+    const username = (dom.registerUsername ? dom.registerUsername.value : '').trim().toLowerCase();
+    const password = (dom.registerPassword ? dom.registerPassword.value : '').trim();
+    const avatar = selectedRegisterAvatar || '🌰';
+
+    if (!displayName || !username || !password) {
+      setAccountModalAlert('Vui lòng điền đầy đủ tất cả các trường thông tin!');
+      return;
+    }
+    if (username.length < 3) {
+      setAccountModalAlert('Tên đăng nhập phải có ít nhất 3 ký tự!');
+      return;
+    }
+    if (password.length < 6) {
+      setAccountModalAlert('Mật khẩu phải có tối thiểu 6 ký tự để đảm bảo an toàn!');
+      return;
+    }
+
+    const btn = dom.registerSubmitBtn;
+    const oldHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>Đang tạo tài khoản...</span> ⏳';
+    }
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayName, username, password, avatar })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        state.authToken = data.token;
+        state.currentUser = data.user;
+        try { localStorage.setItem('ghibli_auth_token', data.token); } catch (_) {}
+
+        updateAccountUI();
+        showToast(`✨ ${data.message || 'Tài khoản đã được tạo thành công!'}`);
+
+        // Đẩy toàn bộ dữ liệu máy hiện tại (Favorites, My Drops, Theme) lên tài khoản mới này
+        syncUserDataToCloud(true);
+
+        if (dom.registerPassword) dom.registerPassword.value = '';
+      } else {
+        setAccountModalAlert(data.error || 'Không thể đăng ký tài khoản!');
+      }
+    } catch (err) {
+      setAccountModalAlert('Lỗi kết nối máy chủ: ' + err.message);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+      }
+    }
+  }
+
+  function handleLogout() {
+    try {
+      localStorage.removeItem('ghibli_auth_token');
+    } catch (_) {}
+    state.authToken = null;
+    state.currentUser = null;
+    updateAccountUI();
+    closeAccountModal();
+    showToast('🍃 Đã đăng xuất tài khoản an toàn.');
+  }
+
+  async function syncUserDataToCloud(silent = false) {
+    if (!state.authToken || state.isSyncing) return;
+    state.isSyncing = true;
+
+    if (dom.profileSyncStatusText) {
+      dom.profileSyncStatusText.textContent = 'Đang đồng bộ Đám Mây...';
+    }
+
+    let localDrops = [];
+    try {
+      localDrops = JSON.parse(localStorage.getItem('my_dropped_music') || '[]').filter(t => t.id !== 'drop_preset_1');
+    } catch (_) {}
+
+    const payload = {
+      favorites: state.favorites || [],
+      myDroppedMusic: localDrops,
+      settings: {
+        theme: document.body.classList.contains('twilight-mode') ? 'twilight' : 'day',
+        loopMode: state.loopMode || 'all',
+        volume: state.volume || 0.8
+      },
+      customPlaylists: []
+    };
+
+    try {
+      const res = await fetch('/api/auth/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.authToken}`
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        if (dom.profileSyncStatusText) {
+          dom.profileSyncStatusText.textContent = `Đã đồng bộ (${timeStr})`;
+        }
+        if (dom.sidebarUserStatus) {
+          dom.sidebarUserStatus.textContent = '☁️ Đã đồng bộ';
+        }
+        if (dom.syncFavCount) dom.syncFavCount.textContent = state.favorites.length;
+        if (dom.syncDropCount) dom.syncDropCount.textContent = localDrops.length;
+        if (!silent) {
+          showToast('☁️ Toàn bộ dữ liệu của bạn đã được đồng bộ lên Đám Mây!');
+        }
+      } else {
+        if (dom.profileSyncStatusText) dom.profileSyncStatusText.textContent = 'Lỗi đồng bộ';
+      }
+    } catch (err) {
+      console.warn('⚠️ [Sync Error]:', err);
+      if (dom.profileSyncStatusText) dom.profileSyncStatusText.textContent = 'Mất kết nối đồng bộ';
+    } finally {
+      state.isSyncing = false;
+    }
+  }
+
+  function exportBackup() {
+    let localDrops = [];
+    try {
+      localDrops = JSON.parse(localStorage.getItem('my_dropped_music') || '[]').filter(t => t.id !== 'drop_preset_1');
+    } catch (_) {}
+
+    const backupPayload = {
+      app: 'Home Music • Studio Ghibli',
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      user: state.currentUser ? {
+        username: state.currentUser.username,
+        displayName: state.currentUser.displayName,
+        avatar: state.currentUser.avatar
+      } : { username: 'guest', displayName: 'Khách', avatar: '🌰' },
+      favorites: state.favorites || [],
+      myDroppedMusic: localDrops,
+      settings: {
+        theme: document.body.classList.contains('twilight-mode') ? 'twilight' : 'day',
+        loopMode: state.loopMode || 'all',
+        volume: state.volume || 0.8
+      }
+    };
+
+    const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const namePrefix = state.currentUser ? state.currentUser.username : 'khach';
+    a.download = `music_home_backup_${namePrefix}_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('💾 Đã xuất tệp sao lưu dữ liệu (.json) thành công!');
+  }
+
+  function importBackup(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const json = JSON.parse(e.target.result);
+        if (!json || typeof json !== 'object') {
+          showToast('⚠️ Tệp sao lưu không đúng định dạng JSON!');
+          return;
+        }
+
+        // Khôi phục Favorites
+        if (Array.isArray(json.favorites)) {
+          state.favorites = json.favorites;
+          try {
+            localStorage.setItem('ghibli_favorites', JSON.stringify(state.favorites));
+          } catch (_) {}
+          if (dom.favCounter) dom.favCounter.textContent = `${state.favorites.length} bài`;
+          renderFavorites();
+        }
+
+        // Khôi phục My Dropped Music
+        if (Array.isArray(json.myDroppedMusic)) {
+          try {
+            localStorage.setItem('my_dropped_music', JSON.stringify(json.myDroppedMusic));
+          } catch (_) {}
+        }
+
+        // Khôi phục Cài đặt
+        if (json.settings && json.settings.theme && window.__applyAmbientMode) {
+          window.__applyAmbientMode(json.settings.theme === 'twilight', true);
+        }
+
+        updateAccountUI();
+        showToast('🎉 Đã khôi phục toàn bộ bài hát và cài đặt từ tệp sao lưu!');
+
+        // Nếu đang đăng nhập, đồng bộ dữ liệu vừa nhập lên cloud
+        if (state.authToken) {
+          syncUserDataToCloud(true);
+        }
+      } catch (err) {
+        showToast('❌ Không thể đọc tệp sao lưu: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function initUserAccounts() {
+    // Avatar Picker clicks
+    if (dom.registerAvatarPicker) {
+      const avatarBtns = dom.registerAvatarPicker.querySelectorAll('.avatar-option');
+      avatarBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          avatarBtns.forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          selectedRegisterAvatar = btn.dataset.avatar || '🌰';
+        });
+      });
+    }
+
+    // Password Visibility Toggles
+    if (dom.toggleLoginPasswordBtn && dom.loginPassword) {
+      dom.toggleLoginPasswordBtn.addEventListener('click', () => {
+        const isPass = dom.loginPassword.type === 'password';
+        dom.loginPassword.type = isPass ? 'text' : 'password';
+        dom.toggleLoginPasswordBtn.textContent = isPass ? '🙈' : '👁️';
+      });
+    }
+
+    if (dom.toggleRegisterPasswordBtn && dom.registerPassword) {
+      dom.toggleRegisterPasswordBtn.addEventListener('click', () => {
+        const isPass = dom.registerPassword.type === 'password';
+        dom.registerPassword.type = isPass ? 'text' : 'password';
+        dom.toggleRegisterPasswordBtn.textContent = isPass ? '🙈' : '👁️';
+      });
+    }
+
+    // Tab buttons in modal
+    if (dom.tabBtnLogin) {
+      dom.tabBtnLogin.addEventListener('click', () => switchAccountTab('login'));
+    }
+    if (dom.tabBtnRegister) {
+      dom.tabBtnRegister.addEventListener('click', () => switchAccountTab('register'));
+    }
+    if (dom.linkSwitchToRegister) {
+      dom.linkSwitchToRegister.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchAccountTab('register');
+      });
+    }
+    if (dom.linkSwitchToLogin) {
+      dom.linkSwitchToLogin.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchAccountTab('login');
+      });
+    }
+
+    // Trigger open buttons
+    if (dom.sidebarUserCard) {
+      dom.sidebarUserCard.addEventListener('click', () => openAccountModal());
+    }
+    if (dom.sidebarAccountBtn) {
+      dom.sidebarAccountBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openAccountModal();
+      });
+    }
+    if (dom.topBarAccountBtn) {
+      dom.topBarAccountBtn.addEventListener('click', () => openAccountModal());
+    }
+    if (dom.mobileAccountBtn) {
+      dom.mobileAccountBtn.addEventListener('click', () => openAccountModal());
+    }
+
+    // Modal Close
+    if (dom.accountModalCloseBtn) {
+      dom.accountModalCloseBtn.addEventListener('click', closeAccountModal);
+    }
+    if (dom.accountModalBackdrop) {
+      dom.accountModalBackdrop.addEventListener('click', closeAccountModal);
+    }
+
+    // Form Submissions
+    if (dom.viewAccountLogin) {
+      dom.viewAccountLogin.addEventListener('submit', handleLoginSubmit);
+    }
+    if (dom.viewAccountRegister) {
+      dom.viewAccountRegister.addEventListener('submit', handleRegisterSubmit);
+    }
+
+    // Profile Actions
+    if (dom.manualSyncBtn) {
+      dom.manualSyncBtn.addEventListener('click', () => syncUserDataToCloud(false));
+    }
+    if (dom.exportBackupBtn) {
+      dom.exportBackupBtn.addEventListener('click', exportBackup);
+    }
+    if (dom.backupFileInput) {
+      dom.backupFileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          importBackup(e.target.files[0]);
+          e.target.value = '';
+        }
+      });
+    }
+    if (dom.logoutBtn) {
+      dom.logoutBtn.addEventListener('click', handleLogout);
+    }
+
+    // Keydown ESC to close Account modal
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && dom.ghibliAccountModal && !dom.ghibliAccountModal.classList.contains('hidden')) {
+        closeAccountModal();
+      }
+    });
+
+    // Kiểm tra phiên đăng nhập đã lưu
+    checkExistingSession();
+  }
+
   // Khởi động
   function init() {
     setVolume(0.8);
@@ -3452,6 +4088,7 @@
     initDropYourMusicEvents();
     loadFavorites();
     loadCommunityTracks();
+    initUserAccounts();
 
     // Khởi tạo tab Home
     const defaultTab = document.getElementById('tabHome') || dom.sidebarNavItems[0];
@@ -3469,6 +4106,8 @@
   // Expose
   window.activatePlayerBar = activatePlayerBar;
   window.playTrack = playTrack;
+  window.openAccountModal = openAccountModal;
+  window.syncUserDataToCloud = syncUserDataToCloud;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

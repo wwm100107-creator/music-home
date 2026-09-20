@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { Innertube, ClientType, UniversalCache, Platform } from 'youtubei.js';
 
@@ -2083,6 +2084,418 @@ apiRouter.post('/drop/upload', async (req, res) => {
   } catch (err) {
     console.error('[Drop Upload Error]:', err);
     res.status(500).json({ success: false, error: 'Không thể tải lên lúc này: ' + err.message });
+  }
+});
+
+// ============================================================================
+// 10.5. USER AUTHENTICATION & MULTI-DEVICE CLOUD SYNC (PBKDF2 & HMAC TOKEN)
+// ============================================================================
+const USER_ACCOUNTS_CONTAINER_ID = 'ff808181a09d98f701a0bda7546a4e23';
+const AUTH_SECRET = process.env.AUTH_SECRET || 'ghibli_sound_sanctuary_secret_key_2026';
+let inMemoryUsers = null;
+let lastUsersFetch = 0;
+
+function hashPassword(password, salt) {
+  if (!salt) salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+  return { hash, salt };
+}
+
+function verifyPassword(password, hash, salt) {
+  const check = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+  return check === hash;
+}
+
+function generateToken(userId, username) {
+  const payload = Buffer.from(JSON.stringify({ userId, username, issuedAt: Date.now() })).toString('base64url');
+  const signature = crypto.createHmac('sha256', AUTH_SECRET).update(payload).digest('base64url');
+  return `${payload}.${signature}`;
+}
+
+function verifyToken(token) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+  const [payload, signature] = parts;
+  const expectedSig = crypto.createHmac('sha256', AUTH_SECRET).update(payload).digest('base64url');
+  if (signature !== expectedSig) return null;
+  try {
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchUsersFromCloud() {
+  const now = Date.now();
+  if (inMemoryUsers && (now - lastUsersFetch < 5000)) {
+    return inMemoryUsers;
+  }
+
+  try {
+    const res = await fetch(`https://api.restful-api.dev/objects/${USER_ACCOUNTS_CONTAINER_ID}`, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(5000)
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.data && typeof json.data.users === 'object') {
+        inMemoryUsers = json.data.users || {};
+        lastUsersFetch = now;
+        return inMemoryUsers;
+      }
+    }
+  } catch (err) {
+    console.warn('[Fetch Remote Users Error]:', err.message);
+  }
+
+  if (!inMemoryUsers) {
+    try {
+      const fs = await import('fs');
+      const localFilePath = path.join(__dirname, 'data', 'users.json');
+      if (fs.existsSync(localFilePath)) {
+        const raw = fs.readFileSync(localFilePath, 'utf8');
+        inMemoryUsers = JSON.parse(raw);
+        lastUsersFetch = now;
+      }
+    } catch {
+      inMemoryUsers = {};
+    }
+  }
+
+  return inMemoryUsers || {};
+}
+
+async function saveUsersToCloud(usersMap) {
+  inMemoryUsers = usersMap;
+  lastUsersFetch = Date.now();
+
+  try {
+    await fetch(`https://api.restful-api.dev/objects/${USER_ACCOUNTS_CONTAINER_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'musichome_users_v1',
+        data: {
+          users: usersMap,
+          lastUpdated: new Date().toISOString()
+        }
+      }),
+      signal: AbortSignal.timeout(6000)
+    });
+  } catch (err) {
+    console.warn('[Save Remote Users Error]:', err.message);
+  }
+
+  try {
+    const fs = await import('fs');
+    const dataDir = path.join(__dirname, 'data');
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(path.join(dataDir, 'users.json'), JSON.stringify(usersMap, null, 2), 'utf8');
+  } catch {}
+}
+
+function getAuthUserFromReq(req) {
+  const authHeader = req.headers['authorization'] || '';
+  let token = '';
+  if (authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7).trim();
+  } else if (req.query && req.query.token) {
+    token = req.query.token;
+  }
+  if (!token) return null;
+  return verifyToken(token);
+}
+
+// 1. ĐĂNG KÝ TÀI KHOẢN (REGISTER)
+apiRouter.post('/auth/register', async (req, res) => {
+  try {
+    const { username, password, displayName } = req.body || {};
+    if (!username || !password) {
+      return res.status(400).json({ success: false, error: 'Vui lòng nhập tên đăng nhập và mật khẩu' });
+    }
+
+    const cleanUsername = String(username).trim().toLowerCase();
+    if (!/^[a-zA-Z0-9_.]{3,24}$/.test(cleanUsername)) {
+      return res.status(400).json({ success: false, error: 'Tên đăng nhập từ 3-24 ký tự, chỉ gồm chữ cái, số, dấu gạch dưới hoặc chấm' });
+    }
+
+    if (String(password).length < 6) {
+      return res.status(400).json({ success: false, error: 'Mật khẩu phải có độ dài tối thiểu 6 ký tự' });
+    }
+
+    const users = await fetchUsersFromCloud();
+    if (users[cleanUsername]) {
+      return res.status(409).json({ success: false, error: 'Tên đăng nhập này đã được sử dụng. Vui lòng chọn tên khác nhé!' });
+    }
+
+    const { hash, salt } = hashPassword(String(password));
+    const userId = 'usr_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
+    const cleanDisplayName = (displayName && String(displayName).trim()) || cleanUsername;
+
+    const newUser = {
+      id: userId,
+      username: cleanUsername,
+      displayName: cleanDisplayName,
+      passwordHash: hash,
+      passwordSalt: salt,
+      favorites: [],
+      settings: { theme: 'day', loopMode: 'all', volume: 0.8 },
+      myDroppedMusic: [],
+      customPlaylists: [],
+      createdAt: new Date().toISOString(),
+      lastActive: new Date().toISOString()
+    };
+
+    users[cleanUsername] = newUser;
+    await saveUsersToCloud(users);
+
+    const token = generateToken(userId, cleanUsername);
+    const safeProfile = {
+      id: newUser.id,
+      username: newUser.username,
+      displayName: newUser.displayName,
+      avatar: newUser.avatar || '🌰',
+      favorites: newUser.favorites,
+      settings: newUser.settings,
+      myDroppedMusic: newUser.myDroppedMusic,
+      customPlaylists: newUser.customPlaylists,
+      createdAt: newUser.createdAt
+    };
+
+    res.json({
+      success: true,
+      message: `Chào mừng bạn đến với Ngôi Nhà Âm Nhạc, ${cleanDisplayName}! ✨`,
+      token,
+      user: safeProfile
+    });
+  } catch (err) {
+    console.error('[Register Error]:', err);
+    res.status(500).json({ success: false, error: 'Lỗi máy chủ khi đăng ký: ' + err.message });
+  }
+});
+
+// 2. ĐĂNG NHẬP (LOGIN)
+apiRouter.post('/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    if (!username || !password) {
+      return res.status(400).json({ success: false, error: 'Vui lòng nhập tên đăng nhập và mật khẩu' });
+    }
+
+    const cleanUsername = String(username).trim().toLowerCase();
+    const users = await fetchUsersFromCloud();
+    const user = users[cleanUsername];
+
+    if (!user || !verifyPassword(String(password), user.passwordHash, user.passwordSalt)) {
+      return res.status(401).json({ success: false, error: 'Tên đăng nhập hoặc mật khẩu không chính xác' });
+    }
+
+    user.lastActive = new Date().toISOString();
+    await saveUsersToCloud(users);
+
+    const token = generateToken(user.id, user.username);
+    const safeProfile = {
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName || user.username,
+      avatar: user.avatar || '🌰',
+      favorites: user.favorites || [],
+      settings: user.settings || { theme: 'day', loopMode: 'all' },
+      myDroppedMusic: user.myDroppedMusic || [],
+      customPlaylists: user.customPlaylists || [],
+      createdAt: user.createdAt
+    };
+
+    res.json({
+      success: true,
+      message: `Đăng nhập thành công! Chào mừng trở lại, ${safeProfile.displayName} 🍃`,
+      token,
+      user: safeProfile
+    });
+  } catch (err) {
+    console.error('[Login Error]:', err);
+    res.status(500).json({ success: false, error: 'Lỗi máy chủ khi đăng nhập: ' + err.message });
+  }
+});
+
+// 3. LẤY THÔNG TIN TÀI KHOẢN (GET /auth/me)
+apiRouter.get('/auth/me', async (req, res) => {
+  try {
+    const authData = getAuthUserFromReq(req);
+    if (!authData) {
+      return res.status(401).json({ success: false, error: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn' });
+    }
+
+    const users = await fetchUsersFromCloud();
+    const user = users[authData.username];
+    if (!user || user.id !== authData.userId) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy thông tin tài khoản' });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName || user.username,
+        avatar: user.avatar || '🌰',
+        favorites: user.favorites || [],
+        settings: user.settings || { theme: 'day', loopMode: 'all' },
+        myDroppedMusic: user.myDroppedMusic || [],
+        customPlaylists: user.customPlaylists || [],
+        createdAt: user.createdAt
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4. ĐỒNG BỘ DỮ LIỆU ĐÁM MÂY (POST /auth/sync)
+apiRouter.post('/auth/sync', async (req, res) => {
+  try {
+    const authData = getAuthUserFromReq(req);
+    if (!authData) {
+      return res.status(401).json({ success: false, error: 'Vui lòng đăng nhập để đồng bộ dữ liệu' });
+    }
+
+    const { favorites, settings, myDroppedMusic, customPlaylists } = req.body || {};
+    const users = await fetchUsersFromCloud();
+    const user = users[authData.username];
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy người dùng' });
+    }
+
+    // Hợp nhất dữ liệu thông minh theo ID
+    if (Array.isArray(favorites)) {
+      const existingFavs = Array.isArray(user.favorites) ? user.favorites : [];
+      const favMap = new Map();
+      existingFavs.forEach(f => { if (f && f.id) favMap.set(f.id, f); });
+      favorites.forEach(f => { if (f && f.id) favMap.set(f.id, f); });
+      user.favorites = Array.from(favMap.values());
+    }
+
+    if (settings && typeof settings === 'object') {
+      user.settings = { ...(user.settings || {}), ...settings };
+    }
+
+    if (Array.isArray(myDroppedMusic)) {
+      const existingDrops = Array.isArray(user.myDroppedMusic) ? user.myDroppedMusic : [];
+      const dropMap = new Map();
+      existingDrops.forEach(d => { if (d && d.id) dropMap.set(d.id, d); });
+      myDroppedMusic.forEach(d => { if (d && d.id) dropMap.set(d.id, d); });
+      user.myDroppedMusic = Array.from(dropMap.values());
+    }
+
+    if (Array.isArray(customPlaylists)) {
+      user.customPlaylists = customPlaylists;
+    }
+
+    user.lastActive = new Date().toISOString();
+    await saveUsersToCloud(users);
+
+    res.json({
+      success: true,
+      message: 'Đồng bộ đám mây thành công! ☁️',
+      syncedData: {
+        favorites: user.favorites,
+        settings: user.settings,
+        myDroppedMusic: user.myDroppedMusic,
+        customPlaylists: user.customPlaylists,
+        lastSynced: user.lastActive
+      }
+    });
+  } catch (err) {
+    console.error('[Sync Error]:', err);
+    res.status(500).json({ success: false, error: 'Đồng bộ thất bại: ' + err.message });
+  }
+});
+
+// 5. XUẤT FILE SAO LƯU DỰ PHÒNG (GET /auth/backup/export)
+apiRouter.get('/auth/backup/export', async (req, res) => {
+  try {
+    const authData = getAuthUserFromReq(req);
+    if (!authData) {
+      return res.status(401).json({ success: false, error: 'Vui lòng đăng nhập để xuất dữ liệu sao lưu' });
+    }
+
+    const users = await fetchUsersFromCloud();
+    const user = users[authData.username];
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy người dùng' });
+    }
+
+    const backupPayload = {
+      app: 'Home Music',
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      user: {
+        username: user.username,
+        displayName: user.displayName,
+        createdAt: user.createdAt
+      },
+      favorites: user.favorites || [],
+      settings: user.settings || {},
+      myDroppedMusic: user.myDroppedMusic || [],
+      customPlaylists: user.customPlaylists || []
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="music_home_backup_${user.username}_${Date.now()}.json"`);
+    res.send(JSON.stringify(backupPayload, null, 2));
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Không thể xuất dữ liệu: ' + err.message });
+  }
+});
+
+// 6. KHÔI PHỤC TỪ FILE SAO LƯU (POST /auth/backup/import)
+apiRouter.post('/auth/backup/import', async (req, res) => {
+  try {
+    const authData = getAuthUserFromReq(req);
+    if (!authData) {
+      return res.status(401).json({ success: false, error: 'Vui lòng đăng nhập để khôi phục dữ liệu' });
+    }
+
+    const { favorites, settings, myDroppedMusic, customPlaylists } = req.body || {};
+    const users = await fetchUsersFromCloud();
+    const user = users[authData.username];
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy người dùng' });
+    }
+
+    if (Array.isArray(favorites)) {
+      user.favorites = favorites;
+    }
+    if (settings && typeof settings === 'object') {
+      user.settings = { ...(user.settings || {}), ...settings };
+    }
+    if (Array.isArray(myDroppedMusic)) {
+      user.myDroppedMusic = myDroppedMusic;
+    }
+    if (Array.isArray(customPlaylists)) {
+      user.customPlaylists = customPlaylists;
+    }
+
+    user.lastActive = new Date().toISOString();
+    await saveUsersToCloud(users);
+
+    res.json({
+      success: true,
+      message: 'Khôi phục dữ liệu sao lưu thành công! 🎉',
+      syncedData: {
+        favorites: user.favorites,
+        settings: user.settings,
+        myDroppedMusic: user.myDroppedMusic,
+        customPlaylists: user.customPlaylists,
+        lastSynced: user.lastActive
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Khôi phục dữ liệu thất bại: ' + err.message });
   }
 });
 

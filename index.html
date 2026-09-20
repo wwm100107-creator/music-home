@@ -153,6 +153,18 @@
         </ul>
       </nav>
 
+      <!-- Khối Tài Khoản Người Dùng ở Sidebar (User Account Card) -->
+      <div class="sidebar-user-card" id="sidebarUserCard" role="button" tabindex="0" title="Quản lý tài khoản & đồng bộ đám mây">
+        <div class="user-avatar-badge" id="sidebarUserAvatar">🌰</div>
+        <div class="user-info-text">
+          <span class="user-name" id="sidebarUserName">Khách (Guest)</span>
+          <span class="user-status" id="sidebarUserStatus">Chạm để đăng nhập</span>
+        </div>
+        <button class="account-action-icon-btn" id="sidebarAccountBtn" title="Tài khoản & Đồng bộ" aria-label="Mở cài đặt tài khoản">
+          <span class="account-gear-icon">⚙️</span>
+        </button>
+      </div>
+
     </aside>
 
     <!-- [SKILL: /apple-design] Backdrop làm mờ khi mở Drawer trên Mobile -->
@@ -177,9 +189,14 @@
           <img src="icon-home-music.png" alt="Home Music" class="mobile-header-icon">
           <span class="mobile-header-title">Home Music</span>
         </div>
-        <button class="mobile-search-btn" id="mobileSearchQuickBtn" aria-label="Tìm kiếm" title="Tìm kiếm">
-          🔍
-        </button>
+        <div class="mobile-top-right-actions">
+          <button class="mobile-account-btn" id="mobileAccountBtn" aria-label="Tài khoản & Đồng bộ" title="Tài khoản & Đồng bộ">
+            <span id="mobileAccountAvatar">🌰</span>
+          </button>
+          <button class="mobile-search-btn" id="mobileSearchQuickBtn" aria-label="Tìm kiếm" title="Tìm kiếm">
+            🔍
+          </button>
+        </div>
       </header>
 
       <!-- ================================================================== -->
@@ -217,6 +234,12 @@
               <span class="mode-icon sun-icon">☀️</span>
               <span class="mode-icon moon-icon hidden">🌙</span>
               <span class="mode-label" id="ambientModeText">Ban Ngày</span>
+            </button>
+
+            <!-- Nút Tài Khoản & Đồng Bộ Đám Mây (Account & Cloud Sync) -->
+            <button id="topBarAccountBtn" class="topbar-account-btn" title="Tài Khoản & Đồng Bộ Đám Mây" aria-label="Tài Khoản & Đồng Bộ">
+              <span class="account-badge-avatar" id="topBarUserAvatar">🌰</span>
+              <span class="account-badge-name" id="topBarUserName">Đăng nhập</span>
             </button>
           </div>
         </div>
@@ -1023,6 +1046,171 @@
       <div class="lyrics-stage-footer">
         <span class="lyrics-hint-text">💡 Nhấp vào bất kỳ câu hát nào để tua nhạc • Nhấn Esc hoặc phím Y để đóng/mở</span>
       </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL ĐĂNG NHẬP, TẠO TÀI KHOẢN & ĐỒNG BỘ ĐÁM MÂY (GHIBLI CLOUD ACCOUNT) -->
+  <!-- ===================================================================== -->
+  <div class="ghibli-modal-overlay hidden" id="ghibliAccountModal" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
+    <div class="ghibli-modal-backdrop" id="accountModalBackdrop"></div>
+    <div class="account-modal-window">
+      <!-- Modal Header -->
+      <div class="account-modal-header">
+        <div class="account-modal-title-cluster">
+          <div class="modal-icon-badge" id="modalHeaderAvatar">🌰</div>
+          <div>
+            <h2 class="account-modal-title" id="accountModalTitle">Tài Khoản & Đồng Bộ</h2>
+            <p class="account-modal-subtitle" id="accountModalSubtitle">Lưu giữ bài hát yêu thích & trải nghiệm âm nhạc trên mọi thiết bị</p>
+          </div>
+        </div>
+        <button class="account-modal-close-btn" id="accountModalCloseBtn" aria-label="Đóng cửa sổ" title="Đóng cửa sổ">✕</button>
+      </div>
+
+      <!-- Alert / Status Notice Banner -->
+      <div class="account-modal-alert hidden" id="accountModalAlert"></div>
+
+      <!-- Modal Tabs Switcher (Visible when logged out) -->
+      <div class="account-tabs-bar" id="accountTabsBar">
+        <button type="button" class="account-tab-btn active" id="tabBtnLogin" data-target="viewAccountLogin">Đăng Nhập</button>
+        <button type="button" class="account-tab-btn" id="tabBtnRegister" data-target="viewAccountRegister">Tạo Tài Khoản Mới</button>
+      </div>
+
+      <!-- VIEW 1: ĐĂNG NHẬP -->
+      <form class="account-modal-view active" id="viewAccountLogin" autocomplete="on">
+        <div class="form-group">
+          <label for="loginUsername">Tên đăng nhập</label>
+          <div class="input-with-icon">
+            <span class="input-icon">👤</span>
+            <input type="text" id="loginUsername" placeholder="Nhập tên đăng nhập của bạn..." autocomplete="username" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Mật khẩu</label>
+          <div class="input-with-icon">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="loginPassword" placeholder="Nhập mật khẩu..." autocomplete="current-password" required>
+            <button type="button" class="toggle-password-btn" id="toggleLoginPasswordBtn" title="Hiện/Ẩn mật khẩu" aria-label="Hiện/Ẩn mật khẩu">👁️</button>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="ghibli-btn-primary" id="loginSubmitBtn">
+            <span>Đăng Nhập Ngay</span> 🍃
+          </button>
+        </div>
+        <div class="form-footer-tip">
+          Chưa có tài khoản? <button type="button" class="inline-link-btn" id="linkSwitchToRegister">Đăng ký thành viên mới tại đây</button>
+        </div>
+      </form>
+
+      <!-- VIEW 2: TẠO TÀI KHOẢN -->
+      <form class="account-modal-view hidden" id="viewAccountRegister" autocomplete="on">
+        <div class="form-group">
+          <label for="registerDisplayName">Tên hiển thị (Biệt danh)</label>
+          <div class="input-with-icon">
+            <span class="input-icon">✨</span>
+            <input type="text" id="registerDisplayName" placeholder="Ví dụ: Totoro Yêu Âm Nhạc" maxlength="30" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="registerUsername">Tên đăng nhập (viết liền không dấu)</label>
+          <div class="input-with-icon">
+            <span class="input-icon">🌱</span>
+            <input type="text" id="registerUsername" placeholder="Ví dụ: totoro2026" autocomplete="username" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="registerPassword">Mật khẩu (tối thiểu 6 ký tự)</label>
+          <div class="input-with-icon">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="registerPassword" placeholder="Mật khẩu bảo vệ..." minlength="6" autocomplete="new-password" required>
+            <button type="button" class="toggle-password-btn" id="toggleRegisterPasswordBtn" title="Hiện/Ẩn mật khẩu" aria-label="Hiện/Ẩn mật khẩu">👁️</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Chọn linh vật đại diện Ghibli</label>
+          <div class="avatar-picker-grid" id="registerAvatarPicker">
+            <button type="button" class="avatar-option selected" data-avatar="🌰">🌰 Totoro</button>
+            <button type="button" class="avatar-option" data-avatar="🌿">🌿 Kodama</button>
+            <button type="button" class="avatar-option" data-avatar="🔥">🔥 Calcifer</button>
+            <button type="button" class="avatar-option" data-avatar="🧹">🧹 Kiki</button>
+            <button type="button" class="avatar-option" data-avatar="🐲">🐲 Haku</button>
+            <button type="button" class="avatar-option" data-avatar="🏮">🏮 No-Face</button>
+            <button type="button" class="avatar-option" data-avatar="🐱">🐱 Jiji</button>
+            <button type="button" class="avatar-option" data-avatar="🌸">🌸 Chihiro</button>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="ghibli-btn-primary" id="registerSubmitBtn">
+            <span>Tạo Tài Khoản & Bắt Đầu</span> 🚀
+          </button>
+        </div>
+        <div class="form-footer-tip">
+          Đã có tài khoản? <button type="button" class="inline-link-btn" id="linkSwitchToLogin">Quay lại đăng nhập</button>
+        </div>
+      </form>
+
+      <!-- VIEW 3: HỒ SƠ & TRẠNG THÁI ĐỒNG BỘ ĐÁM MÂY (KHI ĐÃ ĐĂNG NHẬP) -->
+      <div class="account-modal-view hidden" id="viewAccountProfile">
+        <div class="profile-card">
+          <div class="profile-avatar-large" id="profileAvatar">🌰</div>
+          <div class="profile-meta">
+            <div class="profile-name-row">
+              <h3 class="profile-display-name" id="profileDisplayName">Totoro Yêu Âm Nhạc</h3>
+              <span class="profile-cloud-badge">☁️ Cloud Active</span>
+            </div>
+            <span class="profile-username" id="profileUsername">@totoro2026</span>
+            <div class="profile-sync-status-row">
+              <span class="badge-dot pulse"></span>
+              <span class="profile-sync-status-text" id="profileSyncStatusText">Đã đồng bộ đám mây</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sync-stats-grid">
+          <div class="sync-stat-item">
+            <span class="stat-icon">💚</span>
+            <div class="stat-info">
+              <span class="stat-number" id="syncFavCount">0</span>
+              <span class="stat-label">Yêu thích</span>
+            </div>
+          </div>
+          <div class="sync-stat-item">
+            <span class="stat-icon">🎵</span>
+            <div class="stat-info">
+              <span class="stat-number" id="syncDropCount">0</span>
+              <span class="stat-label">Nhạc tải lên</span>
+            </div>
+          </div>
+          <div class="sync-stat-item">
+            <span class="stat-icon">🌙</span>
+            <div class="stat-info">
+              <span class="stat-number" id="syncThemeLabel">Ban ngày</span>
+              <span class="stat-label">Giao diện</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sync-action-buttons">
+          <button type="button" class="ghibli-btn-action" id="manualSyncBtn">
+            <span class="btn-icon">🔄</span>
+            <span class="btn-text">Đồng bộ Đám Mây ngay</span>
+          </button>
+          <div class="backup-actions-split">
+            <button type="button" class="ghibli-btn-action secondary" id="exportBackupBtn" title="Tải xuống tệp .json chứa toàn bộ bài hát và cài đặt của bạn">
+              <span class="btn-icon">💾</span> Xuất file sao lưu
+            </button>
+            <label class="ghibli-btn-action secondary import-label" id="importBackupLabel" title="Khôi phục dữ liệu từ tệp .json">
+              <span class="btn-icon">📂</span> Khôi phục sao lưu
+              <input type="file" id="backupFileInput" accept=".json,application/json" style="display: none;">
+            </label>
+          </div>
+          <button type="button" class="ghibli-btn-danger" id="logoutBtn">
+            <span class="btn-icon">🚪</span> Đăng xuất tài khoản
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
 

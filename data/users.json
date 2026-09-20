@@ -1,0 +1,60 @@
+{
+  "testuser_1789888789191": {
+    "id": "usr_1789888789523_0d72e4e3",
+    "username": "testuser_1789888789191",
+    "displayName": "Totoro Testing",
+    "passwordHash": "e2599b8c54016873392e4071b36b01103fc3ed5ffc51e89e10f32bf73a3f4d6ca9c7461d17b200fc95f0248118a05a7c02a0cb2514021b6f2772f389d143b6bf",
+    "passwordSalt": "6cb69b65479625ad752d4783cf5a772a",
+    "favorites": [
+      {
+        "id": "fav_song_1",
+        "title": "Path of the Wind",
+        "artist": "Joe Hisaishi"
+      }
+    ],
+    "settings": {
+      "theme": "twilight",
+      "loopMode": "all",
+      "volume": 0.8
+    },
+    "myDroppedMusic": [
+      {
+        "id": "drop_1",
+        "title": "Rain Forest Melodies",
+        "artist": "Community"
+      }
+    ],
+    "customPlaylists": [],
+    "createdAt": "2026-09-20T07:19:49.523Z",
+    "lastActive": "2026-09-20T07:19:49.846Z"
+  },
+  "testuser_1789888817113": {
+    "id": "usr_1789888817457_aec1314c",
+    "username": "testuser_1789888817113",
+    "displayName": "Totoro Testing",
+    "passwordHash": "9fe7b8d3093457a57babf76b0a95195ea576629a7d3442a19bf7eb13775837b3f213206461cff70c3dbf0789af7ae4e58ba23663dd1d34db2286cb820d5d1c5e",
+    "passwordSalt": "cc4c711a4df9c09a4b370996681af242",
+    "favorites": [
+      {
+        "id": "fav_song_1",
+        "title": "Path of the Wind",
+        "artist": "Joe Hisaishi"
+      }
+    ],
+    "settings": {
+      "theme": "twilight",
+      "loopMode": "all",
+      "volume": 0.8
+    },
+    "myDroppedMusic": [
+      {
+        "id": "drop_1",
+        "title": "Rain Forest Melodies",
+        "artist": "Community"
+      }
+    ],
+    "customPlaylists": [],
+    "createdAt": "2026-09-20T07:20:17.457Z",
+    "lastActive": "2026-09-20T07:20:17.895Z"
+  }
+}
