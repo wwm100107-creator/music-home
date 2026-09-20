@@ -43,7 +43,20 @@
     isSyncing: false,
     isMobile: (() => {
       try {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+        const ua = navigator.userAgent || '';
+        const isTouch = typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1;
+        const isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && isTouch);
+        const isAndroid = /Android/i.test(ua);
+        const isSmallScreen = window.matchMedia && window.matchMedia('(max-width: 820px)').matches;
+        const isStandalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+        return isIOS || isAndroid || isSmallScreen || isStandalone;
+      } catch (_) {
+        return false;
+      }
+    })(),
+    isStandalone: (() => {
+      try {
+        return window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
       } catch (_) {
         return false;
       }
@@ -1461,13 +1474,18 @@
       dom.audio.pause();
     }
 
-    // 1. Luồng âm thanh trực tiếp (Drop Your Music, file tải lên, iTunes preview)
+    // 1. Luồng âm thanh trực tiếp (Drop Your Music, file tải lên, iTunes preview) hoặc Background Playback trên Di động
     const directAudioSource = track.audioUrl || track.streamUrl || track.previewUrl;
+    // Trên thiết bị di động (đặc biệt iOS Safari & PWA Standalone trên iPhone) hoặc khi bật Background Playback:
+    // BẮT BUỘC phát qua thẻ HTML5 <audio> để iOS WebKit cấp quyền duy trì âm thanh nền khi tắt màn hình.
+    // YouTube IFrame (<video>) trên iOS WebKit luôn bị hệ điều hành cưỡng chế dừng khi màn hình tắt.
+    const preferNativeAudio = directAudioSource || (state.isMobile && state.backgroundPlayback);
 
-    if (directAudioSource) {
-      // Ưu tiên phát qua HTML5 Audio cho file âm thanh trực tiếp
+    if (preferNativeAudio) {
+      // Ưu tiên phát qua HTML5 Audio cho file âm thanh trực tiếp hoặc Background Playback trên di động
       state.activeEngine = 'audio';
-      dom.audio.src = directAudioSource;
+      const audioSource = directAudioSource || `/api/stream/${track.id}`;
+      dom.audio.src = audioSource;
       dom.audio.load();
       const playPromise = dom.audio.play();
       if (playPromise !== undefined) {
@@ -1478,11 +1496,21 @@
         }).catch(audioErr => {
           if (audioErr.name === 'AbortError') return;
           console.warn('[Native Audio Engine Warning]:', audioErr.message);
-          setPlaybackVisualState(false);
+          // Fallback sang YouTube Engine nếu có sẵn
+          if (!directAudioSource && ytPlayer && isYtReady && typeof ytPlayer.loadVideoById === 'function') {
+            console.log('🔄 Đang chuyển sang YouTube Engine fallback...');
+            state.activeEngine = 'youtube';
+            ytPlayer.loadVideoById(track.id);
+            ytPlayer.playVideo();
+            setPlaybackVisualState(true);
+            updateMediaSession(track);
+          } else {
+            setPlaybackVisualState(false);
+          }
         });
       }
     } else {
-      // 2. Nhạc YouTube: Phát tức thì qua YouTube Engine chính thức (Zero Delay, 100% mượt mà)
+      // 2. Nhạc YouTube trên PC: Phát tức thì qua YouTube Engine chính thức (Zero Delay, 100% mượt mà)
       if (ytPlayer && isYtReady && typeof ytPlayer.loadVideoById === 'function') {
         state.activeEngine = 'youtube';
         ytPlayer.loadVideoById(track.id);
@@ -3498,7 +3526,13 @@
     const actionHandlers = [
       ['play', () => {
         if (!state.isPlaying) {
-          if (state.isMobile && state.backgroundPlayback && state.currentTrack && state.activeEngine === 'youtube') {
+          if (state.activeEngine === 'audio' && dom.audio) {
+            dom.audio.play().then(() => {
+              setPlaybackVisualState(true);
+            }).catch(() => {
+              togglePlayPause();
+            });
+          } else if (state.isMobile && state.backgroundPlayback && state.currentTrack && state.activeEngine === 'youtube') {
             const curTime = (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') ? ytPlayer.getCurrentTime() : 0;
             state.activeEngine = 'audio';
             dom.audio.src = `/api/stream/${state.currentTrack.id}`;
@@ -3586,11 +3620,18 @@
     }
   });
 
-  // Mở khóa AudioSession ngay lần chạm đầu tiên trên thiết bị di động (iOS Safari Audio Unlock)
+  // Mở khóa AudioSession ngay lần chạm đầu tiên trên thiết bị di động (iOS Safari & PWA Standalone Audio Unlock)
   function unlockMobileAudioSession() {
     if (dom.audio && !dom.audio.dataset.unlocked) {
       dom.audio.dataset.unlocked = 'true';
-      dom.audio.load();
+      // Mồi âm thanh im lặng (silent WAV buffer) để iOS cấp quyền AudioSession nền cho ứng dụng
+      const silentDataUri = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+      if (!dom.audio.src || dom.audio.src.endsWith('/')) {
+        dom.audio.src = silentDataUri;
+        dom.audio.play().then(() => {
+          dom.audio.pause();
+        }).catch(() => {});
+      }
     }
   }
   window.addEventListener('touchstart', unlockMobileAudioSession, { once: true, passive: true });
