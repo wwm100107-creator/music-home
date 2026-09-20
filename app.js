@@ -1461,15 +1461,13 @@
       dom.audio.pause();
     }
 
-    // 1. Luồng âm thanh trực tiếp (Drop Your Music, file tải lên, iTunes preview) hoặc Chế độ Background Playback trên Di động
+    // 1. Luồng âm thanh trực tiếp (Drop Your Music, file tải lên, iTunes preview)
     const directAudioSource = track.audioUrl || track.streamUrl || track.previewUrl;
-    const preferBackgroundAudio = directAudioSource || (state.isMobile && state.backgroundPlayback) || (!isYtReady);
 
-    if (preferBackgroundAudio) {
-      // Ưu tiên phát qua HTML5 Audio cho file âm thanh trực tiếp hoặc Background Playback trên di động
+    if (directAudioSource) {
+      // Ưu tiên phát qua HTML5 Audio cho file âm thanh trực tiếp
       state.activeEngine = 'audio';
-      const audioSource = directAudioSource || `/api/stream/${track.id}`;
-      dom.audio.src = audioSource;
+      dom.audio.src = directAudioSource;
       dom.audio.load();
       const playPromise = dom.audio.play();
       if (playPromise !== undefined) {
@@ -1480,20 +1478,11 @@
         }).catch(audioErr => {
           if (audioErr.name === 'AbortError') return;
           console.warn('[Native Audio Engine Warning]:', audioErr.message);
-          // Fallback sang YouTube Engine nếu có sẵn
-          if (!directAudioSource && ytPlayer && isYtReady && typeof ytPlayer.loadVideoById === 'function') {
-            state.activeEngine = 'youtube';
-            ytPlayer.loadVideoById(track.id);
-            ytPlayer.playVideo();
-            setPlaybackVisualState(true);
-            updateMediaSession(track);
-          } else {
-            setPlaybackVisualState(false);
-          }
+          setPlaybackVisualState(false);
         });
       }
     } else {
-      // 2. Nhạc YouTube: Phát tức thì qua YouTube Engine chính thức (Zero Delay, mượt mà 100%)
+      // 2. Nhạc YouTube: Phát tức thì qua YouTube Engine chính thức (Zero Delay, 100% mượt mà)
       if (ytPlayer && isYtReady && typeof ytPlayer.loadVideoById === 'function') {
         state.activeEngine = 'youtube';
         ytPlayer.loadVideoById(track.id);
@@ -3516,7 +3505,9 @@
             dom.audio.currentTime = curTime;
             dom.audio.play().then(() => {
               setPlaybackVisualState(true);
-            }).catch(() => {});
+            }).catch(() => {
+              togglePlayPause();
+            });
           } else {
             togglePlayPause();
           }
@@ -3575,8 +3566,8 @@
   // Lắng nghe sự kiện Tắt màn hình / Chuyển Tab / Chuyển ứng dụng (Mobile Background Handoff)
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-      // Khi người dùng khóa màn hình hoặc chuyển sang ứng dụng khác
-      if (state.isPlaying && state.backgroundPlayback && state.currentTrack) {
+      // Khi người dùng khóa màn hình hoặc chuyển sang ứng dụng khác (chỉ kích hoạt trên di động)
+      if (state.isMobile && state.isPlaying && state.backgroundPlayback && state.currentTrack) {
         if (state.activeEngine === 'youtube' && ytPlayer) {
           try {
             const curTime = (typeof ytPlayer.getCurrentTime === 'function') ? ytPlayer.getCurrentTime() : 0;
