@@ -91,21 +91,24 @@ html, body {
 }
 
 /* ==========================================================================
-   GHIBLI HAND-DRAWN BESPOKE VECTOR ICONS
+   GHIBLI BESPOKE TWO-TONE VECTOR ICONS (ICONSAX PRO SPECIFICATION)
    ========================================================================== */
 .ghibli-svg-icon {
   display: inline-block;
-  vertical-align: -0.15em;
-  width: 1.15em;
-  height: 1.15em;
+  vertical-align: -0.16em;
+  width: 1.2em;
+  height: 1.2em;
   flex-shrink: 0;
-  transition: transform 0.25s var(--ease-out-spring), filter 0.25s ease;
+  color: inherit;
+  stroke: currentColor;
+  transition: transform 0.28s var(--ease-out-spring), filter 0.25s ease, color 0.2s ease;
   pointer-events: none;
 }
 
 button:hover .ghibli-svg-icon,
-.mode-status-chip:hover .ghibli-svg-icon {
-  transform: scale(1.12);
+.mode-status-chip:hover .ghibli-svg-icon,
+[role="button"]:hover .ghibli-svg-icon {
+  transform: scale(1.14);
 }
 
 .ghibli-svg-icon.icon-xs { width: 12px; height: 12px; }
@@ -116,14 +119,31 @@ button:hover .ghibli-svg-icon,
 .ghibli-svg-icon.icon-huge { width: 44px; height: 44px; }
 .ghibli-svg-icon.icon-gigantic { width: 64px; height: 64px; }
 
-/* Pulse animation for active/glowing icons */
-@keyframes ghibliIconGlow {
-  0%, 100% { filter: drop-shadow(0 0 2px rgba(127, 201, 94, 0.4)); transform: scale(1); }
-  50% { filter: drop-shadow(0 0 8px rgba(127, 201, 94, 0.85)); transform: scale(1.08); }
+/* Special High-End Accent Glows */
+.ghibli-icon-leaf-heart.liked {
+  color: #e63946 !important;
+  filter: drop-shadow(0 0 6px rgba(230, 57, 70, 0.6));
 }
 
-.ghibli-svg-icon.pulsing {
-  animation: ghibliIconGlow 2.5s infinite ease-in-out;
+.ghibli-icon-calcifer-flame {
+  color: #f97316;
+  filter: drop-shadow(0 0 5px rgba(249, 115, 22, 0.5));
+}
+
+.ghibli-icon-totoro-acorn {
+  color: var(--theme-accent, #2d6a4f);
+}
+
+#ambientToggleBtn.active .ghibli-icon-firefly-lantern,
+.mode-status-chip.active .ghibli-icon-firefly-lantern {
+  color: #ffd166;
+  filter: drop-shadow(0 0 8px rgba(255, 209, 102, 0.85));
+}
+
+#batterySaverBtn.active .ghibli-icon-leaf-battery,
+#topbarBatterySaverBtn.active .ghibli-icon-leaf-battery {
+  color: #52b788;
+  filter: drop-shadow(0 0 7px rgba(82, 183, 136, 0.75));
 }
 
 /* ==========================================================================
@@ -2466,7 +2486,7 @@ body.twilight-mode .queue-toggle-btn:hover {
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2352b788' stroke='%232d6a4f' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2C7 6 4 12 6 18c2 4 8 4 12 1 4-3 5-10 1-15-2.5-3-5.5-2.5-7-2z'/%3E%3Cpath d='M12 2c0 8 3 14 6 17' stroke='%232d6a4f' stroke-width='1.2'/%3E%3Cpath d='M10 8c1.5 1.5 3 2 5 2' stroke='%232d6a4f' stroke-width='1'/%3E%3Cpath d='M8 13c1.5 1 3 1.5 5 1.5' stroke='%232d6a4f' stroke-width='1'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg%20class%3D%22ghibli-svg-icon%20ghibli-icon-leaf-sprout%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M12%2021c0-6%202.5-11%208.5-13-1%206-4%2010-8.5%2013z%22%20stroke%3D%22currentColor%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22%20fill%3D%22currentColor%22%20fill-opacity%3D%220.25%22%2F%3E%3Cpath%20d%3D%22M12%2021c-2-5-6-8-9-8%201-4%205-6%209-4%22%20stroke%3D%22currentColor%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22%20fill%3D%22currentColor%22%20fill-opacity%3D%220.15%22%2F%3E%3Cpath%20d%3D%22M12%2021V9%22%20stroke%3D%22currentColor%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E");
 }
 
 .acorn-checkbox-input:checked + .acorn-checkbox-icon {
@@ -2477,7 +2497,7 @@ body.twilight-mode .queue-toggle-btn:hover {
 
 .acorn-checkbox-input:checked + .acorn-checkbox-icon::before {
   content: "";
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M12 2.5c.2 1.8-.8 3.2-2.5 3.8' stroke='%234a2c11' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M4.5 8.5C4.5 6 7.8 4.2 12 4.2s7.5 1.8 7.5 4.3c0 1.8-1.4 2.8-3.2 3.2H7.7C5.9 11.3 4.5 10.3 4.5 8.5z' fill='%238b5e3c' stroke='%233d2314' stroke-width='1.5' stroke-linejoin='round'/%3E%3Cpath d='M7 7c2.5.9 7.5.9 10 0M6 9.5c3 1 9 1 12 0' stroke='%235c381e' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M6.2 11.2C6.8 16.8 9.2 21.5 12 22c2.8-.5 5.2-5.2 5.8-10.8' fill='%23c98a4c' stroke='%233d2314' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cellipse cx='9.5' cy='14.5' rx='1.2' ry='2.2' transform='rotate(-15 9.5 14.5)' fill='%23fefae0' opacity='0.7'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg%20class%3D%22ghibli-svg-icon%20ghibli-icon-totoro-acorn%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208.5C5%205.5%208%204%2012%204s7%201.5%207%204.5c0%201-.8%201.8-2%202H7c-1.2-.2-2-1-2-2z%22%20stroke%3D%22currentColor%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22%20fill%3D%22currentColor%22%20fill-opacity%3D%220.25%22%2F%3E%3Cpath%20d%3D%22M8%206.5l2%203M11%205.5l2%204M14%206.5l2%203%22%20stroke%3D%22currentColor%22%20stroke-width%3D%221.2%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.6%22%2F%3E%3Cpath%20d%3D%22M12%204V2c-.6-.6-1.5-.5-1.8.2%22%20stroke%3D%22currentColor%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%2F%3E%3Cpath%20d%3D%22M12%202.5c1.2-.8%202.8-.5%203%20.8-.2.8-1.5%201.2-3-.8z%22%20fill%3D%22var(--ghibli-leaf-green%2C%20%2352b788)%22%20opacity%3D%220.9%22%2F%3E%3Cpath%20d%3D%22M6.5%2010.5C6.5%2016%209.5%2021.5%2012%2022c2.5-.5%205.5-6%205.5-11.5H6.5z%22%20stroke%3D%22currentColor%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22%20fill%3D%22currentColor%22%20fill-opacity%3D%220.12%22%2F%3E%3Cpath%20d%3D%22M8.5%2013.5c.4%202.5%201.5%204.5%202.5%205%22%20stroke%3D%22currentColor%22%20stroke-width%3D%221.2%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.5%22%2F%3E%3C%2Fsvg%3E");
   animation: acornPop 0.35s var(--ease-out-spring);
 }
 
