@@ -8199,52 +8199,223 @@ body.twilight-mode .input-with-icon input:focus {
   opacity: 1;
 }
 
-/* Avatar Picker Grid */
-.avatar-picker-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  margin-top: 2px;
+/* Custom Avatar Upload & Preview */
+.avatar-custom-upload-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1.5px solid rgba(140, 93, 47, 0.28);
+  border-radius: 18px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(45, 25, 10, 0.05);
 }
 
-.avatar-option {
-  padding: 6px 8px;
-  border-radius: 10px;
-  border: 1.5px solid rgba(140, 93, 47, 0.25);
-  background: rgba(255, 255, 255, 0.6);
+body.twilight-mode .avatar-custom-upload-card {
+  background: rgba(20, 38, 26, 0.65);
+  border-color: rgba(82, 183, 136, 0.35);
+}
+
+.avatar-preview-circle {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(140, 93, 47, 0.35);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+  cursor: pointer;
+  background: #ccd5ae;
+}
+
+body.twilight-mode .avatar-preview-circle {
+  border-color: rgba(82, 183, 136, 0.45);
+  background: #1b4332;
+}
+
+.avatar-preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.25s ease;
+}
+
+.avatar-preview-circle:hover .avatar-preview-image {
+  transform: scale(1.08);
+}
+
+.avatar-preview-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(14, 28, 18, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fefae0;
+  font-size: 1.15rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  backdrop-filter: blur(2px);
+}
+
+.avatar-preview-circle:hover .avatar-preview-overlay {
+  opacity: 1;
+}
+
+.avatar-upload-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.avatar-btn-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ghibli-btn-upload-avatar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 12px;
+  background: rgba(45, 106, 79, 0.12);
+  border: 1.5px solid rgba(45, 106, 79, 0.35);
+  color: var(--theme-accent, #2d6a4f);
   font-family: var(--font-ghibli-body, 'Plus Jakarta Sans', sans-serif);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  color: var(--theme-text-main, #2b3d2b);
   cursor: pointer;
   transition: all 0.2s ease;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  user-select: none;
 }
 
-.avatar-option:hover {
+.ghibli-btn-upload-avatar:hover {
+  background: var(--theme-accent, #2d6a4f);
+  color: #fefae0;
   border-color: var(--theme-accent, #2d6a4f);
   transform: translateY(-1px);
 }
 
-.avatar-option.selected {
-  background: var(--theme-accent, #2d6a4f);
-  color: #fefae0;
-  border-color: var(--theme-accent, #2d6a4f);
-  box-shadow: 0 3px 8px rgba(45, 106, 79, 0.3);
+body.twilight-mode .ghibli-btn-upload-avatar {
+  background: rgba(82, 183, 136, 0.18);
+  border-color: rgba(82, 183, 136, 0.4);
+  color: #95d5b2;
 }
 
-body.twilight-mode .avatar-option {
-  background: rgba(255, 255, 255, 0.06);
-  color: #e9edc9;
-  border-color: rgba(255, 255, 255, 0.12);
-}
-
-body.twilight-mode .avatar-option.selected {
+body.twilight-mode .ghibli-btn-upload-avatar:hover {
   background: #2d6a4f;
-  border-color: #52b788;
   color: #fefae0;
+  border-color: #52b788;
+}
+
+.avatar-reset-btn {
+  background: rgba(231, 111, 81, 0.12);
+  border: 1px solid rgba(231, 111, 81, 0.35);
+  color: #c14425;
+  padding: 5px 10px;
+  border-radius: 10px;
+  font-family: var(--font-ghibli-body, 'Plus Jakarta Sans', sans-serif);
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.avatar-reset-btn:hover {
+  background: #e76f51;
+  color: #ffffff;
+}
+
+body.twilight-mode .avatar-reset-btn {
+  background: rgba(231, 111, 81, 0.22);
+  color: #ffb4a2;
+}
+
+.avatar-helper-note {
+  font-family: var(--font-ghibli-body, 'Plus Jakarta Sans', sans-serif);
+  font-size: 0.74rem;
+  color: var(--theme-text-muted, #5f7161);
+  line-height: 1.35;
+  margin: 0;
+}
+
+body.twilight-mode .avatar-helper-note {
+  color: #95d5b2;
+}
+
+/* Universal Avatar Image Fitting */
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.user-avatar-badge,
+.modal-icon-badge,
+.mobile-account-btn,
+.profile-avatar-large {
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+.account-badge-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* Profile Avatar Edit Badge */
+.profile-avatar-wrapper {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.profile-avatar-edit-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #2d6a4f;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.profile-avatar-edit-badge:hover {
+  transform: scale(1.15);
+  background: #40916c;
+}
+
+body.twilight-mode .profile-avatar-edit-badge {
+  background: #52b788;
+  border-color: #14241a;
+  color: #0d1f14;
 }
 
 /* Modal Actions & Primary Buttons */

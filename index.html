@@ -1127,19 +1127,29 @@
             <button type="button" class="toggle-password-btn" id="toggleRegisterPasswordBtn" title="Hiện/Ẩn mật khẩu" aria-label="Hiện/Ẩn mật khẩu">👁️</button>
           </div>
         </div>
+        <!-- Tùy chọn tải ảnh đại diện cá nhân -->
         <div class="form-group">
-          <label>Chọn linh vật đại diện Ghibli</label>
-          <div class="avatar-picker-grid" id="registerAvatarPicker">
-            <button type="button" class="avatar-option selected" data-avatar="🌰">🌰 Totoro</button>
-            <button type="button" class="avatar-option" data-avatar="🌿">🌿 Kodama</button>
-            <button type="button" class="avatar-option" data-avatar="🔥">🔥 Calcifer</button>
-            <button type="button" class="avatar-option" data-avatar="🧹">🧹 Kiki</button>
-            <button type="button" class="avatar-option" data-avatar="🐲">🐲 Haku</button>
-            <button type="button" class="avatar-option" data-avatar="🏮">🏮 No-Face</button>
-            <button type="button" class="avatar-option" data-avatar="🐱">🐱 Jiji</button>
-            <button type="button" class="avatar-option" data-avatar="🌸">🌸 Chihiro</button>
+          <label for="registerAvatarFileInput">Ảnh đại diện (Tùy chọn)</label>
+          <div class="avatar-custom-upload-card">
+            <div class="avatar-preview-circle" id="registerAvatarPreviewWrap">
+              <img id="registerAvatarPreviewImg" src="bg.jpg" alt="Ảnh đại diện xem trước" class="avatar-preview-image">
+              <div class="avatar-preview-overlay" id="registerAvatarOverlay" title="Chạm để tải ảnh lên">
+                <span>📷</span>
+              </div>
+            </div>
+            <div class="avatar-upload-cta">
+              <div class="avatar-btn-row">
+                <label for="registerAvatarFileInput" class="ghibli-btn-upload-avatar">
+                  <span>📷 Chọn ảnh từ thiết bị</span>
+                  <input type="file" id="registerAvatarFileInput" accept="image/png,image/jpeg,image/webp,image/gif" style="display: none;">
+                </label>
+                <button type="button" class="avatar-reset-btn hidden" id="registerAvatarResetBtn" title="Hủy ảnh vừa chọn">✕ Hủy</button>
+              </div>
+              <p class="avatar-helper-note">Tự do tải ảnh từ điện thoại hoặc máy tính của bạn. Nếu để trống, hệ thống sẽ tự động chọn một khung cảnh thiên nhiên Ghibli thanh bình.</p>
+            </div>
           </div>
         </div>
+
         <div class="form-actions">
           <button type="submit" class="ghibli-btn-primary" id="registerSubmitBtn">
             <span>Tạo Tài Khoản & Bắt Đầu</span> 🚀
@@ -1153,13 +1163,19 @@
       <!-- VIEW 3: HỒ SƠ & TRẠNG THÁI ĐỒNG BỘ ĐÁM MÂY (KHI ĐÃ ĐĂNG NHẬP) -->
       <div class="account-modal-view hidden" id="viewAccountProfile">
         <div class="profile-card">
-          <div class="profile-avatar-large" id="profileAvatar">🌰</div>
+          <div class="profile-avatar-wrapper">
+            <div class="profile-avatar-large" id="profileAvatar"></div>
+            <label for="profileAvatarFileInput" class="profile-avatar-edit-badge" title="Chạm để đổi ảnh đại diện">
+              <span>📷</span>
+              <input type="file" id="profileAvatarFileInput" accept="image/png,image/jpeg,image/webp,image/gif" style="display: none;">
+            </label>
+          </div>
           <div class="profile-meta">
             <div class="profile-name-row">
-              <h3 class="profile-display-name" id="profileDisplayName">Totoro Yêu Âm Nhạc</h3>
+              <h3 class="profile-display-name" id="profileDisplayName">Người Yêu Âm Nhạc</h3>
               <span class="profile-cloud-badge">☁️ Cloud Active</span>
             </div>
-            <span class="profile-username" id="profileUsername">@totoro2026</span>
+            <span class="profile-username" id="profileUsername">@user</span>
             <div class="profile-sync-status-row">
               <span class="badge-dot pulse"></span>
               <span class="profile-sync-status-text" id="profileSyncStatusText">Đã đồng bộ đám mây</span>

@@ -285,7 +285,10 @@
     registerUsername: document.getElementById('registerUsername'),
     registerPassword: document.getElementById('registerPassword'),
     toggleRegisterPasswordBtn: document.getElementById('toggleRegisterPasswordBtn'),
-    registerAvatarPicker: document.getElementById('registerAvatarPicker'),
+    registerAvatarFileInput: document.getElementById('registerAvatarFileInput'),
+    registerAvatarPreviewImg: document.getElementById('registerAvatarPreviewImg'),
+    registerAvatarResetBtn: document.getElementById('registerAvatarResetBtn'),
+    profileAvatarFileInput: document.getElementById('profileAvatarFileInput'),
     registerSubmitBtn: document.getElementById('registerSubmitBtn'),
     linkSwitchToLogin: document.getElementById('linkSwitchToLogin'),
     profileAvatar: document.getElementById('profileAvatar'),
@@ -3494,7 +3497,66 @@
   // 14. USER ACCOUNTS & MULTI-DEVICE CLOUD SYNCHRONIZATION
   // ==========================================================================
   let syncDebounceTimer = null;
-  let selectedRegisterAvatar = '🌰';
+  let selectedRegisterAvatar = null;
+
+  // Khung cảnh thiên nhiên Studio Ghibli dịu mát tự động gán khi người dùng không chọn ảnh
+  const GHIBLI_SCENIC_AVATARS = [
+    'bg.jpg',
+    'icon-home-music.png',
+    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%232d6a4f"/><stop offset="100%" stop-color="%2352b788"/></linearGradient></defs><circle cx="50" cy="50" r="50" fill="url(%23g1)"/><circle cx="50" cy="38" r="15" fill="%23d8f3dc"/><path d="M26 80c0-13 11-23 24-23s24 10 24 23" fill="%23b7e4c7"/><circle cx="45" cy="36" r="2.5" fill="%231b4332"/><circle cx="55" cy="36" r="2.5" fill="%231b4332"/><path d="M48 42q2 2 4 0" stroke="%231b4332" stroke-width="1.5" fill="none"/></svg>',
+    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23e76f51"/><stop offset="100%" stop-color="%23f4a261"/></linearGradient></defs><circle cx="50" cy="50" r="50" fill="url(%23g2)"/><circle cx="50" cy="50" r="28" fill="%23fefae0" opacity="0.35"/><path d="M20 75 Q 50 30 80 75 Z" fill="%23264653"/><circle cx="70" cy="30" r="7" fill="%23fefae0"/></svg>',
+    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%231d3557"/><stop offset="100%" stop-color="%23457b9d"/></linearGradient></defs><circle cx="50" cy="50" r="50" fill="url(%23g3)"/><path d="M0 65 Q 25 55 50 65 T 100 65 L 100 100 L 0 100 Z" fill="%23a8dadc"/><circle cx="35" cy="32" r="9" fill="%23f1faee"/></svg>',
+    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%232b2d42"/><stop offset="100%" stop-color="%238d99ae"/></linearGradient></defs><circle cx="50" cy="50" r="50" fill="url(%23g4)"/><circle cx="50" cy="50" r="24" fill="%23edf2f4" opacity="0.8"/><path d="M12 85 Q 50 50 88 85 Z" fill="%23d90429"/></svg>'
+  ];
+
+  function getRandomScenicAvatar() {
+    const idx = Math.floor(Math.random() * GHIBLI_SCENIC_AVATARS.length);
+    return GHIBLI_SCENIC_AVATARS[idx];
+  }
+
+  function renderAvatarToElement(el, avatarSrc) {
+    if (!el) return;
+    const src = avatarSrc || 'bg.jpg';
+    if (typeof src === 'string' && (src.startsWith('data:image/') || src.startsWith('http') || src.includes('.jpg') || src.includes('.png') || src.includes('.webp') || src.includes('.svg'))) {
+      el.innerHTML = `<img src="${src}" alt="Avatar" class="user-avatar-img">`;
+    } else {
+      el.innerHTML = `<img src="bg.jpg" alt="Avatar" class="user-avatar-img">`;
+    }
+  }
+
+  function processImageFile(file, maxWidth = 180, maxHeight = 180) {
+    return new Promise((resolve, reject) => {
+      if (!file || !file.type || !file.type.startsWith('image/')) {
+        return reject(new Error('Vui lòng chọn tệp hình ảnh (JPG, PNG, WebP)'));
+      }
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Không thể đọc tệp tin'));
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('Không thể đọc dữ liệu hình ảnh'));
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const size = Math.min(img.width, img.height);
+            const startX = (img.width - size) / 2;
+            const startY = (img.height - size) / 2;
+
+            const targetSize = Math.min(size, maxWidth);
+            canvas.width = targetSize;
+            canvas.height = targetSize;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            resolve(dataUrl);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 
   function debouncedCloudSync() {
     if (!state.authToken) return;
@@ -3518,6 +3580,7 @@
   function updateAccountUI() {
     const user = state.currentUser;
     const isLogged = !!user;
+    const currentAvatar = isLogged ? user.avatar : 'bg.jpg';
 
     // 1. Sidebar Card
     if (dom.sidebarUserName) {
@@ -3526,24 +3589,21 @@
     if (dom.sidebarUserStatus) {
       dom.sidebarUserStatus.textContent = isLogged ? '☁️ Đã kết nối Đám Mây' : 'Chạm để đăng nhập';
     }
-    if (dom.sidebarUserAvatar) {
-      dom.sidebarUserAvatar.textContent = isLogged ? (user.avatar || '🌰') : '🌰';
-    }
+    renderAvatarToElement(dom.sidebarUserAvatar, currentAvatar);
 
     // 2. PC Topbar Button
     if (dom.topBarUserName) {
       dom.topBarUserName.textContent = isLogged ? (user.displayName || user.username) : 'Đăng nhập';
     }
-    if (dom.topBarUserAvatar) {
-      dom.topBarUserAvatar.textContent = isLogged ? (user.avatar || '🌰') : '🌰';
-    }
+    renderAvatarToElement(dom.topBarUserAvatar, currentAvatar);
 
     // 3. Mobile Topbar Button
-    if (dom.mobileAccountAvatar) {
-      dom.mobileAccountAvatar.textContent = isLogged ? (user.avatar || '🌰') : '🌰';
-    }
+    renderAvatarToElement(dom.mobileAccountAvatar, currentAvatar);
 
-    // 4. Modal Views
+    // 4. Modal Header Avatar
+    renderAvatarToElement(document.getElementById('modalHeaderAvatar'), currentAvatar);
+
+    // 5. Modal Views
     if (isLogged) {
       if (dom.accountTabsBar) dom.accountTabsBar.style.display = 'none';
       if (dom.viewAccountLogin) dom.viewAccountLogin.classList.add('hidden');
@@ -3551,7 +3611,7 @@
       if (dom.viewAccountProfile) dom.viewAccountProfile.classList.remove('hidden');
 
       // Update Profile elements
-      if (dom.profileAvatar) dom.profileAvatar.textContent = user.avatar || '🌰';
+      renderAvatarToElement(dom.profileAvatar, user.avatar || 'bg.jpg');
       if (dom.profileDisplayName) dom.profileDisplayName.textContent = user.displayName || user.username;
       if (dom.profileUsername) dom.profileUsername.textContent = `@${user.username}`;
       if (dom.syncFavCount) dom.syncFavCount.textContent = state.favorites.length;
@@ -3581,6 +3641,13 @@
       if (dom.tabBtnLogin) dom.tabBtnLogin.classList.remove('active');
       if (dom.viewAccountRegister) dom.viewAccountRegister.classList.remove('hidden');
       if (dom.viewAccountLogin) dom.viewAccountLogin.classList.add('hidden');
+      if (!selectedRegisterAvatar && dom.registerAvatarPreviewImg) {
+        if (!dom.registerAvatarPreviewImg.dataset.initialScenic) {
+          const scenic = getRandomScenicAvatar();
+          dom.registerAvatarPreviewImg.src = scenic;
+          dom.registerAvatarPreviewImg.dataset.initialScenic = 'true';
+        }
+      }
     } else {
       if (dom.tabBtnLogin) dom.tabBtnLogin.classList.add('active');
       if (dom.tabBtnRegister) dom.tabBtnRegister.classList.remove('active');
@@ -3753,7 +3820,7 @@
     const displayName = (dom.registerDisplayName ? dom.registerDisplayName.value : '').trim();
     const username = (dom.registerUsername ? dom.registerUsername.value : '').trim().toLowerCase();
     const password = (dom.registerPassword ? dom.registerPassword.value : '').trim();
-    const avatar = selectedRegisterAvatar || '🌰';
+    const avatar = selectedRegisterAvatar || (dom.registerAvatarPreviewImg && dom.registerAvatarPreviewImg.src ? dom.registerAvatarPreviewImg.src : getRandomScenicAvatar());
 
     if (!displayName || !username || !password) {
       setAccountModalAlert('Vui lòng điền đầy đủ tất cả các trường thông tin!');
@@ -3833,6 +3900,8 @@
     } catch (_) {}
 
     const payload = {
+      avatar: state.currentUser ? state.currentUser.avatar : undefined,
+      displayName: state.currentUser ? state.currentUser.displayName : undefined,
       favorites: state.favorites || [],
       myDroppedMusic: localDrops,
       settings: {
@@ -3962,15 +4031,62 @@
   }
 
   function initUserAccounts() {
-    // Avatar Picker clicks
-    if (dom.registerAvatarPicker) {
-      const avatarBtns = dom.registerAvatarPicker.querySelectorAll('.avatar-option');
-      avatarBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          avatarBtns.forEach(b => b.classList.remove('selected'));
-          btn.classList.add('selected');
-          selectedRegisterAvatar = btn.dataset.avatar || '🌰';
-        });
+    // Custom Avatar Upload for Registration
+    if (dom.registerAvatarFileInput) {
+      dom.registerAvatarFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        try {
+          const compressedDataUrl = await processImageFile(file, 180, 180);
+          selectedRegisterAvatar = compressedDataUrl;
+          if (dom.registerAvatarPreviewImg) {
+            dom.registerAvatarPreviewImg.src = compressedDataUrl;
+          }
+          if (dom.registerAvatarResetBtn) {
+            dom.registerAvatarResetBtn.classList.remove('hidden');
+          }
+        } catch (err) {
+          showToast(`⚠️ ${err.message || 'Không thể tải ảnh đại diện'}`);
+        }
+      });
+    }
+
+    const avatarPreviewWrap = document.getElementById('registerAvatarPreviewWrap');
+    if (avatarPreviewWrap && dom.registerAvatarFileInput) {
+      avatarPreviewWrap.addEventListener('click', () => {
+        dom.registerAvatarFileInput.click();
+      });
+    }
+
+    if (dom.registerAvatarResetBtn) {
+      dom.registerAvatarResetBtn.addEventListener('click', () => {
+        selectedRegisterAvatar = null;
+        if (dom.registerAvatarFileInput) dom.registerAvatarFileInput.value = '';
+        const scenic = getRandomScenicAvatar();
+        if (dom.registerAvatarPreviewImg) {
+          dom.registerAvatarPreviewImg.src = scenic;
+          dom.registerAvatarPreviewImg.dataset.initialScenic = 'true';
+        }
+        dom.registerAvatarResetBtn.classList.add('hidden');
+      });
+    }
+
+    // Profile Avatar Change (when logged in)
+    if (dom.profileAvatarFileInput) {
+      dom.profileAvatarFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        try {
+          const compressedDataUrl = await processImageFile(file, 180, 180);
+          if (state.currentUser) {
+            state.currentUser.avatar = compressedDataUrl;
+            updateAccountUI();
+            showToast('📸 Đã cập nhật ảnh đại diện mới!');
+            syncUserDataToCloud(true);
+          }
+        } catch (err) {
+          showToast(`⚠️ ${err.message || 'Không thể cập nhật ảnh đại diện'}`);
+        }
       });
     }
 

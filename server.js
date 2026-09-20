@@ -2232,12 +2232,13 @@ apiRouter.post('/auth/register', async (req, res) => {
 
     const { hash, salt } = hashPassword(String(password));
     const userId = 'usr_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
+    const { avatar } = req.body || {};
     const cleanDisplayName = (displayName && String(displayName).trim()) || cleanUsername;
-
     const newUser = {
       id: userId,
       username: cleanUsername,
       displayName: cleanDisplayName,
+      avatar: (avatar && String(avatar).trim()) || 'bg.jpg',
       passwordHash: hash,
       passwordSalt: salt,
       favorites: [],
@@ -2361,12 +2362,20 @@ apiRouter.post('/auth/sync', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Vui lòng đăng nhập để đồng bộ dữ liệu' });
     }
 
-    const { favorites, settings, myDroppedMusic, customPlaylists } = req.body || {};
+    const { favorites, settings, myDroppedMusic, customPlaylists, avatar, displayName } = req.body || {};
     const users = await fetchUsersFromCloud();
     const user = users[authData.username];
 
     if (!user) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy người dùng' });
+    }
+
+    if (avatar && typeof avatar === 'string') {
+      user.avatar = avatar;
+    }
+
+    if (displayName && typeof displayName === 'string') {
+      user.displayName = displayName.trim();
     }
 
     // Hợp nhất dữ liệu thông minh theo ID
@@ -2401,6 +2410,8 @@ apiRouter.post('/auth/sync', async (req, res) => {
       success: true,
       message: 'Đồng bộ đám mây thành công! ☁️',
       syncedData: {
+        avatar: user.avatar,
+        displayName: user.displayName,
         favorites: user.favorites,
         settings: user.settings,
         myDroppedMusic: user.myDroppedMusic,
