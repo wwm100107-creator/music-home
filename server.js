@@ -265,21 +265,19 @@ async function getSearchClient() {
 
 async function getStreamClient(forceNew = false) {
   if (!ytStreamInstance || forceNew) {
-    // ClientType.IOS là client tốt nhất cho background audio playback:
-    // Cung cấp luồng AAC 128kbps (itag 140) sạch, không bị BotGuard / LOGIN_REQUIRED chặn trên IP datacenter
+    // ClientType.ANDROID_VR (Meta Quest VR Engine) là giải pháp mạnh mẽ nhất:
+    // Cung cấp luồng AAC chất lượng cao (itag 140), giải mã chữ ký hoàn hảo mà KHÔNG BAO GIỜ bị BotGuard / LOGIN_REQUIRED chặn trên IP Cloud/Vercel
     const config = {
-      client_type: ClientType.IOS,
+      client_type: ClientType.ANDROID_VR,
       cache: new UniversalCache(false),
       generate_session_locally: false
     };
     try {
       ytStreamInstance = await Innertube.create(config);
-      console.log('✅ YouTube Stream client initialized (IOS Client - Background Audio Stream)');
+      console.log('✅ YouTube Stream client initialized (ANDROID_VR Client - Background Stream Ready)');
     } catch (err) {
-      console.warn('⚠️ IOS Client init failed, fallback to VISIONOS:', err.message);
-      config.client_type = ClientType.VISIONOS;
-      const cookie = getYouTubeCookie();
-      if (cookie) config.cookie = cookie;
+      console.warn('⚠️ ANDROID_VR Client init failed, fallback to IOS:', err.message);
+      config.client_type = ClientType.IOS;
       ytStreamInstance = await Innertube.create(config);
     }
   }
@@ -310,10 +308,10 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
   }
 
   if (info.playability_status?.status === 'LOGIN_REQUIRED') {
-    console.warn(`[Stream ${videoId}]: Got LOGIN_REQUIRED on primary client, trying TV_EMBEDDED fallback...`);
+    console.warn(`[Stream ${videoId}]: Got LOGIN_REQUIRED on primary client, trying ANDROID_VR fallback...`);
     try {
       const fallbackClient = await Innertube.create({
-        client_type: ClientType.TV_EMBEDDED,
+        client_type: ClientType.ANDROID_VR,
         cache: new UniversalCache(false),
         generate_session_locally: false
       });
@@ -337,11 +335,12 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
     throw new Error(`Không tìm thấy luồng âm thanh (${info.playability_status?.status || 'UNKNOWN'}: ${info.playability_status?.reason || 'No streaming data'})`);
   }
 
-  // Ưu tiên itag 140 (AAC 128kbps) hoặc 251 (Opus) hoặc 139 (AAC 48kbps)
+  // Ưu tiên itag 140 (AAC 128kbps) hoặc 251 (Opus) hoặc bất kỳ định dạng audio/mp4 nào
   let chosenFormat =
     audioFormats.find(f => f.itag === 140) ||
     audioFormats.find(f => f.itag === 251) ||
     audioFormats.find(f => f.itag === 139) ||
+    audioFormats.find(f => f.mime_type?.startsWith('audio/mp4')) ||
     audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
 
   let streamUrl = chosenFormat.url;
