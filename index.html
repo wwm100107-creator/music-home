@@ -155,13 +155,13 @@
 
       <!-- Khối Tài Khoản Người Dùng ở Sidebar (User Account Card) -->
       <div class="sidebar-user-card" id="sidebarUserCard" role="button" tabindex="0" title="Quản lý tài khoản & đồng bộ đám mây">
-        <div class="user-avatar-badge" id="sidebarUserAvatar">🌰</div>
+        <div class="user-avatar-badge" id="sidebarUserAvatar"><svg class="ghibli-svg-icon ghibli-icon-totoro-acorn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c.2 1.8-.8 3.2-2.5 3.8" stroke="#4a2c11" stroke-width="2" stroke-linecap="round"/><path d="M4.5 8.5C4.5 6 7.8 4.2 12 4.2s7.5 1.8 7.5 4.3c0 1.8-1.4 2.8-3.2 3.2H7.7C5.9 11.3 4.5 10.3 4.5 8.5z" fill="#8b5e3c" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 7c2.5.9 7.5.9 10 0M6 9.5c3 1 9 1 12 0" stroke="#5c381e" stroke-width="1" stroke-linecap="round"/><path d="M6.2 11.2C6.8 16.8 9.2 21.5 12 22c2.8-.5 5.2-5.2 5.8-10.8" fill="#c98a4c" stroke="#3d2314" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="9.5" cy="14.5" rx="1.2" ry="2.2" transform="rotate(-15 9.5 14.5)" fill="#fefae0" opacity="0.6"/></svg></div>
         <div class="user-info-text">
           <span class="user-name" id="sidebarUserName">Khách (Guest)</span>
           <span class="user-status" id="sidebarUserStatus">Chạm để đăng nhập</span>
         </div>
         <button class="account-action-icon-btn" id="sidebarAccountBtn" title="Tài khoản & Đồng bộ" aria-label="Mở cài đặt tài khoản">
-          <span class="account-gear-icon">⚙️</span>
+          <span class="account-gear-icon"><svg class="ghibli-svg-icon ghibli-icon-brass-gear" viewBox="0 0 24 24" fill="none" stroke="#6f4518" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" fill="#faedcd"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
         </button>
       </div>
 
@@ -190,15 +190,11 @@
           <span class="mobile-header-title">Home Music</span>
         </div>
         <div class="mobile-top-right-actions">
-          <button class="mobile-battery-btn" id="mobileBatterySaverQuickBtn" aria-label="Tiết kiệm pin OLED" title="Chế độ tiết kiệm pin OLED">
-            🔋
-          </button>
+          <button class="mobile-battery-btn" id="mobileBatterySaverQuickBtn" aria-label="Tiết kiệm pin OLED" title="Chế độ tiết kiệm pin OLED"><svg class="ghibli-svg-icon ghibli-icon-leaf-battery" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="6.5" width="14" height="14" rx="3.5" fill="#2d5a27" fill-opacity="0.15" stroke="#2d6a4f" stroke-width="1.6"/><path d="M10 6.5V4.5c0-.8.7-1.5 1.5-1.5h1c.8 0 1.5.7 1.5 1.5v2" stroke="#2d6a4f" stroke-width="1.5"/><path d="M12 3c-1.8-1.5-3.5-1.2-4.5-.5.2 1.5 1.2 2.5 3 2.5M12 3c1.8-1.5 3.5-1.2 4.5-.5-.2 1.5-1.2 2.5-3 2.5" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.1" stroke-linecap="round"/><rect x="7.5" y="12" width="2.5" height="6" rx="1" fill="#7fc95e"/><rect x="11" y="10" width="2.5" height="8" rx="1" fill="#52b788"/><rect x="14.5" y="8" width="2.5" height="10" rx="1" fill="#40916c"/></svg></button>
           <button class="mobile-account-btn" id="mobileAccountBtn" aria-label="Tài khoản & Đồng bộ" title="Tài khoản & Đồng bộ">
-            <span id="mobileAccountAvatar">🌰</span>
+            <span id="mobileAccountAvatar"><svg class="ghibli-svg-icon ghibli-icon-totoro-acorn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c.2 1.8-.8 3.2-2.5 3.8" stroke="#4a2c11" stroke-width="2" stroke-linecap="round"/><path d="M4.5 8.5C4.5 6 7.8 4.2 12 4.2s7.5 1.8 7.5 4.3c0 1.8-1.4 2.8-3.2 3.2H7.7C5.9 11.3 4.5 10.3 4.5 8.5z" fill="#8b5e3c" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 7c2.5.9 7.5.9 10 0M6 9.5c3 1 9 1 12 0" stroke="#5c381e" stroke-width="1" stroke-linecap="round"/><path d="M6.2 11.2C6.8 16.8 9.2 21.5 12 22c2.8-.5 5.2-5.2 5.8-10.8" fill="#c98a4c" stroke="#3d2314" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="9.5" cy="14.5" rx="1.2" ry="2.2" transform="rotate(-15 9.5 14.5)" fill="#fefae0" opacity="0.6"/></svg></span>
           </button>
-          <button class="mobile-search-btn" id="mobileSearchQuickBtn" aria-label="Tìm kiếm" title="Tìm kiếm">
-            🔍
-          </button>
+          <button class="mobile-search-btn" id="mobileSearchQuickBtn" aria-label="Tìm kiếm" title="Tìm kiếm"><svg class="ghibli-svg-icon ghibli-icon-brass-lens" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="6.5" fill="#e8f4f8" fill-opacity="0.4" stroke="#8b5e3c" stroke-width="1.8"/><path d="M7 7.5a4.2 4.2 0 0 1 5-1.5" stroke="#b08968" stroke-width="1.2" stroke-linecap="round"/><path d="M15 15l1.5-1.5 5.5 5.5a1.2 1.2 0 0 1-1.7 1.7L15 15z" fill="#6f4518" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><circle cx="15.5" cy="14.5" r="1" fill="#d4a373"/></svg></button>
         </div>
       </header>
 
@@ -210,14 +206,14 @@
         <!-- Top Toolbar: Quick Search + Bộ Chọn Quốc Gia Ghibli -->
         <div class="home-top-bar">
           <div class="home-search-quickbox">
-            <span class="search-box-icon">🔍</span>
+            <span class="search-box-icon"><svg class="ghibli-svg-icon ghibli-icon-brass-lens" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="6.5" fill="#e8f4f8" fill-opacity="0.4" stroke="#8b5e3c" stroke-width="1.8"/><path d="M7 7.5a4.2 4.2 0 0 1 5-1.5" stroke="#b08968" stroke-width="1.2" stroke-linecap="round"/><path d="M15 15l1.5-1.5 5.5 5.5a1.2 1.2 0 0 1-1.7 1.7L15 15z" fill="#6f4518" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><circle cx="15.5" cy="14.5" r="1" fill="#d4a373"/></svg></span>
             <input type="text" id="homeQuickSearchInput" placeholder="Tìm kiếm bài hát, nghệ sĩ hoặc dán link YouTube..." class="ghibli-quick-search-input">
           </div>
 
           <div class="home-top-actions">
             <div class="country-selector-wrapper">
               <label for="countrySelectDropdown" class="country-selector-label">
-                <span class="globe-icon">🌐</span>
+                <span class="globe-icon"><svg class="ghibli-svg-icon ghibli-icon-globe-vintage" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" fill="#fefae0" fill-opacity="0.3" stroke="#8b5e3c" stroke-width="1.6"/><ellipse cx="12" cy="12" rx="4.5" ry="9" stroke="#8b5e3c" stroke-width="1.3"/><line x1="3" y1="12" x2="21" y2="12" stroke="#8b5e3c" stroke-width="1.3"/><path d="M5.5 7.5h13M5.5 16.5h13" stroke="#b08968" stroke-width="1"/></svg></span>
                 <span class="label-text">Khu vực:</span>
               </label>
               <div class="custom-select-shell">
@@ -234,14 +230,14 @@
 
             <!-- Nút bật/tắt chế độ Đêm Rừng Đom Đóm / Ban Ngày (Twilight Mode) -->
             <button id="ambientModeBtn" class="ambient-mode-btn" title="Chuyển chế độ: Ban Ngày ☀️ / Đêm Rừng Đom Đóm 🌙" aria-label="Chuyển chế độ ánh sáng">
-              <span class="mode-icon sun-icon">☀️</span>
-              <span class="mode-icon moon-icon hidden">🌙</span>
+              <span class="mode-icon sun-icon"><svg class="ghibli-svg-icon ghibli-icon-sun-warm" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="5" fill="#ffe170" stroke="#f4a261" stroke-width="1.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="#f4a261" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+              <span class="mode-icon moon-icon hidden"><svg class="ghibli-svg-icon ghibli-icon-moon-crescent" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="#fff9db" stroke="#52b788" stroke-width="1.6" stroke-linejoin="round"/><circle cx="18" cy="5" r="0.8" fill="#ffe170"/><circle cx="19.5" cy="9" r="0.6" fill="#ffe170"/></svg></span>
               <span class="mode-label" id="ambientModeText">Ban Ngày</span>
             </button>
 
             <!-- Nút Tài Khoản & Đồng Bộ Đám Mây (Account & Cloud Sync) -->
             <button id="topBarAccountBtn" class="topbar-account-btn" title="Tài Khoản & Đồng Bộ Đám Mây" aria-label="Tài Khoản & Đồng Bộ">
-              <span class="account-badge-avatar" id="topBarUserAvatar">🌰</span>
+              <span class="account-badge-avatar" id="topBarUserAvatar"><svg class="ghibli-svg-icon ghibli-icon-totoro-acorn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c.2 1.8-.8 3.2-2.5 3.8" stroke="#4a2c11" stroke-width="2" stroke-linecap="round"/><path d="M4.5 8.5C4.5 6 7.8 4.2 12 4.2s7.5 1.8 7.5 4.3c0 1.8-1.4 2.8-3.2 3.2H7.7C5.9 11.3 4.5 10.3 4.5 8.5z" fill="#8b5e3c" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 7c2.5.9 7.5.9 10 0M6 9.5c3 1 9 1 12 0" stroke="#5c381e" stroke-width="1" stroke-linecap="round"/><path d="M6.2 11.2C6.8 16.8 9.2 21.5 12 22c2.8-.5 5.2-5.2 5.8-10.8" fill="#c98a4c" stroke="#3d2314" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="9.5" cy="14.5" rx="1.2" ry="2.2" transform="rotate(-15 9.5 14.5)" fill="#fefae0" opacity="0.6"/></svg></span>
               <span class="account-badge-name" id="topBarUserName">Đăng nhập</span>
             </button>
           </div>
@@ -272,15 +268,15 @@
         <!-- Trending Section -->
         <div class="section-heading-row chart-heading-row">
           <div class="heading-left">
-            <span class="heading-icon">🔥</span>
+            <span class="heading-icon"><svg class="ghibli-svg-icon ghibli-icon-calcifer-flame" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c1.5 3 4.5 5 4.5 8.5 0 4.5-3.5 8.5-8.5 8.5S2 16 2 12.5c0-3 2.5-5.5 4.5-7.5 0 2.5 1.5 4 3 4 1 0 2-.8 2.5-2.5z" fill="#ff7b00" stroke="#c0392b" stroke-width="1.4" stroke-linejoin="round"/><path d="M11 9c1 1.5 2.5 2.5 2.5 4.5 0 2.5-2 4.5-4.5 4.5S5 16 5 14.5c0-1.5 1.5-2.5 2.5-3.5 0 1.2.8 1.8 1.5 1.8.8 0 1.5-.8 2-1.8z" fill="#ffe170"/><circle cx="8" cy="13.5" r="0.9" fill="#2b1810"/><circle cx="11.5" cy="13.5" r="0.9" fill="#2b1810"/><ellipse cx="9.8" cy="15.2" rx="1.2" ry="0.6" fill="#c0392b"/></svg></span>
             <h2 class="heading-title" id="trendingSectionTitle">Bảng Xếp Hạng Thịnh Hành</h2>
           </div>
           <div class="chart-timeframe-switch" id="chartTimeframeSwitch" role="group" aria-label="Thời gian bảng xếp hạng">
             <button class="timeframe-pill-btn active" id="timeframeDailyBtn" data-timeframe="daily" title="Bảng xếp hạng ngày: lượt nghe cao nhất trong 24h qua">
-              <span class="pill-fire-icon">🔥</span> Hôm Nay (24h)
+              <span class="pill-fire-icon"><svg class="ghibli-svg-icon ghibli-icon-calcifer-flame" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c1.5 3 4.5 5 4.5 8.5 0 4.5-3.5 8.5-8.5 8.5S2 16 2 12.5c0-3 2.5-5.5 4.5-7.5 0 2.5 1.5 4 3 4 1 0 2-.8 2.5-2.5z" fill="#ff7b00" stroke="#c0392b" stroke-width="1.4" stroke-linejoin="round"/><path d="M11 9c1 1.5 2.5 2.5 2.5 4.5 0 2.5-2 4.5-4.5 4.5S5 16 5 14.5c0-1.5 1.5-2.5 2.5-3.5 0 1.2.8 1.8 1.5 1.8.8 0 1.5-.8 2-1.8z" fill="#ffe170"/><circle cx="8" cy="13.5" r="0.9" fill="#2b1810"/><circle cx="11.5" cy="13.5" r="0.9" fill="#2b1810"/><ellipse cx="9.8" cy="15.2" rx="1.2" ry="0.6" fill="#c0392b"/></svg></span> Hôm Nay (24h)
             </button>
             <button class="timeframe-pill-btn" id="timeframeWeeklyBtn" data-timeframe="weekly" title="Bảng xếp hạng tuần: tổng lượt nghe cao nhất 7 ngày qua">
-              <span class="pill-chart-icon">📈</span> Tuần Này (7 Ngày)
+              <span class="pill-chart-icon"><svg class="ghibli-svg-icon ghibli-icon-bamboo-chart" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="14" width="3.5" height="7" rx="1" fill="#74c69d" stroke="#2d6a4f" stroke-width="1.2"/><rect x="10" y="10" width="3.5" height="11" rx="1" fill="#52b788" stroke="#2d6a4f" stroke-width="1.2"/><rect x="16" y="5" width="3.5" height="16" rx="1" fill="#40916c" stroke="#2d6a4f" stroke-width="1.2"/><path d="M4 12c4-2 7-6 15-8" stroke="#f4a261" stroke-width="1.8" stroke-linecap="round"/><path d="M15 4h4v4" stroke="#f4a261" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Tuần Này (7 Ngày)
             </button>
           </div>
           <span class="heading-badge-counter" id="trendingCounter">Top 20 bài</span>
@@ -289,7 +285,7 @@
         <!-- Trending Tracks Grid -->
         <div class="nature-songs-grid" id="trendingTracksGrid">
           <div class="ghibli-loading-placeholder">
-            <div class="loading-leaf-spinner">🌿</div>
+            <div class="loading-leaf-spinner"><svg class="ghibli-svg-icon ghibli-icon-leaf-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21c0-6 2-11 8-13-1 6-4 10-8 13z" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21C9 16 5 13 2 13c1-4 5-6 9-4" fill="#95d5b2" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21V10" stroke="#1b4332" stroke-width="1.5" stroke-linecap="round"/></svg></div>
             <p class="loading-text">Đang lắng nghe giai điệu từ thiên nhiên...</p>
           </div>
         </div>
@@ -302,20 +298,20 @@
       <section class="tab-view-section hidden" id="viewSearch" data-tab="search">
         <div class="search-view-header">
           <div class="search-huge-box">
-            <span class="search-huge-icon" id="searchTypeIcon">🔍</span>
+            <span class="search-huge-icon" id="searchTypeIcon"><svg class="ghibli-svg-icon ghibli-icon-brass-lens" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="6.5" fill="#e8f4f8" fill-opacity="0.4" stroke="#8b5e3c" stroke-width="1.8"/><path d="M7 7.5a4.2 4.2 0 0 1 5-1.5" stroke="#b08968" stroke-width="1.2" stroke-linecap="round"/><path d="M15 15l1.5-1.5 5.5 5.5a1.2 1.2 0 0 1-1.7 1.7L15 15z" fill="#6f4518" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><circle cx="15.5" cy="14.5" r="1" fill="#d4a373"/></svg></span>
             <input type="text" id="mainSearchInput" placeholder="Nhập tên bài hát, nghệ sĩ hoặc dán đường dẫn YouTube..." class="ghibli-search-huge-input" autocomplete="off">
             <button id="clearSearchBtn" class="search-clear-btn hidden" title="Xóa tìm kiếm">✕</button>
           </div>
-          <p class="search-tip-note">💡 Nhập từ khóa để tìm trên YouTube Music hoặc dán link YouTube để phát ngay.</p>
+          <p class="search-tip-note"><svg class="ghibli-svg-icon ghibli-icon-firefly-lantern" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 5C8 3 9.8 1.8 12 1.8s4 1.2 4 3.2" stroke="#6f4518" stroke-width="1.4" stroke-linecap="round"/><rect x="7" y="5" width="10" height="2.5" rx="1" fill="#b08968" stroke="#4a2c11" stroke-width="1.3"/><path d="M6.5 8.5C6.5 7.5 7.5 7.5 8 7.5h8c.5 0 1.5 0 1.5 1s-.5 9-1 10.5c-.5 1.5-2 2-4.5 2s-4-.5-4.5-2C7 17.5 6.5 9.5 6.5 8.5z" fill="#fff9db" fill-opacity="0.3" stroke="#4a2c11" stroke-width="1.5" stroke-linejoin="round"/><ellipse cx="12" cy="13" rx="2" ry="1.5" fill="#ffd166"/><path d="M12 10.5v-1M12 16.5v-1M9.5 13h-1M15.5 13h-1" stroke="#f4a261" stroke-width="1" stroke-linecap="round"/></svg> Nhập từ khóa để tìm trên YouTube Music hoặc dán link YouTube để phát ngay.</p>
         </div>
 
         <div class="search-results-wrapper">
           <div id="searchLoadingState" class="ghibli-loading-placeholder hidden">
-            <div class="loading-leaf-spinner">🕊️</div>
+            <div class="loading-leaf-spinner"><svg class="ghibli-svg-icon ghibli-icon-white-dove" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 7c-2 0-4 1-5 2.5-2.5-2-6-2.5-9-1.5 2 2 3.5 4.5 4 7-2-.5-4 0-5.5 1.5 3 2.5 6.5 2.5 10 1 1.5-.5 3-1.5 4-3 1-.3 2-1 2.5-2.5-.5-.2-1.5-.5-2-.5 1-1 1.5-2.5 1-4.5z" fill="#fefae0" stroke="#4a2c11" stroke-width="1.4" stroke-linejoin="round"/><path d="M20 8l2.5-2M21 7l1.5 1" stroke="#52b788" stroke-width="1.2" stroke-linecap="round"/></svg></div>
             <p class="loading-text">Chim bồ câu đang mang bài hát về...</p>
           </div>
           <div id="searchEmptyState" class="search-empty-prompt">
-            <span class="empty-icon">🎵</span>
+            <span class="empty-icon"><svg class="ghibli-svg-icon ghibli-icon-music-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18V6.5l9-2.5V15" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round"/><path d="M9 7.5l9-2.5" stroke="#52b788" stroke-width="3" stroke-linecap="round"/><path d="M9 18c0 1.7-1.8 3-4 3s-3.5-1.3-3.5-3 1.3-3 3.5-3c1.2 0 2.3.4 3 1.2" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.2"/><path d="M18 15c0 1.7-1.8 3-4 3s-3.5-1.3-3.5-3 1.3-3 3.5-3c1.2 0 2.3.4 3 1.2" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.2"/></svg></span>
             <h3>Hãy nhập tên bài hát bạn muốn nghe</h3>
             <p>Khám phá kho tàng hàng triệu bài hát từ YouTube Music</p>
           </div>
@@ -329,16 +325,16 @@
       <section class="tab-view-section hidden" id="viewLibrary" data-tab="library">
         <div class="section-heading-row">
           <div class="heading-left">
-            <span class="heading-icon">💚</span>
+            <span class="heading-icon"><svg class="ghibli-svg-icon ghibli-icon-leaf-heart liked" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#52b788" stroke="#1b4332" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 7c0 4.5-2 8-5 9.5M12 10c1.5 2 3.5 3.5 6 4" stroke="#7fc95e" stroke-width="1.2" stroke-linecap="round"/></svg></span>
             <h2 class="heading-title">Khu Vườn Yêu Thích Của Bạn</h2>
           </div>
           <span class="heading-badge-counter" id="favCounter">0 bài</span>
         </div>
         <div class="nature-songs-grid" id="favoriteTracksGrid">
           <div class="search-empty-prompt">
-            <span class="empty-icon">🌱</span>
+            <span class="empty-icon"><svg class="ghibli-svg-icon ghibli-icon-leaf-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21c0-6 2-11 8-13-1 6-4 10-8 13z" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21C9 16 5 13 2 13c1-4 5-6 9-4" fill="#95d5b2" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21V10" stroke="#1b4332" stroke-width="1.5" stroke-linecap="round"/></svg></span>
             <h3>Chưa có bài hát yêu thích nào</h3>
-            <p>Bấm biểu tượng trái tim 💚 ở thanh phát nhạc để lưu vào đây nhé!</p>
+            <p>Bấm biểu tượng trái tim <svg class="ghibli-svg-icon ghibli-icon-leaf-heart liked" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#52b788" stroke="#1b4332" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 7c0 4.5-2 8-5 9.5M12 10c1.5 2 3.5 3.5 6 4" stroke="#7fc95e" stroke-width="1.2" stroke-linecap="round"/></svg> ở thanh phát nhạc để lưu vào đây nhé!</p>
           </div>
         </div>
       </section>
@@ -352,7 +348,7 @@
         <div class="albums-main-view" id="albumsMainView">
           <div class="section-heading-row">
             <div class="heading-left">
-              <span class="heading-icon">💿</span>
+              <span class="heading-icon"><svg class="ghibli-svg-icon ghibli-icon-vinyl-groove" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9.5" fill="#1b1d1f" stroke="#3d2314" stroke-width="1.5"/><circle cx="12" cy="12" r="7.5" stroke="#343a40" stroke-width="0.8" stroke-dasharray="8 4"/><circle cx="12" cy="12" r="5.5" stroke="#495057" stroke-width="0.8" stroke-dasharray="6 3"/><circle cx="12" cy="12" r="3.2" fill="#e76f51" stroke="#faedcd" stroke-width="1"/><circle cx="12" cy="12" r="1" fill="#fefae0"/></svg></span>
               <div>
                 <h2 class="heading-title" id="albumSectionTitle">Tuyển Tập EP & Album Nghệ Sĩ</h2>
                 <p class="heading-subtitle" id="albumRegionSubtitle">Quét các EP & Album chính thức phát hành theo vùng quốc gia bạn chọn</p>
@@ -364,7 +360,7 @@
           <!-- Thanh Tìm kiếm EP / Album chuyên dụng trong tab -->
           <div class="album-search-cottage">
             <div class="album-search-bar-wrap">
-              <span class="album-search-icon">🔍</span>
+              <span class="album-search-icon"><svg class="ghibli-svg-icon ghibli-icon-brass-lens" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="6.5" fill="#e8f4f8" fill-opacity="0.4" stroke="#8b5e3c" stroke-width="1.8"/><path d="M7 7.5a4.2 4.2 0 0 1 5-1.5" stroke="#b08968" stroke-width="1.2" stroke-linecap="round"/><path d="M15 15l1.5-1.5 5.5 5.5a1.2 1.2 0 0 1-1.7 1.7L15 15z" fill="#6f4518" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><circle cx="15.5" cy="14.5" r="1" fill="#d4a373"/></svg></span>
               <input type="text" id="albumSearchInput" class="album-search-input" placeholder="Tìm tên EP, Album hoặc Nghệ sĩ..." autocomplete="off">
               <button id="clearAlbumSearchBtn" class="clear-album-search-btn hidden" title="Xóa tìm kiếm">✕</button>
             </div>
@@ -372,7 +368,7 @@
 
           <!-- Trạng thái Đang Tải EP & Album -->
           <div class="albums-loading-state hidden" id="albumsLoadingState">
-            <div class="ghibli-loader-spinner">🍃</div>
+            <div class="ghibli-loader-spinner"><svg class="ghibli-svg-icon ghibli-icon-leaf-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21c0-6 2-11 8-13-1 6-4 10-8 13z" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21C9 16 5 13 2 13c1-4 5-6 9-4" fill="#95d5b2" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21V10" stroke="#1b4332" stroke-width="1.5" stroke-linecap="round"/></svg></div>
             <p>Đang quét các đĩa EP & Album tuyển chọn...</p>
           </div>
 
@@ -383,7 +379,7 @@
 
           <!-- Trạng thái Trống khi Không Tìm Thấy Kết Quả -->
           <div class="albums-empty-state hidden" id="albumsEmptyState">
-            <span class="empty-icon">💿</span>
+            <span class="empty-icon"><svg class="ghibli-svg-icon ghibli-icon-vinyl-groove" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9.5" fill="#1b1d1f" stroke="#3d2314" stroke-width="1.5"/><circle cx="12" cy="12" r="7.5" stroke="#343a40" stroke-width="0.8" stroke-dasharray="8 4"/><circle cx="12" cy="12" r="5.5" stroke="#495057" stroke-width="0.8" stroke-dasharray="6 3"/><circle cx="12" cy="12" r="3.2" fill="#e76f51" stroke="#faedcd" stroke-width="1"/><circle cx="12" cy="12" r="1" fill="#fefae0"/></svg></span>
             <h3>Không tìm thấy EP hay Album nào phù hợp</h3>
             <p>Hãy thử tìm kiếm với tên nghệ sĩ khác hoặc chọn lại vùng quốc gia nhé!</p>
           </div>
@@ -417,9 +413,7 @@
                 <button class="album-hero-play-all-btn" id="albumDetailPlayAllBtn">
                   <span>▶</span> Phát Toàn Bộ Album
                 </button>
-                <button class="album-hero-queue-all-btn" id="albumDetailQueueAllBtn">
-                  <span>🌰</span> Thêm Vào Danh Sách Chờ
-                </button>
+                <button class="album-hero-queue-all-btn" id="albumDetailQueueAllBtn"><span><svg class="ghibli-svg-icon ghibli-icon-totoro-acorn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c.2 1.8-.8 3.2-2.5 3.8" stroke="#4a2c11" stroke-width="2" stroke-linecap="round"/><path d="M4.5 8.5C4.5 6 7.8 4.2 12 4.2s7.5 1.8 7.5 4.3c0 1.8-1.4 2.8-3.2 3.2H7.7C5.9 11.3 4.5 10.3 4.5 8.5z" fill="#8b5e3c" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 7c2.5.9 7.5.9 10 0M6 9.5c3 1 9 1 12 0" stroke="#5c381e" stroke-width="1" stroke-linecap="round"/><path d="M6.2 11.2C6.8 16.8 9.2 21.5 12 22c2.8-.5 5.2-5.2 5.8-10.8" fill="#c98a4c" stroke="#3d2314" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="9.5" cy="14.5" rx="1.2" ry="2.2" transform="rotate(-15 9.5 14.5)" fill="#fefae0" opacity="0.6"/></svg></span> Thêm Vào Danh Sách Chờ</button>
               </div>
             </div>
           </div>
@@ -434,7 +428,7 @@
             </div>
             
             <div class="album-detail-loading hidden" id="albumDetailLoading">
-              <div class="ghibli-loader-spinner">🍃</div>
+              <div class="ghibli-loader-spinner"><svg class="ghibli-svg-icon ghibli-icon-leaf-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21c0-6 2-11 8-13-1 6-4 10-8 13z" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21C9 16 5 13 2 13c1-4 5-6 9-4" fill="#95d5b2" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21V10" stroke="#1b4332" stroke-width="1.5" stroke-linecap="round"/></svg></div>
               <p>Đang nạp toàn bộ danh sách bài hát...</p>
             </div>
 
@@ -453,7 +447,7 @@
         <!-- Header phần Drop Your Music -->
         <div class="drop-header-cottage">
           <div class="drop-header-titles">
-            <h1 class="drop-main-title">Drop Your Music 🍃</h1>
+            <h1 class="drop-main-title">Drop Your Music <svg class="ghibli-svg-icon ghibli-icon-leaf-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21c0-6 2-11 8-13-1 6-4 10-8 13z" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21C9 16 5 13 2 13c1-4 5-6 9-4" fill="#95d5b2" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21V10" stroke="#1b4332" stroke-width="1.5" stroke-linecap="round"/></svg></h1>
             <p class="drop-sub-title">Gửi gắm giai điệu mộc mạc của bạn và chia sẻ trực tiếp với mọi người trên mọi thiết bị.</p>
           </div>
           <div class="drop-counter-pill" id="dropCommunityCounterPill">
@@ -467,10 +461,10 @@
           <div class="dropzone-area" id="audioDropZone">
             <div class="dropzone-vinyl-disc"></div>
             <div class="dropzone-content">
-              <span class="dropzone-icon">💿</span>
+              <span class="dropzone-icon"><svg class="ghibli-svg-icon ghibli-icon-vinyl-groove" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9.5" fill="#1b1d1f" stroke="#3d2314" stroke-width="1.5"/><circle cx="12" cy="12" r="7.5" stroke="#343a40" stroke-width="0.8" stroke-dasharray="8 4"/><circle cx="12" cy="12" r="5.5" stroke="#495057" stroke-width="0.8" stroke-dasharray="6 3"/><circle cx="12" cy="12" r="3.2" fill="#e76f51" stroke="#faedcd" stroke-width="1"/><circle cx="12" cy="12" r="1" fill="#fefae0"/></svg></span>
               <h3 class="dropzone-title">Kéo & Thả File Nhạc Vào Đây</h3>
               <p class="dropzone-desc">Hỗ trợ các định dạng <strong>.mp3, .wav, .m4a, .ogg, .flac</strong> hoặc bấm để chọn từ máy</p>
-              <button type="button" class="dropzone-browse-btn" id="browseAudioFileBtn">📁 Chọn File Nhạc Từ Máy</button>
+              <button type="button" class="dropzone-browse-btn" id="browseAudioFileBtn"><svg class="ghibli-svg-icon ghibli-icon-explorer-folder" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9.5c0-1.1-.9-2-2-2h-6.5L10.5 5H5c-1.1 0-2 .9-2 2.5z" fill="#faedcd" stroke="#4a2c11" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 11h18" stroke="#8b5e3c" stroke-width="1.3"/><circle cx="12" cy="15" r="1.2" fill="#6f4518"/></svg> Chọn File Nhạc Từ Máy</button>
               <input type="file" id="dropAudioFileInput" accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac" class="hidden">
             </div>
           </div>
@@ -478,7 +472,7 @@
           <!-- Banner hiển thị file đã chọn kèm trình nghe thử (Audio Preview) -->
           <div class="drop-selected-banner hidden" id="dropSelectedBanner">
             <div class="selected-audio-info">
-              <span class="selected-icon">🎵</span>
+              <span class="selected-icon"><svg class="ghibli-svg-icon ghibli-icon-music-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18V6.5l9-2.5V15" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round"/><path d="M9 7.5l9-2.5" stroke="#52b788" stroke-width="3" stroke-linecap="round"/><path d="M9 18c0 1.7-1.8 3-4 3s-3.5-1.3-3.5-3 1.3-3 3.5-3c1.2 0 2.3.4 3 1.2" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.2"/><path d="M18 15c0 1.7-1.8 3-4 3s-3.5-1.3-3.5-3 1.3-3 3.5-3c1.2 0 2.3.4 3 1.2" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.2"/></svg></span>
               <div class="selected-meta">
                 <div class="selected-filename" id="selectedFileName">filename.mp3</div>
                 <div class="selected-details" id="selectedFileDetails">0.0 MB • 00:00</div>
@@ -507,7 +501,7 @@
             <label class="drop-field-label">Đặt Theme & Ảnh Bìa Cho Bài Hát (Tùy Chọn):</label>
             <div class="custom-theme-dropzone" id="customThemeDropZone">
               <div class="theme-upload-placeholder" id="customThemeEmpty">
-                <span class="theme-upload-icon">🎨</span>
+                <span class="theme-upload-icon"><svg class="ghibli-svg-icon ghibli-icon-paint-palette" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.5 2 2 6.5 2 12c0 3 1.5 5 4 5 1.2 0 2-.8 2-2 0-.8.5-1.5 1.5-1.5h1.5c4.5 0 8-3.5 8-8 0-4.5-4-5.5-7-5.5z" fill="#faedcd" stroke="#4a2c11" stroke-width="1.5"/><circle cx="7" cy="8" r="1.5" fill="#e76f51"/><circle cx="11.5" cy="6" r="1.5" fill="#f4a261"/><circle cx="16" cy="8" r="1.5" fill="#52b788"/><circle cx="17.5" cy="12.5" r="1.5" fill="#457b9d"/></svg></span>
                 <span class="theme-upload-title">Nhấp hoặc kéo thả ảnh bìa từ máy vào đây</span>
                 <span class="theme-upload-sub">Hỗ trợ ảnh .jpg, .png, .webp (Tự động canh vuông chuẩn bìa đĩa)</span>
               </div>
@@ -528,11 +522,9 @@
           <!-- 4. Đính Kèm Lời Bài Hát (Tùy Chọn) -->
           <div class="drop-lyrics-section">
             <div class="drop-lyrics-header">
-              <label for="dropSongLyrics" class="drop-field-label">📜 Đính Kèm Lời Bài Hát (Tùy Chọn):</label>
+              <label for="dropSongLyrics" class="drop-field-label"><svg class="ghibli-svg-icon ghibli-icon-quill-scroll" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 4.5c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2v13c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V4.5z" fill="#fefae0" stroke="#8b5e3c" stroke-width="1.5"/><path d="M4 19.5c0 1.4 1.1 2.5 2.5 2.5h11c1.4 0 2.5-1.1 2.5-2.5s-1.1-2.5-2.5-2.5H6.5C5.1 17 4 18.1 4 19.5z" fill="#d4a373" stroke="#6f4518" stroke-width="1.3"/><path d="M8 8h6M8 11h8M8 14h5" stroke="#8b5e3c" stroke-width="1.2" stroke-linecap="round"/><path d="M19 4c1-2 3-2 3-2s-.5 2.5-1.5 4.5l-2.5-1z" fill="#52b788" stroke="#2d6a4f" stroke-width="0.8"/></svg> Đính Kèm Lời Bài Hát (Tùy Chọn):</label>
               <div class="drop-lyrics-upload-wrap">
-                <button type="button" class="drop-lyrics-file-btn" id="browseLyricsFileBtn">
-                  📄 Tải Lên File .lrc / .txt
-                </button>
+                <button type="button" class="drop-lyrics-file-btn" id="browseLyricsFileBtn"><svg class="ghibli-svg-icon ghibli-icon-quill-scroll" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 4.5c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2v13c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V4.5z" fill="#fefae0" stroke="#8b5e3c" stroke-width="1.5"/><path d="M4 19.5c0 1.4 1.1 2.5 2.5 2.5h11c1.4 0 2.5-1.1 2.5-2.5s-1.1-2.5-2.5-2.5H6.5C5.1 17 4 18.1 4 19.5z" fill="#d4a373" stroke="#6f4518" stroke-width="1.3"/><path d="M8 8h6M8 11h8M8 14h5" stroke="#8b5e3c" stroke-width="1.2" stroke-linecap="round"/><path d="M19 4c1-2 3-2 3-2s-.5 2.5-1.5 4.5l-2.5-1z" fill="#52b788" stroke="#2d6a4f" stroke-width="0.8"/></svg> Tải Lên File .lrc / .txt</button>
                 <input type="file" id="dropLyricsFileInput" accept=".lrc,.txt" class="hidden">
               </div>
             </div>
@@ -542,7 +534,7 @@
             <div class="drop-lyrics-input-wrap">
               <textarea id="dropSongLyrics" class="drop-lyrics-textarea" rows="4" placeholder="Dán lời bài hát vào đây...&#10;Hỗ trợ cả văn bản thường hoặc định dạng đồng bộ nhịp [00:15.20] Từng câu hát..."></textarea>
               <div class="drop-lyrics-file-badge hidden" id="lyricsFileBadge">
-                <span class="badge-icon">✅</span>
+                <span class="badge-icon"><svg class="ghibli-svg-icon ghibli-icon-check-done" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" fill="#e8f5e9" stroke="#2d6a4f" stroke-width="1.4"/><path d="M8 12l2.5 2.5L16 9" stroke="#2d6a4f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
                 <span class="badge-filename" id="lyricsBadgeFilename">lyrics.lrc</span>
                 <button type="button" class="badge-remove-btn" id="removeLyricsFileBtn" title="Hủy file này">✕</button>
               </div>
@@ -556,7 +548,7 @@
               <span class="btn-text">Chia Sẻ Lên Ngôi Nhà Âm Nhạc</span>
             </button>
             <div class="drop-submit-loading hidden" id="dropSubmitLoading">
-              <div class="ghibli-loader-spinner">🍃</div>
+              <div class="ghibli-loader-spinner"><svg class="ghibli-svg-icon ghibli-icon-leaf-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21c0-6 2-11 8-13-1 6-4 10-8 13z" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21C9 16 5 13 2 13c1-4 5-6 9-4" fill="#95d5b2" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21V10" stroke="#1b4332" stroke-width="1.5" stroke-linecap="round"/></svg></div>
               <span>Đang tải lên và kết nối với cộng đồng...</span>
             </div>
           </div>
@@ -566,11 +558,11 @@
         <div class="drop-community-section">
           <div class="community-section-header">
             <div class="community-header-left">
-              <h2 class="community-title">Giai Điệu Cộng Đồng Đã Chia Sẻ 🌰</h2>
+              <h2 class="community-title">Giai Điệu Cộng Đồng Đã Chia Sẻ <svg class="ghibli-svg-icon ghibli-icon-totoro-acorn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c.2 1.8-.8 3.2-2.5 3.8" stroke="#4a2c11" stroke-width="2" stroke-linecap="round"/><path d="M4.5 8.5C4.5 6 7.8 4.2 12 4.2s7.5 1.8 7.5 4.3c0 1.8-1.4 2.8-3.2 3.2H7.7C5.9 11.3 4.5 10.3 4.5 8.5z" fill="#8b5e3c" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 7c2.5.9 7.5.9 10 0M6 9.5c3 1 9 1 12 0" stroke="#5c381e" stroke-width="1" stroke-linecap="round"/><path d="M6.2 11.2C6.8 16.8 9.2 21.5 12 22c2.8-.5 5.2-5.2 5.8-10.8" fill="#c98a4c" stroke="#3d2314" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="9.5" cy="14.5" rx="1.2" ry="2.2" transform="rotate(-15 9.5 14.5)" fill="#fefae0" opacity="0.6"/></svg></h2>
               <p class="community-desc">Tất cả bài hát do người dùng tải lên và chia sẻ trên mọi thiết bị.</p>
             </div>
             <button id="refreshCommunityTracksBtn" class="refresh-community-btn" title="Làm mới danh sách bài hát cộng đồng">
-              <span class="refresh-icon">🔄</span> Làm Mới
+              <span class="refresh-icon"><svg class="ghibli-svg-icon ghibli-icon-refresh-water" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 12A8 8 0 0 1 6.5 17.7L4 20" stroke="#52b788" stroke-width="1.8" stroke-linecap="round"/><path d="M4 12A8 8 0 0 1 17.5 6.3L20 4" stroke="#52b788" stroke-width="1.8" stroke-linecap="round"/><path d="M20 9V4h-5" stroke="#52b788" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v5h5" stroke="#52b788" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Làm Mới
             </button>
           </div>
 
@@ -581,7 +573,7 @@
 
           <!-- Trạng thái trống -->
           <div class="community-empty-state hidden" id="communityEmptyState">
-            <span class="empty-icon">🍃</span>
+            <span class="empty-icon"><svg class="ghibli-svg-icon ghibli-icon-leaf-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21c0-6 2-11 8-13-1 6-4 10-8 13z" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21C9 16 5 13 2 13c1-4 5-6 9-4" fill="#95d5b2" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21V10" stroke="#1b4332" stroke-width="1.5" stroke-linecap="round"/></svg></span>
             <h3>Chưa có bài hát nào được chia sẻ</h3>
             <p>Hãy là người đầu tiên gửi giai điệu của bạn vào Ngôi Nhà Âm Nhạc nhé!</p>
           </div>
@@ -596,7 +588,7 @@
         <div class="drawer-header-title">
           <span class="moss-stamp">Danh Sách Chờ</span>
           <span class="counter-badge" id="queueCounterBadge">0 bài</span>
-          <span class="custom-loop-chip" id="acornLoopActiveBadge">🌰 Hạt dẻ</span>
+          <span class="custom-loop-chip" id="acornLoopActiveBadge"><svg class="ghibli-svg-icon ghibli-icon-totoro-acorn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c.2 1.8-.8 3.2-2.5 3.8" stroke="#4a2c11" stroke-width="2" stroke-linecap="round"/><path d="M4.5 8.5C4.5 6 7.8 4.2 12 4.2s7.5 1.8 7.5 4.3c0 1.8-1.4 2.8-3.2 3.2H7.7C5.9 11.3 4.5 10.3 4.5 8.5z" fill="#8b5e3c" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 7c2.5.9 7.5.9 10 0M6 9.5c3 1 9 1 12 0" stroke="#5c381e" stroke-width="1" stroke-linecap="round"/><path d="M6.2 11.2C6.8 16.8 9.2 21.5 12 22c2.8-.5 5.2-5.2 5.8-10.8" fill="#c98a4c" stroke="#3d2314" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="9.5" cy="14.5" rx="1.2" ry="2.2" transform="rotate(-15 9.5 14.5)" fill="#fefae0" opacity="0.6"/></svg> Hạt dẻ</span>
         </div>
         <div class="drawer-actions">
           <button id="clearQueueBtn" class="sync-tiny-btn" title="Xóa hàng đợi">Xóa hết</button>
@@ -632,13 +624,13 @@
           <div class="player-mini-vinyl" id="playerMiniVinyl" aria-hidden="true">
             <div class="mini-vinyl-center"></div>
           </div>
-          <img id="currentTrackCover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='24' fill='%23fefae0'>🎵</text></svg>" alt="Chưa có bài hát" class="now-playing-cover">
+          <img id="currentTrackCover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%232b3d2b'/><path d='M26 40V24l16-4v16' stroke='%23fefae0' stroke-width='3' stroke-linecap='round'/><path d='M26 26l16-4' stroke='%237fc95e' stroke-width='4' stroke-linecap='round'/><circle cx='23' cy='40' r='5' fill='%237fc95e'/><circle cx='39' cy='36' r='5' fill='%237fc95e'/></svg>" alt="Chưa có bài hát" class="now-playing-cover">
           <span class="mobile-sheet-expand-hint" id="mobileSheetExpandHint" title="Mở đĩa than toàn màn hình" aria-hidden="true">▲</span>
         </div>
         <div class="now-playing-meta">
           <div class="song-title-row">
             <span id="trackTitle" class="track-title-text" title="Chưa có bài hát nào">Chưa có bài hát nào</span>
-            <button id="likeBtn" class="leaf-heart-btn" title="Yêu thích bài này">💚</button>
+            <button id="likeBtn" class="leaf-heart-btn" title="Yêu thích bài này"><svg class="ghibli-svg-icon ghibli-icon-leaf-heart unliked" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#fefae0" fill-opacity="0.3" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button>
             
             <!-- [SKILL: /design-spells] Dải sóng âm thực vật Ghibli (Botanical Waveform) -->
             <div class="nature-waveform-eq" id="natureWaveformEq" title="Sóng âm thiên nhiên" aria-hidden="true">
@@ -715,7 +707,7 @@
               <path d="m7 22-4-4 4-4"></path>
               <path d="M21 13v1a4 4 0 0 1-4 4H3"></path>
             </svg>
-            <span class="loop-badge-dot" id="loopBadge">🌰</span>
+            <span class="loop-badge-dot" id="loopBadge"><svg class="ghibli-svg-icon ghibli-icon-totoro-acorn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c.2 1.8-.8 3.2-2.5 3.8" stroke="#4a2c11" stroke-width="2" stroke-linecap="round"/><path d="M4.5 8.5C4.5 6 7.8 4.2 12 4.2s7.5 1.8 7.5 4.3c0 1.8-1.4 2.8-3.2 3.2H7.7C5.9 11.3 4.5 10.3 4.5 8.5z" fill="#8b5e3c" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 7c2.5.9 7.5.9 10 0M6 9.5c3 1 9 1 12 0" stroke="#5c381e" stroke-width="1" stroke-linecap="round"/><path d="M6.2 11.2C6.8 16.8 9.2 21.5 12 22c2.8-.5 5.2-5.2 5.8-10.8" fill="#c98a4c" stroke="#3d2314" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="9.5" cy="14.5" rx="1.2" ry="2.2" transform="rotate(-15 9.5 14.5)" fill="#fefae0" opacity="0.6"/></svg></span>
           </button>
         </div>
 
@@ -785,19 +777,19 @@
 
         <!-- Nút bật/tắt lời bài hát (Spotify Style Lyrics) -->
         <button id="lyricsToggleBtn" class="lyrics-toggle-btn" title="Xem lời bài hát (Karaoke) [Y]">
-          <span class="lyrics-mic-icon">🎤</span>
+          <span class="lyrics-mic-icon"><svg class="ghibli-svg-icon ghibli-icon-vintage-mic" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="2.5" width="8" height="11" rx="4" fill="#faedcd" stroke="#4a2c11" stroke-width="1.6"/><line x1="10" y1="5.5" x2="14" y2="5.5" stroke="#8b5e3c" stroke-width="1.2" stroke-linecap="round"/><line x1="10" y1="8" x2="14" y2="8" stroke="#8b5e3c" stroke-width="1.2" stroke-linecap="round"/><line x1="10" y1="10.5" x2="14" y2="10.5" stroke="#8b5e3c" stroke-width="1.2" stroke-linecap="round"/><path d="M5.5 9.5c0 3.6 2.9 6.5 6.5 6.5s6.5-2.9 6.5-6.5" stroke="#4a2c11" stroke-width="1.6" stroke-linecap="round"/><path d="M12 16v5M8.5 21h7" stroke="#4a2c11" stroke-width="1.6" stroke-linecap="round"/><path d="M18.5 7.5c1.2-.8 2.2-.2 2 1.2s-1.5 1.8-2 1.8" stroke="#52b788" stroke-width="1.3" stroke-linecap="round"/><circle cx="20.5" cy="7.2" r="1" fill="#7fc95e"/></svg></span>
           <span class="lyrics-btn-label">Lời bài hát</span>
         </button>
 
         <!-- Nút bật/tắt chế độ tiết kiệm pin OLED -->
         <button id="batterySaverBtn" class="battery-saver-btn" title="Chế độ tiết kiệm pin OLED [B]">
-          <span class="battery-icon">🔋</span>
+          <span class="battery-icon"><svg class="ghibli-svg-icon ghibli-icon-leaf-battery" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="6.5" width="14" height="14" rx="3.5" fill="#2d5a27" fill-opacity="0.15" stroke="#2d6a4f" stroke-width="1.6"/><path d="M10 6.5V4.5c0-.8.7-1.5 1.5-1.5h1c.8 0 1.5.7 1.5 1.5v2" stroke="#2d6a4f" stroke-width="1.5"/><path d="M12 3c-1.8-1.5-3.5-1.2-4.5-.5.2 1.5 1.2 2.5 3 2.5M12 3c1.8-1.5 3.5-1.2 4.5-.5-.2 1.5-1.2 2.5-3 2.5" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.1" stroke-linecap="round"/><rect x="7.5" y="12" width="2.5" height="6" rx="1" fill="#7fc95e"/><rect x="11" y="10" width="2.5" height="8" rx="1" fill="#52b788"/><rect x="14.5" y="8" width="2.5" height="10" rx="1" fill="#40916c"/></svg></span>
           <span class="battery-btn-label">Tiết kiệm pin</span>
         </button>
 
         <!-- Nút bật/tắt ngăn kéo danh sách phát -->
         <button id="queueToggleBtn" class="queue-toggle-btn" title="Xem danh sách chờ & ô chọn hạt dẻ">
-          <span>🌰 Danh Sách Chờ</span>
+          <span><svg class="ghibli-svg-icon ghibli-icon-totoro-acorn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c.2 1.8-.8 3.2-2.5 3.8" stroke="#4a2c11" stroke-width="2" stroke-linecap="round"/><path d="M4.5 8.5C4.5 6 7.8 4.2 12 4.2s7.5 1.8 7.5 4.3c0 1.8-1.4 2.8-3.2 3.2H7.7C5.9 11.3 4.5 10.3 4.5 8.5z" fill="#8b5e3c" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 7c2.5.9 7.5.9 10 0M6 9.5c3 1 9 1 12 0" stroke="#5c381e" stroke-width="1" stroke-linecap="round"/><path d="M6.2 11.2C6.8 16.8 9.2 21.5 12 22c2.8-.5 5.2-5.2 5.8-10.8" fill="#c98a4c" stroke="#3d2314" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="9.5" cy="14.5" rx="1.2" ry="2.2" transform="rotate(-15 9.5 14.5)" fill="#fefae0" opacity="0.6"/></svg> Danh Sách Chờ</span>
         </button>
       </div>
 
@@ -865,14 +857,14 @@
         <span class="sheet-now-playing-sub">ĐANG PHÁT TỪ KHU VƯỜN GHIBLI</span>
         <span class="sheet-playlist-name" id="sheetPlaylistName">Bảng Xếp Hạng Thịnh Hành</span>
       </div>
-      <button class="sheet-queue-btn" id="sheetQueueBtn" aria-label="Xem hàng đợi" title="Hàng đợi">🌰</button>
+      <button class="sheet-queue-btn" id="sheetQueueBtn" aria-label="Xem hàng đợi" title="Hàng đợi"><svg class="ghibli-svg-icon ghibli-icon-totoro-acorn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c.2 1.8-.8 3.2-2.5 3.8" stroke="#4a2c11" stroke-width="2" stroke-linecap="round"/><path d="M4.5 8.5C4.5 6 7.8 4.2 12 4.2s7.5 1.8 7.5 4.3c0 1.8-1.4 2.8-3.2 3.2H7.7C5.9 11.3 4.5 10.3 4.5 8.5z" fill="#8b5e3c" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 7c2.5.9 7.5.9 10 0M6 9.5c3 1 9 1 12 0" stroke="#5c381e" stroke-width="1" stroke-linecap="round"/><path d="M6.2 11.2C6.8 16.8 9.2 21.5 12 22c2.8-.5 5.2-5.2 5.8-10.8" fill="#c98a4c" stroke="#3d2314" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="9.5" cy="14.5" rx="1.2" ry="2.2" transform="rotate(-15 9.5 14.5)" fill="#fefae0" opacity="0.6"/></svg></button>
     </div>
 
     <!-- Sân khấu đĩa than xoay tròn nghệ thuật -->
     <div class="sheet-vinyl-stage">
       <div class="sheet-vinyl-record" id="sheetVinylRecord">
         <div class="sheet-vinyl-grooves"></div>
-        <img id="sheetTrackCover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><rect width='120' height='120' rx='60' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='32' fill='%23fefae0'>🎵</text></svg>" alt="Vinyl Label" class="sheet-vinyl-label">
+        <img id="sheetTrackCover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><rect width='120' height='120' rx='60' fill='%232b3d2b'/><path d='M48 76V45l30-8v31' stroke='%23fefae0' stroke-width='5' stroke-linecap='round'/><circle cx='42' cy='76' r='10' fill='%237fc95e'/><circle cx='72' cy='68' r='10' fill='%237fc95e'/></svg>" alt="Vinyl Label" class="sheet-vinyl-label">
       </div>
     </div>
 
@@ -882,7 +874,7 @@
         <h2 class="sheet-title" id="sheetTitle">Chưa có bài hát</h2>
         <p class="sheet-artist" id="sheetArtist">Studio Ghibli</p>
       </div>
-      <button class="sheet-like-btn" id="sheetLikeBtn" title="Thích bài hát này">💚</button>
+      <button class="sheet-like-btn" id="sheetLikeBtn" title="Thích bài hát này"><svg class="ghibli-svg-icon ghibli-icon-leaf-heart unliked" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#fefae0" fill-opacity="0.3" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button>
     </div>
 
     <!-- Thanh tiến trình bài hát trên Sheet -->
@@ -914,32 +906,30 @@
       </button>
       <button class="sheet-ctrl-btn sheet-loop-btn active" id="sheetLoopBtn" title="Chế độ lặp: Vĩnh viễn / 1 Bài / Hạt dẻ">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3"/></svg>
-        <span class="sheet-loop-badge" id="sheetLoopBadge">🔁</span>
+        <span class="sheet-loop-badge" id="sheetLoopBadge"><svg class="ghibli-svg-icon ghibli-icon-loop-twigs" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 8.5C5 6 7 4 10 4h7" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round"/><path d="M14.5 1.5l3.5 2.5-3.5 2.5" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M11 4c0-1.2.8-2 1.8-1.5s1 1.8 0 2.2" fill="#7fc95e" stroke="#2d6a4f" stroke-width="0.9"/><path d="M19 15.5C19 18 17 20 14 20H7" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round"/><path d="M9.5 22.5L6 20l3.5-2.5" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 20c0 1.2-.8 2-1.8 1.5s-1-1.8 0-2.2" fill="#7fc95e" stroke="#2d6a4f" stroke-width="0.9"/></svg></span>
       </button>
     </div>
 
     <!-- Dòng hiển thị trạng thái chế độ lặp, trộn nhạc & phát chạy nền trên sheet -->
     <div class="sheet-mode-status" id="sheetModeStatus">
-      <span class="mode-status-chip" id="sheetLoopStatusChip">🔁 Lặp vĩnh viễn (Toàn bộ)</span>
-      <span class="mode-status-chip hidden" id="sheetShuffleStatusChip">🔀 Trộn nhạc: BẬT</span>
+      <span class="mode-status-chip" id="sheetLoopStatusChip"><svg class="ghibli-svg-icon ghibli-icon-loop-twigs" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 8.5C5 6 7 4 10 4h7" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round"/><path d="M14.5 1.5l3.5 2.5-3.5 2.5" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M11 4c0-1.2.8-2 1.8-1.5s1 1.8 0 2.2" fill="#7fc95e" stroke="#2d6a4f" stroke-width="0.9"/><path d="M19 15.5C19 18 17 20 14 20H7" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round"/><path d="M9.5 22.5L6 20l3.5-2.5" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 20c0 1.2-.8 2-1.8 1.5s-1-1.8 0-2.2" fill="#7fc95e" stroke="#2d6a4f" stroke-width="0.9"/></svg> Lặp vĩnh viễn (Toàn bộ)</span>
+      <span class="mode-status-chip hidden" id="sheetShuffleStatusChip"><svg class="ghibli-svg-icon ghibli-icon-shuffle-wind" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 6.5h3.5c2.5 0 4.5 4.5 7 7h5" stroke="#52b788" stroke-width="1.7" stroke-linecap="round"/><path d="M16 11l3.5 2.5-3.5 2.5" stroke="#52b788" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 17.5h3.5c1.8 0 3.3-2.2 4.8-4.5" stroke="#52b788" stroke-width="1.7" stroke-linecap="round"/><path d="M14 10.5c1-.8 2-1.5 3-1.5h2" stroke="#52b788" stroke-width="1.7" stroke-linecap="round"/><path d="M16 6.5l3.5 2.5-3.5 2.5" stroke="#52b788" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.5 4c1 .2 2 1.2 1.8 2.2s-1.5 1.2-2.2.8.2-1.8.4-3z" fill="#d4a373" stroke="#8b5e3c" stroke-width="0.8"/></svg> Trộn nhạc: BẬT</span>
       <button type="button" class="mode-status-chip bg-playback-chip active" id="sheetBgPlaybackChip" title="Chạm để bật/tắt phát nhạc khi tắt màn hình">
         <span class="bg-playback-dot"></span>
-        <span id="sheetBgPlaybackText">🎧 Phát nền (Tắt màn hình): <strong>BẬT</strong></span>
+        <span id="sheetBgPlaybackText"><svg class="ghibli-svg-icon ghibli-icon-wooden-headphone" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 14v-2.5C4 7.4 7.6 3.8 12 3.8s8 3.6 8 7.7V14" stroke="#6f4518" stroke-width="2" stroke-linecap="round"/><path d="M12 3.8c-1-1.5-2.5-1.5-3-.8.2 1.2 1.2 1.6 2.5 1.4M12 3.8c1-1.5 2.5-1.5 3-.8-.2 1.2-1.2 1.6-2.5 1.4" fill="#7fc95e" stroke="#2d6a4f" stroke-width="0.9"/><rect x="2.5" y="13" width="4.5" height="7" rx="2.2" fill="#d4a373" stroke="#4a2c11" stroke-width="1.5"/><rect x="17" y="13" width="4.5" height="7" rx="2.2" fill="#d4a373" stroke="#4a2c11" stroke-width="1.5"/><line x1="4.5" y1="15" x2="4.5" y2="18" stroke="#8b5e3c" stroke-width="1.5" stroke-linecap="round"/><line x1="19.5" y1="15" x2="19.5" y2="18" stroke="#8b5e3c" stroke-width="1.5" stroke-linecap="round"/></svg> Phát nền (Tắt màn hình): <strong>BẬT</strong></span>
       </button>
       <button type="button" class="mode-status-chip battery-saver-chip" id="sheetBatterySaverBtn" title="Bật chế độ tiết kiệm pin màn hình đen OLED">
         <span class="battery-saver-dot"></span>
-        <span id="sheetBatterySaverText">🔋 Tiết kiệm pin: <strong>TẮT</strong></span>
+        <span id="sheetBatterySaverText"><svg class="ghibli-svg-icon ghibli-icon-leaf-battery" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="6.5" width="14" height="14" rx="3.5" fill="#2d5a27" fill-opacity="0.15" stroke="#2d6a4f" stroke-width="1.6"/><path d="M10 6.5V4.5c0-.8.7-1.5 1.5-1.5h1c.8 0 1.5.7 1.5 1.5v2" stroke="#2d6a4f" stroke-width="1.5"/><path d="M12 3c-1.8-1.5-3.5-1.2-4.5-.5.2 1.5 1.2 2.5 3 2.5M12 3c1.8-1.5 3.5-1.2 4.5-.5-.2 1.5-1.2 2.5-3 2.5" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.1" stroke-linecap="round"/><rect x="7.5" y="12" width="2.5" height="6" rx="1" fill="#7fc95e"/><rect x="11" y="10" width="2.5" height="8" rx="1" fill="#52b788"/><rect x="14.5" y="8" width="2.5" height="10" rx="1" fill="#40916c"/></svg> Tiết kiệm pin: <strong>TẮT</strong></span>
       </button>
     </div>
 
     <!-- Thẻ Lời Bài Hát Chuẩn Spotify Trên Mobile Sheet -->
     <div class="sheet-lyrics-card" id="sheetLyricsCard">
       <div class="sheet-lyrics-card-header">
-        <span class="sheet-lyrics-badge">🎤 LỜI BÀI HÁT</span>
+        <span class="sheet-lyrics-badge"><svg class="ghibli-svg-icon ghibli-icon-vintage-mic" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="2.5" width="8" height="11" rx="4" fill="#faedcd" stroke="#4a2c11" stroke-width="1.6"/><line x1="10" y1="5.5" x2="14" y2="5.5" stroke="#8b5e3c" stroke-width="1.2" stroke-linecap="round"/><line x1="10" y1="8" x2="14" y2="8" stroke="#8b5e3c" stroke-width="1.2" stroke-linecap="round"/><line x1="10" y1="10.5" x2="14" y2="10.5" stroke="#8b5e3c" stroke-width="1.2" stroke-linecap="round"/><path d="M5.5 9.5c0 3.6 2.9 6.5 6.5 6.5s6.5-2.9 6.5-6.5" stroke="#4a2c11" stroke-width="1.6" stroke-linecap="round"/><path d="M12 16v5M8.5 21h7" stroke="#4a2c11" stroke-width="1.6" stroke-linecap="round"/><path d="M18.5 7.5c1.2-.8 2.2-.2 2 1.2s-1.5 1.8-2 1.8" stroke="#52b788" stroke-width="1.3" stroke-linecap="round"/><circle cx="20.5" cy="7.2" r="1" fill="#7fc95e"/></svg> LỜI BÀI HÁT</span>
         <div class="sheet-lyrics-header-actions">
-          <button type="button" class="sheet-sync-quick-btn" id="sheetSyncQuickBtn" title="Cân chỉnh độ lệch lời">
-            ⏱️ <span id="sheetLyricsOffsetLabel">0.0s</span>
-          </button>
+          <button type="button" class="sheet-sync-quick-btn" id="sheetSyncQuickBtn" title="Cân chỉnh độ lệch lời"><svg class="ghibli-svg-icon ghibli-icon-pocket-watch" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 2.5h4M12 2.5v2.5" stroke="#8b5e3c" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="2" r="1.5" stroke="#8b5e3c" stroke-width="1.2"/><circle cx="12" cy="13.5" r="8" fill="#fefae0" stroke="#8b5e3c" stroke-width="1.8"/><path d="M12 9v4.5l3 1.5" stroke="#4a2c11" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="1" fill="#2d6a4f"/><path d="M12 6.5v1M18.5 13.5h-1M12 20.5v-1M5.5 13.5h1" stroke="#b08968" stroke-width="1" stroke-linecap="round"/></svg> <span id="sheetLyricsOffsetLabel">0.0s</span></button>
           <button type="button" class="sheet-lyrics-fullscreen-trigger" id="sheetLyricsExpandBtn" title="Phóng to sân khấu lời nhạc">
             Mở rộng ↗
           </button>
@@ -963,11 +953,11 @@
       <!-- Header thanh công cụ trên cùng -->
       <div class="lyrics-stage-header">
         <div class="stage-header-left">
-          <span class="stage-ghibli-badge">🍃 GHIBLI STUDIO NOW PLAYING</span>
+          <span class="stage-ghibli-badge"><svg class="ghibli-svg-icon ghibli-icon-leaf-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21c0-6 2-11 8-13-1 6-4 10-8 13z" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21C9 16 5 13 2 13c1-4 5-6 9-4" fill="#95d5b2" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21V10" stroke="#1b4332" stroke-width="1.5" stroke-linecap="round"/></svg> GHIBLI STUDIO NOW PLAYING</span>
           <span class="stage-quality-badge">24-BIT / 96KHZ LOSSLESS MASTER</span>
         </div>
         <div class="stage-header-right">
-          <span class="lyrics-sync-badge" id="lyricsSyncBadge">✨ Đồng bộ thời gian thực</span>
+          <span class="lyrics-sync-badge" id="lyricsSyncBadge"><svg class="ghibli-svg-icon ghibli-icon-sparkle-star" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5L12 2z" fill="#ffe170" stroke="#d4a373" stroke-width="1.2" stroke-linejoin="round"/></svg> Đồng bộ thời gian thực</span>
           <button class="lyrics-close-btn" id="lyricsCloseBtn" aria-label="Thu nhỏ về trang chủ" title="Thu nhỏ về trang chủ [Esc / Y]">✕</button>
         </div>
       </div>
@@ -975,7 +965,7 @@
       <!-- Thanh Cân Chỉnh Độ Trễ Lời Bài Hát Thời Gian Thực (Lyric Sync Offset Calibrator) -->
       <div class="lyrics-sync-bar" id="lyricsSyncBar">
         <div class="sync-bar-info">
-          <span class="sync-bar-label">⏱️ Cân chỉnh đồng bộ:</span>
+          <span class="sync-bar-label"><svg class="ghibli-svg-icon ghibli-icon-pocket-watch" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 2.5h4M12 2.5v2.5" stroke="#8b5e3c" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="2" r="1.5" stroke="#8b5e3c" stroke-width="1.2"/><circle cx="12" cy="13.5" r="8" fill="#fefae0" stroke="#8b5e3c" stroke-width="1.8"/><path d="M12 9v4.5l3 1.5" stroke="#4a2c11" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="1" fill="#2d6a4f"/><path d="M12 6.5v1M18.5 13.5h-1M12 20.5v-1M5.5 13.5h1" stroke="#b08968" stroke-width="1" stroke-linecap="round"/></svg> Cân chỉnh đồng bộ:</span>
           <span class="sync-offset-badge" id="lyricsOffsetBadge" title="Độ lệch hiện tại so với âm thanh gốc">0.0s</span>
           <span class="sync-saved-chip hidden" id="lyricsOffsetSavedChip">✓ Đã nhớ cho bài này</span>
         </div>
@@ -1008,7 +998,7 @@
             <div class="stage-vinyl-wrapper" id="stageVinylWrapper">
               <!-- Vỏ bọc đĩa Album Jacket -->
               <div class="stage-album-jacket">
-                <img id="stageJacketCover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='280' viewBox='0 0 280 280'><rect width='280' height='280' rx='20' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fefae0'>🎵</text></svg>" alt="Album Jacket" class="stage-jacket-img">
+                <img id="stageJacketCover" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='280' viewBox='0 0 280 280'><rect width='280' height='280' rx='20' fill='%232b3d2b'/><path d='M110 180V100l70-20v80' stroke='%23fefae0' stroke-width='10' stroke-linecap='round'/><circle cx='95' cy='180' r='24' fill='%237fc95e'/><circle cx='165' cy='160' r='24' fill='%237fc95e'/></svg>" alt="Album Jacket" class="stage-jacket-img">
                 <div class="stage-jacket-glare"></div>
                 <div class="stage-jacket-badge">GHIBLI MASTER</div>
               </div>
@@ -1017,7 +1007,7 @@
               <div class="stage-vinyl-disc" id="stageVinylDisc">
                 <div class="stage-vinyl-grooves"></div>
                 <div class="stage-vinyl-reflection"></div>
-                <img id="stageVinylLabel" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='24' fill='%23fefae0'>🎵</text></svg>" alt="Vinyl Label" class="stage-vinyl-label-img">
+                <img id="stageVinylLabel" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='%232b3d2b'/><path d='M26 40V24l16-4v16' stroke='%23fefae0' stroke-width='3' stroke-linecap='round'/><path d='M26 26l16-4' stroke='%237fc95e' stroke-width='4' stroke-linecap='round'/><circle cx='23' cy='40' r='5' fill='%237fc95e'/><circle cx='39' cy='36' r='5' fill='%237fc95e'/></svg>" alt="Vinyl Label" class="stage-vinyl-label-img">
                 <div class="stage-vinyl-spindle"></div>
               </div>
 
@@ -1043,11 +1033,10 @@
 
             <div class="stage-actions-row">
               <button class="stage-action-btn" id="stageLikeBtn" title="Yêu thích bài hát này">
-                <span class="stage-action-icon" id="stageLikeIcon">🤍</span>
+                <span class="stage-action-icon" id="stageLikeIcon"><svg class="ghibli-svg-icon ghibli-icon-leaf-heart unliked" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#fefae0" fill-opacity="0.3" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span>
                 <span class="stage-action-text" id="stageLikeText">Yêu thích</span>
               </button>
-              <button class="stage-action-btn" id="stageQueueAddBtn" title="Thêm vào danh sách chờ hạt dẻ">
-                <span class="stage-action-icon">🌰</span>
+              <button class="stage-action-btn" id="stageQueueAddBtn" title="Thêm vào danh sách chờ hạt dẻ"><span class="stage-action-icon"><svg class="ghibli-svg-icon ghibli-icon-totoro-acorn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c.2 1.8-.8 3.2-2.5 3.8" stroke="#4a2c11" stroke-width="2" stroke-linecap="round"/><path d="M4.5 8.5C4.5 6 7.8 4.2 12 4.2s7.5 1.8 7.5 4.3c0 1.8-1.4 2.8-3.2 3.2H7.7C5.9 11.3 4.5 10.3 4.5 8.5z" fill="#8b5e3c" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 7c2.5.9 7.5.9 10 0M6 9.5c3 1 9 1 12 0" stroke="#5c381e" stroke-width="1" stroke-linecap="round"/><path d="M6.2 11.2C6.8 16.8 9.2 21.5 12 22c2.8-.5 5.2-5.2 5.8-10.8" fill="#c98a4c" stroke="#3d2314" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="9.5" cy="14.5" rx="1.2" ry="2.2" transform="rotate(-15 9.5 14.5)" fill="#fefae0" opacity="0.6"/></svg></span>
                 <span class="stage-action-text">Hạt dẻ</span>
               </button>
               <div class="stage-audio-spec-pill">
@@ -1059,7 +1048,7 @@
           <!-- Thẻ Xem Trước Bài Hát Tiếp Theo (Up Next Preview Card) -->
           <div class="stage-up-next-card" id="stageUpNextCard">
             <div class="up-next-thumb-wrap">
-              <img id="stageUpNextThumb" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'><rect width='50' height='50' rx='8' fill='%232b3d2b'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='20' fill='%23fefae0'>⏭️</text></svg>" alt="Up Next" class="up-next-thumb">
+              <img id="stageUpNextThumb" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'><rect width='50' height='50' rx='8' fill='%232b3d2b'/><path d='M15 15l15 10-15 10V15zm16 0h4v20h-4z' fill='%23fefae0'/></svg>" alt="Up Next" class="up-next-thumb">
             </div>
             <div class="up-next-meta">
               <span class="up-next-sub">TIẾP THEO TRONG HÀNG ĐỢI</span>
@@ -1080,7 +1069,7 @@
               <div class="lyrics-lines-container" id="lyricsLinesContainer">
                 <!-- Render danh sách câu hát ở đây -->
                 <div class="lyrics-loading-state">
-                  <div class="lyrics-sparkle-icon">🍃</div>
+                  <div class="lyrics-sparkle-icon"><svg class="ghibli-svg-icon ghibli-icon-leaf-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21c0-6 2-11 8-13-1 6-4 10-8 13z" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21C9 16 5 13 2 13c1-4 5-6 9-4" fill="#95d5b2" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21V10" stroke="#1b4332" stroke-width="1.5" stroke-linecap="round"/></svg></div>
                   <p>Đang lắng nghe giai điệu và tải lời bài hát...</p>
                 </div>
               </div>
@@ -1092,7 +1081,7 @@
 
       <!-- Footer thanh trạng thái & hướng dẫn tương tác -->
       <div class="lyrics-stage-footer">
-        <span class="lyrics-hint-text">💡 Nhấp câu hát để tua nhạc • Bấm 🎯 để căn chuẩn câu đang hát • Phím [ / ] để chỉnh độ trễ • Esc / Y để đóng</span>
+        <span class="lyrics-hint-text"><svg class="ghibli-svg-icon ghibli-icon-firefly-lantern" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 5C8 3 9.8 1.8 12 1.8s4 1.2 4 3.2" stroke="#6f4518" stroke-width="1.4" stroke-linecap="round"/><rect x="7" y="5" width="10" height="2.5" rx="1" fill="#b08968" stroke="#4a2c11" stroke-width="1.3"/><path d="M6.5 8.5C6.5 7.5 7.5 7.5 8 7.5h8c.5 0 1.5 0 1.5 1s-.5 9-1 10.5c-.5 1.5-2 2-4.5 2s-4-.5-4.5-2C7 17.5 6.5 9.5 6.5 8.5z" fill="#fff9db" fill-opacity="0.3" stroke="#4a2c11" stroke-width="1.5" stroke-linejoin="round"/><ellipse cx="12" cy="13" rx="2" ry="1.5" fill="#ffd166"/><path d="M12 10.5v-1M12 16.5v-1M9.5 13h-1M15.5 13h-1" stroke="#f4a261" stroke-width="1" stroke-linecap="round"/></svg> Nhấp câu hát để tua nhạc • Bấm <svg class="ghibli-svg-icon ghibli-icon-compass-anchor" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9.2" fill="#fefae0" stroke="#2d6a4f" stroke-width="1.6"/><path d="M12 4.5l1.5 5 4-1-3 3.5 3.5 3-4-1-1.5 5-1.5-5-4 1 3-3.5-3.5-3 4 1L12 4.5z" fill="#52b788" stroke="#1b4332" stroke-width="1.5" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" fill="#ffe170" stroke="#d4a373" stroke-width="1"/></svg> để căn chuẩn • Phím [ / ] để chỉnh độ trễ • Esc / Y để đóng</span>
       </div>
     </div>
   </div>
@@ -1106,7 +1095,7 @@
       <!-- Modal Header -->
       <div class="account-modal-header">
         <div class="account-modal-title-cluster">
-          <div class="modal-icon-badge" id="modalHeaderAvatar">🌰</div>
+          <div class="modal-icon-badge" id="modalHeaderAvatar"><svg class="ghibli-svg-icon ghibli-icon-totoro-acorn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c.2 1.8-.8 3.2-2.5 3.8" stroke="#4a2c11" stroke-width="2" stroke-linecap="round"/><path d="M4.5 8.5C4.5 6 7.8 4.2 12 4.2s7.5 1.8 7.5 4.3c0 1.8-1.4 2.8-3.2 3.2H7.7C5.9 11.3 4.5 10.3 4.5 8.5z" fill="#8b5e3c" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 7c2.5.9 7.5.9 10 0M6 9.5c3 1 9 1 12 0" stroke="#5c381e" stroke-width="1" stroke-linecap="round"/><path d="M6.2 11.2C6.8 16.8 9.2 21.5 12 22c2.8-.5 5.2-5.2 5.8-10.8" fill="#c98a4c" stroke="#3d2314" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="9.5" cy="14.5" rx="1.2" ry="2.2" transform="rotate(-15 9.5 14.5)" fill="#fefae0" opacity="0.6"/></svg></div>
           <div>
             <h2 class="account-modal-title" id="accountModalTitle">Tài Khoản & Đồng Bộ</h2>
             <p class="account-modal-subtitle" id="accountModalSubtitle">Lưu giữ bài hát yêu thích & trải nghiệm âm nhạc trên mọi thiết bị</p>
@@ -1129,21 +1118,21 @@
         <div class="form-group">
           <label for="loginUsername">Tên đăng nhập</label>
           <div class="input-with-icon">
-            <span class="input-icon">👤</span>
+            <span class="input-icon"><svg class="ghibli-svg-icon ghibli-icon-kodama-user" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 10c0-4.5 2.7-7.5 6-7.5s6 3 6 7.5c0 5-2.2 7-6 7s-6-2-6-7z" fill="#fefae0" stroke="#2d5a27" stroke-width="1.6"/><path d="M10 17v4c0 .6.4 1 1 1h2c.6 0 1-.4 1-1v-4" stroke="#2d5a27" stroke-width="1.5" stroke-linecap="round"/><circle cx="9.2" cy="9.2" r="1.3" fill="#1b4332"/><circle cx="14.8" cy="9.2" r="1.3" fill="#1b4332"/><circle cx="12" cy="13.2" r="1" fill="#1b4332"/></svg></span>
             <input type="text" id="loginUsername" placeholder="Nhập tên đăng nhập của bạn..." autocomplete="username" required>
           </div>
         </div>
         <div class="form-group">
           <label for="loginPassword">Mật khẩu</label>
           <div class="input-with-icon">
-            <span class="input-icon">🔒</span>
+            <span class="input-icon"><svg class="ghibli-svg-icon ghibli-icon-brass-padlock" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 10.5V7a5 5 0 0 1 10 0v3.5" stroke="#4a2c11" stroke-width="1.8" stroke-linecap="round"/><rect x="5" y="10.5" width="14" height="11" rx="3" fill="#d4a373" stroke="#4a2c11" stroke-width="1.6"/><circle cx="12" cy="15" r="1.5" fill="#3d2314"/><path d="M12 16.5v2" stroke="#3d2314" stroke-width="1.4" stroke-linecap="round"/></svg></span>
             <input type="password" id="loginPassword" placeholder="Nhập mật khẩu..." autocomplete="current-password" required>
-            <button type="button" class="toggle-password-btn" id="toggleLoginPasswordBtn" title="Hiện/Ẩn mật khẩu" aria-label="Hiện/Ẩn mật khẩu">👁️</button>
+            <button type="button" class="toggle-password-btn" id="toggleLoginPasswordBtn" title="Hiện/Ẩn mật khẩu" aria-label="Hiện/Ẩn mật khẩu"><svg class="ghibli-svg-icon ghibli-icon-sketched-eye" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 12c2.5-5 5.5-7 9.5-7s7 2 9.5 7c-2.5 5-5.5 7-9.5 7s-7-2-9.5-7z" stroke="#4a2c11" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="#52b788" stroke="#1b4332" stroke-width="1.2"/><circle cx="12" cy="12" r="1.3" fill="#1b4332"/><circle cx="13" cy="11" r="0.7" fill="#ffffff"/></svg></button>
           </div>
         </div>
         <div class="form-actions">
           <button type="submit" class="ghibli-btn-primary" id="loginSubmitBtn">
-            <span>Đăng Nhập Ngay</span> 🍃
+            <span>Đăng Nhập Ngay</span> <svg class="ghibli-svg-icon ghibli-icon-leaf-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21c0-6 2-11 8-13-1 6-4 10-8 13z" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21C9 16 5 13 2 13c1-4 5-6 9-4" fill="#95d5b2" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21V10" stroke="#1b4332" stroke-width="1.5" stroke-linecap="round"/></svg>
           </button>
         </div>
         <div class="form-footer-tip">
@@ -1156,23 +1145,23 @@
         <div class="form-group">
           <label for="registerDisplayName">Tên hiển thị (Biệt danh)</label>
           <div class="input-with-icon">
-            <span class="input-icon">✨</span>
+            <span class="input-icon"><svg class="ghibli-svg-icon ghibli-icon-sparkle-star" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5L12 2z" fill="#ffe170" stroke="#d4a373" stroke-width="1.2" stroke-linejoin="round"/></svg></span>
             <input type="text" id="registerDisplayName" placeholder="Ví dụ: Totoro Yêu Âm Nhạc" maxlength="30" required>
           </div>
         </div>
         <div class="form-group">
           <label for="registerUsername">Tên đăng nhập (viết liền không dấu)</label>
           <div class="input-with-icon">
-            <span class="input-icon">🌱</span>
+            <span class="input-icon"><svg class="ghibli-svg-icon ghibli-icon-leaf-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21c0-6 2-11 8-13-1 6-4 10-8 13z" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21C9 16 5 13 2 13c1-4 5-6 9-4" fill="#95d5b2" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21V10" stroke="#1b4332" stroke-width="1.5" stroke-linecap="round"/></svg></span>
             <input type="text" id="registerUsername" placeholder="Ví dụ: totoro2026" autocomplete="username" required>
           </div>
         </div>
         <div class="form-group">
           <label for="registerPassword">Mật khẩu (tối thiểu 6 ký tự)</label>
           <div class="input-with-icon">
-            <span class="input-icon">🔒</span>
+            <span class="input-icon"><svg class="ghibli-svg-icon ghibli-icon-brass-padlock" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 10.5V7a5 5 0 0 1 10 0v3.5" stroke="#4a2c11" stroke-width="1.8" stroke-linecap="round"/><rect x="5" y="10.5" width="14" height="11" rx="3" fill="#d4a373" stroke="#4a2c11" stroke-width="1.6"/><circle cx="12" cy="15" r="1.5" fill="#3d2314"/><path d="M12 16.5v2" stroke="#3d2314" stroke-width="1.4" stroke-linecap="round"/></svg></span>
             <input type="password" id="registerPassword" placeholder="Mật khẩu bảo vệ..." minlength="6" autocomplete="new-password" required>
-            <button type="button" class="toggle-password-btn" id="toggleRegisterPasswordBtn" title="Hiện/Ẩn mật khẩu" aria-label="Hiện/Ẩn mật khẩu">👁️</button>
+            <button type="button" class="toggle-password-btn" id="toggleRegisterPasswordBtn" title="Hiện/Ẩn mật khẩu" aria-label="Hiện/Ẩn mật khẩu"><svg class="ghibli-svg-icon ghibli-icon-sketched-eye" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 12c2.5-5 5.5-7 9.5-7s7 2 9.5 7c-2.5 5-5.5 7-9.5 7s-7-2-9.5-7z" stroke="#4a2c11" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="#52b788" stroke="#1b4332" stroke-width="1.2"/><circle cx="12" cy="12" r="1.3" fill="#1b4332"/><circle cx="13" cy="11" r="0.7" fill="#ffffff"/></svg></button>
           </div>
         </div>
         <!-- Tùy chọn tải ảnh đại diện cá nhân -->
@@ -1181,14 +1170,12 @@
           <div class="avatar-custom-upload-card">
             <div class="avatar-preview-circle" id="registerAvatarPreviewWrap">
               <img id="registerAvatarPreviewImg" src="bg.jpg" alt="Ảnh đại diện xem trước" class="avatar-preview-image">
-              <div class="avatar-preview-overlay" id="registerAvatarOverlay" title="Chạm để tải ảnh lên">
-                <span>📷</span>
-              </div>
+              <div class="avatar-preview-overlay" id="registerAvatarOverlay" title="Chạm để tải ảnh lên"><span><svg class="ghibli-svg-icon ghibli-icon-vintage-camera" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 8.5C4 7.4 4.9 6.5 6 6.5h2.2l1.2-2h5.2l1.2 2H18c1.1 0 2 .9 2 2v10c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2v-10z" fill="#faedcd" stroke="#4a2c11" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="3.8" fill="#d4a373" stroke="#4a2c11" stroke-width="1.5"/><circle cx="12" cy="13.5" r="1.8" fill="#2d6a4f"/><circle cx="17" cy="9.5" r="0.8" fill="#e76f51"/></svg></span></div>
             </div>
             <div class="avatar-upload-cta">
               <div class="avatar-btn-row">
                 <label for="registerAvatarFileInput" class="ghibli-btn-upload-avatar">
-                  <span>📷 Chọn ảnh từ thiết bị</span>
+                  <span><svg class="ghibli-svg-icon ghibli-icon-vintage-camera" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 8.5C4 7.4 4.9 6.5 6 6.5h2.2l1.2-2h5.2l1.2 2H18c1.1 0 2 .9 2 2v10c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2v-10z" fill="#faedcd" stroke="#4a2c11" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="3.8" fill="#d4a373" stroke="#4a2c11" stroke-width="1.5"/><circle cx="12" cy="13.5" r="1.8" fill="#2d6a4f"/><circle cx="17" cy="9.5" r="0.8" fill="#e76f51"/></svg> Chọn ảnh từ thiết bị</span>
                   <input type="file" id="registerAvatarFileInput" accept="image/png,image/jpeg,image/webp,image/gif" style="display: none;">
                 </label>
                 <button type="button" class="avatar-reset-btn hidden" id="registerAvatarResetBtn" title="Hủy ảnh vừa chọn">✕ Hủy</button>
@@ -1200,7 +1187,7 @@
 
         <div class="form-actions">
           <button type="submit" class="ghibli-btn-primary" id="registerSubmitBtn">
-            <span>Tạo Tài Khoản & Bắt Đầu</span> 🚀
+            <span>Tạo Tài Khoản & Bắt Đầu</span> <svg class="ghibli-svg-icon ghibli-icon-sprout-soar" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5C14 6 18 8 18 13c0 3.5-2.5 6-6 6s-6-2.5-6-6c0-5 4-7 6-10.5z" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.5"/><path d="M12 6v13M8 12c2 1 4 1 8 0" stroke="#2d6a4f" stroke-width="1.2"/><circle cx="12" cy="10" r="1.5" fill="#fefae0"/></svg>
           </button>
         </div>
         <div class="form-footer-tip">
@@ -1213,15 +1200,14 @@
         <div class="profile-card">
           <div class="profile-avatar-wrapper">
             <div class="profile-avatar-large" id="profileAvatar"></div>
-            <label for="profileAvatarFileInput" class="profile-avatar-edit-badge" title="Chạm để đổi ảnh đại diện">
-              <span>📷</span>
+            <label for="profileAvatarFileInput" class="profile-avatar-edit-badge" title="Chạm để đổi ảnh đại diện"><span><svg class="ghibli-svg-icon ghibli-icon-vintage-camera" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 8.5C4 7.4 4.9 6.5 6 6.5h2.2l1.2-2h5.2l1.2 2H18c1.1 0 2 .9 2 2v10c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2v-10z" fill="#faedcd" stroke="#4a2c11" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="3.8" fill="#d4a373" stroke="#4a2c11" stroke-width="1.5"/><circle cx="12" cy="13.5" r="1.8" fill="#2d6a4f"/><circle cx="17" cy="9.5" r="0.8" fill="#e76f51"/></svg></span>
               <input type="file" id="profileAvatarFileInput" accept="image/png,image/jpeg,image/webp,image/gif" style="display: none;">
             </label>
           </div>
           <div class="profile-meta">
             <div class="profile-name-row">
               <h3 class="profile-display-name" id="profileDisplayName">Người Yêu Âm Nhạc</h3>
-              <span class="profile-cloud-badge">☁️ Cloud Active</span>
+              <span class="profile-cloud-badge"><svg class="ghibli-svg-icon ghibli-icon-sky-cloud" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18.5h12c2.5 0 4.5-1.8 4.5-4 0-2-1.6-3.7-3.8-3.9-.4-3.2-3.1-5.6-6.7-5.6-3 0-5.5 1.7-6.4 4.2C3.4 9.5 2 11.2 2 13.5c0 2.8 2.2 5 5 5z" fill="#edf6f9" stroke="#4a2c11" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 14.5c1.5.8 4 .8 6 0" stroke="#83c5be" stroke-width="1.2" stroke-linecap="round"/></svg> Cloud Active</span>
             </div>
             <span class="profile-username" id="profileUsername">@user</span>
             <div class="profile-sync-status-row">
@@ -1233,21 +1219,21 @@
 
         <div class="sync-stats-grid">
           <div class="sync-stat-item">
-            <span class="stat-icon">💚</span>
+            <span class="stat-icon"><svg class="ghibli-svg-icon ghibli-icon-leaf-heart liked" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#52b788" stroke="#1b4332" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 7c0 4.5-2 8-5 9.5M12 10c1.5 2 3.5 3.5 6 4" stroke="#7fc95e" stroke-width="1.2" stroke-linecap="round"/></svg></span>
             <div class="stat-info">
               <span class="stat-number" id="syncFavCount">0</span>
               <span class="stat-label">Yêu thích</span>
             </div>
           </div>
           <div class="sync-stat-item">
-            <span class="stat-icon">🎵</span>
+            <span class="stat-icon"><svg class="ghibli-svg-icon ghibli-icon-music-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18V6.5l9-2.5V15" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round"/><path d="M9 7.5l9-2.5" stroke="#52b788" stroke-width="3" stroke-linecap="round"/><path d="M9 18c0 1.7-1.8 3-4 3s-3.5-1.3-3.5-3 1.3-3 3.5-3c1.2 0 2.3.4 3 1.2" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.2"/><path d="M18 15c0 1.7-1.8 3-4 3s-3.5-1.3-3.5-3 1.3-3 3.5-3c1.2 0 2.3.4 3 1.2" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.2"/></svg></span>
             <div class="stat-info">
               <span class="stat-number" id="syncDropCount">0</span>
               <span class="stat-label">Nhạc tải lên</span>
             </div>
           </div>
           <div class="sync-stat-item">
-            <span class="stat-icon">🌙</span>
+            <span class="stat-icon"><svg class="ghibli-svg-icon ghibli-icon-moon-crescent" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="#fff9db" stroke="#52b788" stroke-width="1.6" stroke-linejoin="round"/><circle cx="18" cy="5" r="0.8" fill="#ffe170"/><circle cx="19.5" cy="9" r="0.6" fill="#ffe170"/></svg></span>
             <div class="stat-info">
               <span class="stat-number" id="syncThemeLabel">Ban ngày</span>
               <span class="stat-label">Giao diện</span>
@@ -1257,20 +1243,20 @@
 
         <div class="sync-action-buttons">
           <button type="button" class="ghibli-btn-action" id="manualSyncBtn">
-            <span class="btn-icon">🔄</span>
+            <span class="btn-icon"><svg class="ghibli-svg-icon ghibli-icon-refresh-water" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 12A8 8 0 0 1 6.5 17.7L4 20" stroke="#52b788" stroke-width="1.8" stroke-linecap="round"/><path d="M4 12A8 8 0 0 1 17.5 6.3L20 4" stroke="#52b788" stroke-width="1.8" stroke-linecap="round"/><path d="M20 9V4h-5" stroke="#52b788" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v5h5" stroke="#52b788" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             <span class="btn-text">Đồng bộ Đám Mây ngay</span>
           </button>
           <div class="backup-actions-split">
             <button type="button" class="ghibli-btn-action secondary" id="exportBackupBtn" title="Tải xuống tệp .json chứa toàn bộ bài hát và cài đặt của bạn">
-              <span class="btn-icon">💾</span> Xuất file sao lưu
+              <span class="btn-icon"><svg class="ghibli-svg-icon ghibli-icon-treasure-scroll" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 19c0 1.7-1.3 3-3 3H6c-1.7 0-3-1.3-3-3s1.3-3 3-3h10c1.7 0 3 1.3 3 3z" fill="#d4a373" stroke="#4a2c11" stroke-width="1.5"/><path d="M6 16V4c0-1.1 1-2 2.2-2h10.6C20 2 21 2.9 21 4v12.5" stroke="#4a2c11" stroke-width="1.5"/><path d="M9 7h8M9 11h6" stroke="#8b5e3c" stroke-width="1.2" stroke-linecap="round"/><circle cx="14" cy="16" r="1.8" fill="#e76f51" stroke="#4a2c11" stroke-width="1"/></svg></span> Xuất file sao lưu
             </button>
             <label class="ghibli-btn-action secondary import-label" id="importBackupLabel" title="Khôi phục dữ liệu từ tệp .json">
-              <span class="btn-icon">📂</span> Khôi phục sao lưu
+              <span class="btn-icon"><svg class="ghibli-svg-icon ghibli-icon-explorer-folder" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9.5c0-1.1-.9-2-2-2h-6.5L10.5 5H5c-1.1 0-2 .9-2 2.5z" fill="#faedcd" stroke="#4a2c11" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 11h18" stroke="#8b5e3c" stroke-width="1.3"/><circle cx="12" cy="15" r="1.2" fill="#6f4518"/></svg></span> Khôi phục sao lưu
               <input type="file" id="backupFileInput" accept=".json,application/json" style="display: none;">
             </label>
           </div>
           <button type="button" class="ghibli-btn-danger" id="logoutBtn">
-            <span class="btn-icon">🚪</span> Đăng xuất tài khoản
+            <span class="btn-icon"><svg class="ghibli-svg-icon ghibli-icon-cottage-door" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 21V9c0-3.9 3.1-7 7-7s7 3.1 7 7v12" stroke="#4a2c11" stroke-width="1.7"/><path d="M7 21V9.5C7 6.8 9.2 4.5 12 4.5s5 2.3 5 5V21H7z" fill="#d4a373" stroke="#6f4518" stroke-width="1.3"/><line x1="12" y1="5" x2="12" y2="21" stroke="#8b5e3c" stroke-width="1"/><circle cx="14.5" cy="13.5" r="1.2" fill="#4a2c11"/><path d="M4 21.5h16" stroke="#4a2c11" stroke-width="1.8" stroke-linecap="round"/></svg></span> Đăng xuất tài khoản
           </button>
         </div>
       </div>
@@ -1294,13 +1280,13 @@
     <div class="battery-saver-topbar">
       <div class="battery-saver-clock" id="batterySaverClock">00:00</div>
       <div class="battery-saver-status" id="batterySaverStatus">
-        <span class="eco-leaf-icon">🍃</span>
+        <span class="eco-leaf-icon"><svg class="ghibli-svg-icon ghibli-icon-leaf-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21c0-6 2-11 8-13-1 6-4 10-8 13z" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21C9 16 5 13 2 13c1-4 5-6 9-4" fill="#95d5b2" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21V10" stroke="#1b4332" stroke-width="1.5" stroke-linecap="round"/></svg></span>
         <span id="batterySaverLevel">OLED Eco Mode</span>
       </div>
     </div>
 
     <div class="battery-saver-center">
-      <div class="battery-saver-totoro-icon" id="batterySaverTotoro">🌰</div>
+      <div class="battery-saver-totoro-icon" id="batterySaverTotoro"><svg class="ghibli-svg-icon ghibli-icon-totoro-acorn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c.2 1.8-.8 3.2-2.5 3.8" stroke="#4a2c11" stroke-width="2" stroke-linecap="round"/><path d="M4.5 8.5C4.5 6 7.8 4.2 12 4.2s7.5 1.8 7.5 4.3c0 1.8-1.4 2.8-3.2 3.2H7.7C5.9 11.3 4.5 10.3 4.5 8.5z" fill="#8b5e3c" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 7c2.5.9 7.5.9 10 0M6 9.5c3 1 9 1 12 0" stroke="#5c381e" stroke-width="1" stroke-linecap="round"/><path d="M6.2 11.2C6.8 16.8 9.2 21.5 12 22c2.8-.5 5.2-5.2 5.8-10.8" fill="#c98a4c" stroke="#3d2314" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="9.5" cy="14.5" rx="1.2" ry="2.2" transform="rotate(-15 9.5 14.5)" fill="#fefae0" opacity="0.6"/></svg></div>
       <div class="battery-saver-track-info">
         <h3 class="battery-saver-title" id="batterySaverTitle">Chưa có bài hát</h3>
         <p class="battery-saver-artist" id="batterySaverArtist">Studio Ghibli</p>
@@ -1330,7 +1316,7 @@
     </div>
 
     <div class="battery-saver-footer">
-      <p class="battery-saver-hint">💡 Chạm đúp 2 lần bất kỳ để đánh thức màn hình</p>
+      <p class="battery-saver-hint"><svg class="ghibli-svg-icon ghibli-icon-firefly-lantern" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 5C8 3 9.8 1.8 12 1.8s4 1.2 4 3.2" stroke="#6f4518" stroke-width="1.4" stroke-linecap="round"/><rect x="7" y="5" width="10" height="2.5" rx="1" fill="#b08968" stroke="#4a2c11" stroke-width="1.3"/><path d="M6.5 8.5C6.5 7.5 7.5 7.5 8 7.5h8c.5 0 1.5 0 1.5 1s-.5 9-1 10.5c-.5 1.5-2 2-4.5 2s-4-.5-4.5-2C7 17.5 6.5 9.5 6.5 8.5z" fill="#fff9db" fill-opacity="0.3" stroke="#4a2c11" stroke-width="1.5" stroke-linejoin="round"/><ellipse cx="12" cy="13" rx="2" ry="1.5" fill="#ffd166"/><path d="M12 10.5v-1M12 16.5v-1M9.5 13h-1M15.5 13h-1" stroke="#f4a261" stroke-width="1" stroke-linecap="round"/></svg> Chạm đúp 2 lần bất kỳ để đánh thức màn hình</p>
       <button id="batterySaverExitBtn" class="battery-saver-exit-btn">
         ✕ Đánh Thức Màn Hình
       </button>

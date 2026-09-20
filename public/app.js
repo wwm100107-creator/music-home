@@ -7,6 +7,143 @@
 
 (() => {
   'use strict';
+  // ==========================================================================
+  // GHIBLI HAND-DRAWN BESPOKE VECTOR ICON LIBRARY
+  // Hand-drawn vector SVG icons tailored for Studio Ghibli woodland theme
+  // ==========================================================================
+  const GhibliIcons = {
+    totoroAcorn: `<svg class="ghibli-svg-icon ghibli-icon-totoro-acorn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c.2 1.8-.8 3.2-2.5 3.8" stroke="#4a2c11" stroke-width="2" stroke-linecap="round"/><path d="M4.5 8.5C4.5 6 7.8 4.2 12 4.2s7.5 1.8 7.5 4.3c0 1.8-1.4 2.8-3.2 3.2H7.7C5.9 11.3 4.5 10.3 4.5 8.5z" fill="#8b5e3c" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 7c2.5.9 7.5.9 10 0M6 9.5c3 1 9 1 12 0" stroke="#5c381e" stroke-width="1" stroke-linecap="round"/><path d="M6.2 11.2C6.8 16.8 9.2 21.5 12 22c2.8-.5 5.2-5.2 5.8-10.8" fill="#c98a4c" stroke="#3d2314" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="9.5" cy="14.5" rx="1.2" ry="2.2" transform="rotate(-15 9.5 14.5)" fill="#fefae0" opacity="0.6"/></svg>`,
+
+    leafBattery: `<svg class="ghibli-svg-icon ghibli-icon-leaf-battery" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="6.5" width="14" height="14" rx="3.5" fill="#2d5a27" fill-opacity="0.15" stroke="#2d6a4f" stroke-width="1.6"/><path d="M10 6.5V4.5c0-.8.7-1.5 1.5-1.5h1c.8 0 1.5.7 1.5 1.5v2" stroke="#2d6a4f" stroke-width="1.5"/><path d="M12 3c-1.8-1.5-3.5-1.2-4.5-.5.2 1.5 1.2 2.5 3 2.5M12 3c1.8-1.5 3.5-1.2 4.5-.5-.2 1.5-1.2 2.5-3 2.5" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.1" stroke-linecap="round"/><rect x="7.5" y="12" width="2.5" height="6" rx="1" fill="#7fc95e"/><rect x="11" y="10" width="2.5" height="8" rx="1" fill="#52b788"/><rect x="14.5" y="8" width="2.5" height="10" rx="1" fill="#40916c"/></svg>`,
+
+    vintageMic: `<svg class="ghibli-svg-icon ghibli-icon-vintage-mic" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="2.5" width="8" height="11" rx="4" fill="#faedcd" stroke="#4a2c11" stroke-width="1.6"/><line x1="10" y1="5.5" x2="14" y2="5.5" stroke="#8b5e3c" stroke-width="1.2" stroke-linecap="round"/><line x1="10" y1="8" x2="14" y2="8" stroke="#8b5e3c" stroke-width="1.2" stroke-linecap="round"/><line x1="10" y1="10.5" x2="14" y2="10.5" stroke="#8b5e3c" stroke-width="1.2" stroke-linecap="round"/><path d="M5.5 9.5c0 3.6 2.9 6.5 6.5 6.5s6.5-2.9 6.5-6.5" stroke="#4a2c11" stroke-width="1.6" stroke-linecap="round"/><path d="M12 16v5M8.5 21h7" stroke="#4a2c11" stroke-width="1.6" stroke-linecap="round"/><path d="M18.5 7.5c1.2-.8 2.2-.2 2 1.2s-1.5 1.8-2 1.8" stroke="#52b788" stroke-width="1.3" stroke-linecap="round"/><circle cx="20.5" cy="7.2" r="1" fill="#7fc95e"/></svg>`,
+
+    brassLens: `<svg class="ghibli-svg-icon ghibli-icon-brass-lens" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="6.5" fill="#e8f4f8" fill-opacity="0.4" stroke="#8b5e3c" stroke-width="1.8"/><path d="M7 7.5a4.2 4.2 0 0 1 5-1.5" stroke="#b08968" stroke-width="1.2" stroke-linecap="round"/><path d="M15 15l1.5-1.5 5.5 5.5a1.2 1.2 0 0 1-1.7 1.7L15 15z" fill="#6f4518" stroke="#3d2314" stroke-width="1.5" stroke-linejoin="round"/><circle cx="15.5" cy="14.5" r="1" fill="#d4a373"/></svg>`,
+
+    pocketWatch: `<svg class="ghibli-svg-icon ghibli-icon-pocket-watch" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 2.5h4M12 2.5v2.5" stroke="#8b5e3c" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="2" r="1.5" stroke="#8b5e3c" stroke-width="1.2"/><circle cx="12" cy="13.5" r="8" fill="#fefae0" stroke="#8b5e3c" stroke-width="1.8"/><path d="M12 9v4.5l3 1.5" stroke="#4a2c11" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="1" fill="#2d6a4f"/><path d="M12 6.5v1M18.5 13.5h-1M12 20.5v-1M5.5 13.5h1" stroke="#b08968" stroke-width="1" stroke-linecap="round"/></svg>`,
+
+    compassAnchor: `<svg class="ghibli-svg-icon ghibli-icon-compass-anchor" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9.2" fill="#fefae0" stroke="#2d6a4f" stroke-width="1.6"/><path d="M12 4.5l1.5 5 4-1-3 3.5 3.5 3-4-1-1.5 5-1.5-5-4 1 3-3.5-3.5-3 4 1L12 4.5z" fill="#52b788" stroke="#1b4332" stroke-width="1.5" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" fill="#ffe170" stroke="#d4a373" stroke-width="1"/></svg>`,
+
+    fireflyLantern: `<svg class="ghibli-svg-icon ghibli-icon-firefly-lantern" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 5C8 3 9.8 1.8 12 1.8s4 1.2 4 3.2" stroke="#6f4518" stroke-width="1.4" stroke-linecap="round"/><rect x="7" y="5" width="10" height="2.5" rx="1" fill="#b08968" stroke="#4a2c11" stroke-width="1.3"/><path d="M6.5 8.5C6.5 7.5 7.5 7.5 8 7.5h8c.5 0 1.5 0 1.5 1s-.5 9-1 10.5c-.5 1.5-2 2-4.5 2s-4-.5-4.5-2C7 17.5 6.5 9.5 6.5 8.5z" fill="#fff9db" fill-opacity="0.3" stroke="#4a2c11" stroke-width="1.5" stroke-linejoin="round"/><ellipse cx="12" cy="13" rx="2" ry="1.5" fill="#ffd166"/><path d="M12 10.5v-1M12 16.5v-1M9.5 13h-1M15.5 13h-1" stroke="#f4a261" stroke-width="1" stroke-linecap="round"/></svg>`,
+
+    woodenHeadphone: `<svg class="ghibli-svg-icon ghibli-icon-wooden-headphone" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 14v-2.5C4 7.4 7.6 3.8 12 3.8s8 3.6 8 7.7V14" stroke="#6f4518" stroke-width="2" stroke-linecap="round"/><path d="M12 3.8c-1-1.5-2.5-1.5-3-.8.2 1.2 1.2 1.6 2.5 1.4M12 3.8c1-1.5 2.5-1.5 3-.8-.2 1.2-1.2 1.6-2.5 1.4" fill="#7fc95e" stroke="#2d6a4f" stroke-width="0.9"/><rect x="2.5" y="13" width="4.5" height="7" rx="2.2" fill="#d4a373" stroke="#4a2c11" stroke-width="1.5"/><rect x="17" y="13" width="4.5" height="7" rx="2.2" fill="#d4a373" stroke="#4a2c11" stroke-width="1.5"/><line x1="4.5" y1="15" x2="4.5" y2="18" stroke="#8b5e3c" stroke-width="1.5" stroke-linecap="round"/><line x1="19.5" y1="15" x2="19.5" y2="18" stroke="#8b5e3c" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+
+    loopTwigs: `<svg class="ghibli-svg-icon ghibli-icon-loop-twigs" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 8.5C5 6 7 4 10 4h7" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round"/><path d="M14.5 1.5l3.5 2.5-3.5 2.5" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M11 4c0-1.2.8-2 1.8-1.5s1 1.8 0 2.2" fill="#7fc95e" stroke="#2d6a4f" stroke-width="0.9"/><path d="M19 15.5C19 18 17 20 14 20H7" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round"/><path d="M9.5 22.5L6 20l3.5-2.5" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 20c0 1.2-.8 2-1.8 1.5s-1-1.8 0-2.2" fill="#7fc95e" stroke="#2d6a4f" stroke-width="0.9"/></svg>`,
+
+    loopSingle: `<svg class="ghibli-svg-icon ghibli-icon-loop-single" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 9C5 6.2 7.2 4 10.5 4h6" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round"/><path d="M14 1.5L17.5 4 14 6.5" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 15c0 2.8-2.2 5-5.5 5h-6" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round"/><path d="M10 22.5L6.5 20 10 17.5" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.5" fill="#fefae0" stroke="#8b5e3c" stroke-width="1.2"/><path d="M11 11.2l1-.7v3" stroke="#4a2c11" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+
+    shuffleWind: `<svg class="ghibli-svg-icon ghibli-icon-shuffle-wind" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.5 6.5h3.5c2.5 0 4.5 4.5 7 7h5" stroke="#52b788" stroke-width="1.7" stroke-linecap="round"/><path d="M16 11l3.5 2.5-3.5 2.5" stroke="#52b788" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 17.5h3.5c1.8 0 3.3-2.2 4.8-4.5" stroke="#52b788" stroke-width="1.7" stroke-linecap="round"/><path d="M14 10.5c1-.8 2-1.5 3-1.5h2" stroke="#52b788" stroke-width="1.7" stroke-linecap="round"/><path d="M16 6.5l3.5 2.5-3.5 2.5" stroke="#52b788" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.5 4c1 .2 2 1.2 1.8 2.2s-1.5 1.2-2.2.8.2-1.8.4-3z" fill="#d4a373" stroke="#8b5e3c" stroke-width="0.8"/></svg>`,
+
+    kodamaUser: `<svg class="ghibli-svg-icon ghibli-icon-kodama-user" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 10c0-4.5 2.7-7.5 6-7.5s6 3 6 7.5c0 5-2.2 7-6 7s-6-2-6-7z" fill="#fefae0" stroke="#2d5a27" stroke-width="1.6"/><path d="M10 17v4c0 .6.4 1 1 1h2c.6 0 1-.4 1-1v-4" stroke="#2d5a27" stroke-width="1.5" stroke-linecap="round"/><circle cx="9.2" cy="9.2" r="1.3" fill="#1b4332"/><circle cx="14.8" cy="9.2" r="1.3" fill="#1b4332"/><circle cx="12" cy="13.2" r="1" fill="#1b4332"/></svg>`,
+
+    brassPadlock: `<svg class="ghibli-svg-icon ghibli-icon-brass-padlock" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 10.5V7a5 5 0 0 1 10 0v3.5" stroke="#4a2c11" stroke-width="1.8" stroke-linecap="round"/><rect x="5" y="10.5" width="14" height="11" rx="3" fill="#d4a373" stroke="#4a2c11" stroke-width="1.6"/><circle cx="12" cy="15" r="1.5" fill="#3d2314"/><path d="M12 16.5v2" stroke="#3d2314" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+
+    sketchedEye: `<svg class="ghibli-svg-icon ghibli-icon-sketched-eye" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 12c2.5-5 5.5-7 9.5-7s7 2 9.5 7c-2.5 5-5.5 7-9.5 7s-7-2-9.5-7z" stroke="#4a2c11" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="#52b788" stroke="#1b4332" stroke-width="1.2"/><circle cx="12" cy="12" r="1.3" fill="#1b4332"/><circle cx="13" cy="11" r="0.7" fill="#ffffff"/></svg>`,
+
+    eyeClosed: `<svg class="ghibli-svg-icon ghibli-icon-eye-closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 10c3 5 6 7 9 7s6-2 9-7" stroke="#4a2c11" stroke-width="1.8" stroke-linecap="round"/><path d="M5 12.5l-1.5 2M8.5 15.5l-1 2.5M12 17v2.8M15.5 15.5l1 2.5M19 12.5l1.5 2" stroke="#4a2c11" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+
+    leafHeartFilled: `<svg class="ghibli-svg-icon ghibli-icon-leaf-heart liked" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#52b788" stroke="#1b4332" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 7c0 4.5-2 8-5 9.5M12 10c1.5 2 3.5 3.5 6 4" stroke="#7fc95e" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+
+    leafHeartOutline: `<svg class="ghibli-svg-icon ghibli-icon-leaf-heart unliked" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#fefae0" fill-opacity="0.3" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>`,
+
+    skyCloud: `<svg class="ghibli-svg-icon ghibli-icon-sky-cloud" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18.5h12c2.5 0 4.5-1.8 4.5-4 0-2-1.6-3.7-3.8-3.9-.4-3.2-3.1-5.6-6.7-5.6-3 0-5.5 1.7-6.4 4.2C3.4 9.5 2 11.2 2 13.5c0 2.8 2.2 5 5 5z" fill="#edf6f9" stroke="#4a2c11" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 14.5c1.5.8 4 .8 6 0" stroke="#83c5be" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+
+    treasureScroll: `<svg class="ghibli-svg-icon ghibli-icon-treasure-scroll" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 19c0 1.7-1.3 3-3 3H6c-1.7 0-3-1.3-3-3s1.3-3 3-3h10c1.7 0 3 1.3 3 3z" fill="#d4a373" stroke="#4a2c11" stroke-width="1.5"/><path d="M6 16V4c0-1.1 1-2 2.2-2h10.6C20 2 21 2.9 21 4v12.5" stroke="#4a2c11" stroke-width="1.5"/><path d="M9 7h8M9 11h6" stroke="#8b5e3c" stroke-width="1.2" stroke-linecap="round"/><circle cx="14" cy="16" r="1.8" fill="#e76f51" stroke="#4a2c11" stroke-width="1"/></svg>`,
+
+    explorerFolder: `<svg class="ghibli-svg-icon ghibli-icon-explorer-folder" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9.5c0-1.1-.9-2-2-2h-6.5L10.5 5H5c-1.1 0-2 .9-2 2.5z" fill="#faedcd" stroke="#4a2c11" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 11h18" stroke="#8b5e3c" stroke-width="1.3"/><circle cx="12" cy="15" r="1.2" fill="#6f4518"/></svg>`,
+
+    cottageDoor: `<svg class="ghibli-svg-icon ghibli-icon-cottage-door" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 21V9c0-3.9 3.1-7 7-7s7 3.1 7 7v12" stroke="#4a2c11" stroke-width="1.7"/><path d="M7 21V9.5C7 6.8 9.2 4.5 12 4.5s5 2.3 5 5V21H7z" fill="#d4a373" stroke="#6f4518" stroke-width="1.3"/><line x1="12" y1="5" x2="12" y2="21" stroke="#8b5e3c" stroke-width="1"/><circle cx="14.5" cy="13.5" r="1.2" fill="#4a2c11"/><path d="M4 21.5h16" stroke="#4a2c11" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+
+    vintageCamera: `<svg class="ghibli-svg-icon ghibli-icon-vintage-camera" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 8.5C4 7.4 4.9 6.5 6 6.5h2.2l1.2-2h5.2l1.2 2H18c1.1 0 2 .9 2 2v10c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2v-10z" fill="#faedcd" stroke="#4a2c11" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="3.8" fill="#d4a373" stroke="#4a2c11" stroke-width="1.5"/><circle cx="12" cy="13.5" r="1.8" fill="#2d6a4f"/><circle cx="17" cy="9.5" r="0.8" fill="#e76f51"/></svg>`,
+
+    musicSprout: `<svg class="ghibli-svg-icon ghibli-icon-music-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18V6.5l9-2.5V15" stroke="#2d6a4f" stroke-width="1.7" stroke-linecap="round"/><path d="M9 7.5l9-2.5" stroke="#52b788" stroke-width="3" stroke-linecap="round"/><path d="M9 18c0 1.7-1.8 3-4 3s-3.5-1.3-3.5-3 1.3-3 3.5-3c1.2 0 2.3.4 3 1.2" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.2"/><path d="M18 15c0 1.7-1.8 3-4 3s-3.5-1.3-3.5-3 1.3-3 3.5-3c1.2 0 2.3.4 3 1.2" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.2"/></svg>`,
+
+    leafSprout: `<svg class="ghibli-svg-icon ghibli-icon-leaf-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21c0-6 2-11 8-13-1 6-4 10-8 13z" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21C9 16 5 13 2 13c1-4 5-6 9-4" fill="#95d5b2" stroke="#2d6a4f" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 21V10" stroke="#1b4332" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+
+    vinylGroove: `<svg class="ghibli-svg-icon ghibli-icon-vinyl-groove" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9.5" fill="#1b1d1f" stroke="#3d2314" stroke-width="1.5"/><circle cx="12" cy="12" r="7.5" stroke="#343a40" stroke-width="0.8" stroke-dasharray="8 4"/><circle cx="12" cy="12" r="5.5" stroke="#495057" stroke-width="0.8" stroke-dasharray="6 3"/><circle cx="12" cy="12" r="3.2" fill="#e76f51" stroke="#faedcd" stroke-width="1"/><circle cx="12" cy="12" r="1" fill="#fefae0"/></svg>`,
+
+    calciferFlame: `<svg class="ghibli-svg-icon ghibli-icon-calcifer-flame" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c1.5 3 4.5 5 4.5 8.5 0 4.5-3.5 8.5-8.5 8.5S2 16 2 12.5c0-3 2.5-5.5 4.5-7.5 0 2.5 1.5 4 3 4 1 0 2-.8 2.5-2.5z" fill="#ff7b00" stroke="#c0392b" stroke-width="1.4" stroke-linejoin="round"/><path d="M11 9c1 1.5 2.5 2.5 2.5 4.5 0 2.5-2 4.5-4.5 4.5S5 16 5 14.5c0-1.5 1.5-2.5 2.5-3.5 0 1.2.8 1.8 1.5 1.8.8 0 1.5-.8 2-1.8z" fill="#ffe170"/><circle cx="8" cy="13.5" r="0.9" fill="#2b1810"/><circle cx="11.5" cy="13.5" r="0.9" fill="#2b1810"/><ellipse cx="9.8" cy="15.2" rx="1.2" ry="0.6" fill="#c0392b"/></svg>`,
+
+    bambooChart: `<svg class="ghibli-svg-icon ghibli-icon-bamboo-chart" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="14" width="3.5" height="7" rx="1" fill="#74c69d" stroke="#2d6a4f" stroke-width="1.2"/><rect x="10" y="10" width="3.5" height="11" rx="1" fill="#52b788" stroke="#2d6a4f" stroke-width="1.2"/><rect x="16" y="5" width="3.5" height="16" rx="1" fill="#40916c" stroke="#2d6a4f" stroke-width="1.2"/><path d="M4 12c4-2 7-6 15-8" stroke="#f4a261" stroke-width="1.8" stroke-linecap="round"/><path d="M15 4h4v4" stroke="#f4a261" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+
+    quillScroll: `<svg class="ghibli-svg-icon ghibli-icon-quill-scroll" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 4.5c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2v13c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V4.5z" fill="#fefae0" stroke="#8b5e3c" stroke-width="1.5"/><path d="M4 19.5c0 1.4 1.1 2.5 2.5 2.5h11c1.4 0 2.5-1.1 2.5-2.5s-1.1-2.5-2.5-2.5H6.5C5.1 17 4 18.1 4 19.5z" fill="#d4a373" stroke="#6f4518" stroke-width="1.3"/><path d="M8 8h6M8 11h8M8 14h5" stroke="#8b5e3c" stroke-width="1.2" stroke-linecap="round"/><path d="M19 4c1-2 3-2 3-2s-.5 2.5-1.5 4.5l-2.5-1z" fill="#52b788" stroke="#2d6a4f" stroke-width="0.8"/></svg>`,
+
+    globeVintage: `<svg class="ghibli-svg-icon ghibli-icon-globe-vintage" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" fill="#fefae0" fill-opacity="0.3" stroke="#8b5e3c" stroke-width="1.6"/><ellipse cx="12" cy="12" rx="4.5" ry="9" stroke="#8b5e3c" stroke-width="1.3"/><line x1="3" y1="12" x2="21" y2="12" stroke="#8b5e3c" stroke-width="1.3"/><path d="M5.5 7.5h13M5.5 16.5h13" stroke="#b08968" stroke-width="1"/></svg>`,
+
+    whiteDove: `<svg class="ghibli-svg-icon ghibli-icon-white-dove" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 7c-2 0-4 1-5 2.5-2.5-2-6-2.5-9-1.5 2 2 3.5 4.5 4 7-2-.5-4 0-5.5 1.5 3 2.5 6.5 2.5 10 1 1.5-.5 3-1.5 4-3 1-.3 2-1 2.5-2.5-.5-.2-1.5-.5-2-.5 1-1 1.5-2.5 1-4.5z" fill="#fefae0" stroke="#4a2c11" stroke-width="1.4" stroke-linejoin="round"/><path d="M20 8l2.5-2M21 7l1.5 1" stroke="#52b788" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+
+    refreshWater: `<svg class="ghibli-svg-icon ghibli-icon-refresh-water" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 12A8 8 0 0 1 6.5 17.7L4 20" stroke="#52b788" stroke-width="1.8" stroke-linecap="round"/><path d="M4 12A8 8 0 0 1 17.5 6.3L20 4" stroke="#52b788" stroke-width="1.8" stroke-linecap="round"/><path d="M20 9V4h-5" stroke="#52b788" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v5h5" stroke="#52b788" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+
+    autumnLeaf: `<svg class="ghibli-svg-icon ghibli-icon-autumn-leaf" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19.5 4.5c-4 1-8 4-11 8-2.5 3.5-3 8-3 8s4.5-.5 8-3c4-3 7-7 8-11-1-.5-1.5-.5-2-2z" fill="#e07a5f" stroke="#8b5e3c" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.5 20.5l9-9M10 16l3 1.5M13 13l2 1.5" stroke="#4a2c11" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+
+    paintPalette: `<svg class="ghibli-svg-icon ghibli-icon-paint-palette" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.5 2 2 6.5 2 12c0 3 1.5 5 4 5 1.2 0 2-.8 2-2 0-.8.5-1.5 1.5-1.5h1.5c4.5 0 8-3.5 8-8 0-4.5-4-5.5-7-5.5z" fill="#faedcd" stroke="#4a2c11" stroke-width="1.5"/><circle cx="7" cy="8" r="1.5" fill="#e76f51"/><circle cx="11.5" cy="6" r="1.5" fill="#f4a261"/><circle cx="16" cy="8" r="1.5" fill="#52b788"/><circle cx="17.5" cy="12.5" r="1.5" fill="#457b9d"/></svg>`,
+
+    sparkleStar: `<svg class="ghibli-svg-icon ghibli-icon-sparkle-star" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5L12 2z" fill="#ffe170" stroke="#d4a373" stroke-width="1.2" stroke-linejoin="round"/></svg>`,
+
+    sunWarm: `<svg class="ghibli-svg-icon ghibli-icon-sun-warm" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="5" fill="#ffe170" stroke="#f4a261" stroke-width="1.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="#f4a261" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+
+    moonCrescent: `<svg class="ghibli-svg-icon ghibli-icon-moon-crescent" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="#fff9db" stroke="#52b788" stroke-width="1.6" stroke-linejoin="round"/><circle cx="18" cy="5" r="0.8" fill="#ffe170"/><circle cx="19.5" cy="9" r="0.6" fill="#ffe170"/></svg>`,
+
+    gearBrass: `<svg class="ghibli-svg-icon ghibli-icon-brass-gear" viewBox="0 0 24 24" fill="none" stroke="#6f4518" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3" fill="#faedcd"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+
+    rankLeafGold: `<svg class="ghibli-svg-icon ghibli-icon-rank-leaf gold" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="8" fill="#ffe170" stroke="#b08968" stroke-width="1.3"/><path d="M8 8c1-1 2.5-1.5 4-1.5s3 .5 4 1.5" stroke="#8b5e3c" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+
+    rankLeafSilver: `<svg class="ghibli-svg-icon ghibli-icon-rank-leaf silver" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="8" fill="#e9ecef" stroke="#adb5bd" stroke-width="1.3"/><path d="M8 8c1-1 2.5-1.5 4-1.5s3 .5 4 1.5" stroke="#6c757d" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+
+    rankLeafBronze: `<svg class="ghibli-svg-icon ghibli-icon-rank-leaf bronze" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="8" fill="#e0a96d" stroke="#8b5e3c" stroke-width="1.3"/><path d="M8 8c1-1 2.5-1.5 4-1.5s3 .5 4 1.5" stroke="#5c381e" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+
+    vintagePiano: `<svg class="ghibli-svg-icon ghibli-icon-vintage-piano" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6h16v12H4z" fill="#4a2c11" stroke="#2b1810" stroke-width="1.5"/><rect x="6" y="11" width="12" height="7" fill="#fefae0" stroke="#2b1810" stroke-width="1"/><line x1="8.5" y1="11" x2="8.5" y2="15" stroke="#2b1810" stroke-width="1.4"/><line x1="11" y1="11" x2="11" y2="15" stroke="#2b1810" stroke-width="1.4"/><line x1="13.5" y1="11" x2="13.5" y2="15" stroke="#2b1810" stroke-width="1.4"/><line x1="16" y1="11" x2="16" y2="15" stroke="#2b1810" stroke-width="1.4"/></svg>`,
+
+    sproutSoar: `<svg class="ghibli-svg-icon ghibli-icon-sprout-soar" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5C14 6 18 8 18 13c0 3.5-2.5 6-6 6s-6-2.5-6-6c0-5 4-7 6-10.5z" fill="#7fc95e" stroke="#2d6a4f" stroke-width="1.5"/><path d="M12 6v13M8 12c2 1 4 1 8 0" stroke="#2d6a4f" stroke-width="1.2"/><circle cx="12" cy="10" r="1.5" fill="#fefae0"/></svg>`,
+
+    arrowRight: `<svg class="ghibli-svg-icon ghibli-icon-arrow-right" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12h14M13 6l6 6-6 6" stroke="#2d6a4f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+
+    checkDone: `<svg class="ghibli-svg-icon ghibli-icon-check-done" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" fill="#e8f5e9" stroke="#2d6a4f" stroke-width="1.4"/><path d="M8 12l2.5 2.5L16 9" stroke="#2d6a4f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+  };
+  window.GhibliIcons = GhibliIcons;
+
+  function replaceEmojisWithGhibliIcons(text) {
+    if (!text || typeof text !== 'string') return text;
+    return text
+      .replace(/🔋/g, GhibliIcons.leafBattery)
+      .replace(/🎤/g, GhibliIcons.vintageMic)
+      .replace(/🌰/g, GhibliIcons.totoroAcorn)
+      .replace(/🔍/g, GhibliIcons.brassLens)
+      .replace(/⏱️/g, GhibliIcons.pocketWatch)
+      .replace(/🎯/g, GhibliIcons.compassAnchor)
+      .replace(/💡/g, GhibliIcons.fireflyLantern)
+      .replace(/🎧/g, GhibliIcons.woodenHeadphone)
+      .replace(/🔁/g, GhibliIcons.loopTwigs)
+      .replace(/🔂/g, GhibliIcons.loopSingle)
+      .replace(/🔀/g, GhibliIcons.shuffleWind)
+      .replace(/☁️/g, GhibliIcons.skyCloud)
+      .replace(/💾/g, GhibliIcons.treasureScroll)
+      .replace(/📂/g, GhibliIcons.explorerFolder)
+      .replace(/👤/g, GhibliIcons.kodamaUser)
+      .replace(/🔒/g, GhibliIcons.brassPadlock)
+      .replace(/👁️|👁/g, GhibliIcons.sketchedEye)
+      .replace(/🙈/g, GhibliIcons.eyeClosed)
+      .replace(/💚/g, GhibliIcons.leafHeartFilled)
+      .replace(/🤍/g, GhibliIcons.leafHeartOutline)
+      .replace(/🌿|🌱|🍃/g, GhibliIcons.leafSprout)
+      .replace(/🍂/g, GhibliIcons.autumnLeaf)
+      .replace(/💿/g, GhibliIcons.vinylGroove)
+      .replace(/🔥/g, GhibliIcons.calciferFlame)
+      .replace(/📈/g, GhibliIcons.bambooChart)
+      .replace(/📜|📄/g, GhibliIcons.quillScroll)
+      .replace(/🌐/g, GhibliIcons.globeVintage)
+      .replace(/🕊️|🕊/g, GhibliIcons.whiteDove)
+      .replace(/🔄/g, GhibliIcons.refreshWater)
+      .replace(/🎨/g, GhibliIcons.paintPalette)
+      .replace(/🎹/g, GhibliIcons.vintagePiano)
+      .replace(/🎵/g, GhibliIcons.musicSprout)
+      .replace(/📷|📸/g, GhibliIcons.vintageCamera)
+      .replace(/🚪/g, GhibliIcons.cottageDoor)
+      .replace(/🎉/g, GhibliIcons.sparkleStar)
+      .replace(/🚀/g, GhibliIcons.sproutSoar)
+      .replace(/➡/g, GhibliIcons.arrowRight);
+  }
+
 
   // State
   const state = {
@@ -381,7 +518,7 @@
   function showToast(msg) {
     if (!dom.toast) return;
     clearTimeout(toastTimer);
-    dom.toast.textContent = msg;
+    dom.toast.innerHTML = replaceEmojisWithGhibliIcons(msg);
     dom.toast.classList.remove('hidden');
     toastTimer = setTimeout(() => {
       dom.toast.classList.add('hidden');
@@ -607,7 +744,7 @@
     dom.sheetBgPlaybackChip.classList.toggle('active', isEnabled);
     dom.sheetBgPlaybackChip.classList.toggle('disabled', !isEnabled);
     if (dom.sheetBgPlaybackText) {
-      dom.sheetBgPlaybackText.innerHTML = `🎧 Phát nền (Tắt màn hình): <strong>${isEnabled ? 'BẬT' : 'TẮT'}</strong>`;
+      dom.sheetBgPlaybackText.innerHTML = `${GhibliIcons.woodenHeadphone} Phát nền (Tắt màn hình): <strong>${isEnabled ? 'BẬT' : 'TẮT'}</strong>`;
     }
   }
 
@@ -627,7 +764,7 @@
       dom.sheetBatterySaverBtn.classList.toggle('active', isActive);
     }
     if (dom.sheetBatterySaverText) {
-      dom.sheetBatterySaverText.innerHTML = `🔋 Tiết kiệm pin: <strong>${isActive ? 'BẬT' : 'TẮT'}</strong>`;
+      dom.sheetBatterySaverText.innerHTML = `${GhibliIcons.leafBattery} Tiết kiệm pin: <strong>${isActive ? 'BẬT' : 'TẮT'}</strong>`;
     }
   }
 
@@ -648,7 +785,7 @@
           dom.batterySaverTotoro.textContent = state.currentUser.avatar;
         }
       } else {
-        dom.batterySaverTotoro.textContent = '🌰';
+        dom.batterySaverTotoro.innerHTML = GhibliIcons.totoroAcorn;
       }
     }
   }
@@ -1434,7 +1571,7 @@
       return `
         <div class="lyric-line" data-index="${idx}" data-time="${item.time}">
           <span class="lyric-text">${escapeHtml(item.text || '♪')}</span>
-          <button type="button" class="line-sync-anchor-btn" data-time="${item.time}" title="🎯 Chạm để căn chuẩn bài hát theo câu này">🎯</button>
+          <button type="button" class="line-sync-anchor-btn" data-time="${item.time}" title="Căn chuẩn bài hát theo câu này">${GhibliIcons.compassAnchor}</button>
         </div>
       `;
     }).join('');
@@ -1619,7 +1756,7 @@
 
       // Ngược lại: Lời dạng văn bản thường (Plain Text)
       state.lyrics = [];
-      if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '📜 Lời bài hát do tác giả đính kèm';
+      if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.quillScroll} Lời bài hát do tác giả đính kèm`;
       const plainLines = track.lyrics.split(/\r?\n/).filter(l => l.trim().length > 0);
       if (dom.lyricsLinesContainer) {
         dom.lyricsLinesContainer.innerHTML = plainLines.map(line => `
@@ -1647,7 +1784,7 @@
     if (dom.lyricsLinesContainer) {
       dom.lyricsLinesContainer.innerHTML = `
         <div class="lyrics-loading-state">
-          <div class="lyrics-sparkle-icon">🍃</div>
+          <div class="lyrics-sparkle-icon">${GhibliIcons.leafSprout}</div>
           <p>Đang tìm kiếm lời bài hát <strong>${escapeHtml(track.title)}</strong>...</p>
         </div>
       `;
@@ -1676,25 +1813,25 @@
 
       if (data.instrumental) {
         state.lyrics = [];
-        if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '🍃 Bản nhạc hòa tấu không lời';
+        if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.leafSprout} Bản nhạc hòa tấu không lời`;
         if (dom.lyricsLinesContainer) {
           dom.lyricsLinesContainer.innerHTML = `
             <div class="lyrics-instrumental-state">
-              <div class="lyrics-sparkle-icon">🎹</div>
+              <div class="lyrics-sparkle-icon">${GhibliIcons.vintagePiano}</div>
               <h4>Giai Điệu Hòa Tấu Không Lời</h4>
               <p>Bản nhạc không lời mộc mạc từ Khu Vườn Ghibli. Hãy nhắm mắt và hòa mình vào từng nốt nhạc êm dịu.</p>
             </div>
           `;
         }
         if (dom.sheetLyricsActiveText) {
-          dom.sheetLyricsActiveText.textContent = '🍃 Giai điệu hòa tấu không lời của Khu Vườn Ghibli';
+          dom.sheetLyricsActiveText.innerHTML = `${GhibliIcons.leafSprout} Giai điệu hòa tấu không lời của Khu Vườn Ghibli`;
         }
         return;
       }
 
       if (data.synced && Array.isArray(data.lines) && data.lines.length > 0) {
         state.lyrics = data.lines;
-        if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '✨ Đồng bộ thời gian thực (Karaoke)';
+        if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.sparkleStar} Đồng bộ thời gian thực (Karaoke)`;
 
         renderLyricsLines(state.lyrics);
 
@@ -1717,7 +1854,7 @@
         }
       } else if (data.plain) {
         state.lyrics = [];
-        if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '📜 Lời bài hát (Chưa đồng bộ nhịp)';
+        if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.quillScroll} Lời bài hát (Chưa đồng bộ nhịp)`;
 
         const plainLines = data.plain.split(/\r?\n/).filter(l => l.trim().length > 0);
         if (dom.lyricsLinesContainer) {
@@ -1732,11 +1869,11 @@
         }
       } else {
         state.lyrics = [];
-        if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '🌱 Chưa có lời';
+        if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.leafSprout} Chưa có lời`;
         if (dom.lyricsLinesContainer) {
           dom.lyricsLinesContainer.innerHTML = `
             <div class="lyrics-empty-state">
-              <div class="lyrics-sparkle-icon">🎵</div>
+              <div class="lyrics-sparkle-icon">${GhibliIcons.musicSprout}</div>
               <p>Chưa có lời đồng bộ cho bài hát này trong kho dữ liệu cộng đồng.<br>Hãy tận hưởng trọn vẹn giai điệu tuyệt vời này nhé!</p>
             </div>
           `;
@@ -1753,7 +1890,7 @@
       if (dom.lyricsLinesContainer) {
         dom.lyricsLinesContainer.innerHTML = `
           <div class="lyrics-empty-state">
-            <div class="lyrics-sparkle-icon">🍃</div>
+            <div class="lyrics-sparkle-icon">${GhibliIcons.leafSprout}</div>
             <p>Không thể kết nối máy chủ lời nhạc lúc này. Đang phát nhạc bình thường...</p>
           </div>
         `;
@@ -2100,13 +2237,13 @@
     }
     if (dom.loopBadge) {
       if (mode === 'all') {
-        dom.loopBadge.textContent = '🔁';
+        dom.loopBadge.innerHTML = GhibliIcons.loopTwigs;
         dom.loopBadge.classList.remove('hidden');
       } else if (mode === 'one') {
         dom.loopBadge.textContent = '1';
         dom.loopBadge.classList.remove('hidden');
       } else if (mode === 'acorn') {
-        dom.loopBadge.textContent = '🌰';
+        dom.loopBadge.innerHTML = GhibliIcons.totoroAcorn;
         dom.loopBadge.classList.remove('hidden');
       } else {
         dom.loopBadge.classList.add('hidden');
@@ -2122,13 +2259,13 @@
     }
     if (dom.sheetLoopBadge) {
       if (mode === 'all') {
-        dom.sheetLoopBadge.textContent = '🔁';
+        dom.sheetLoopBadge.innerHTML = GhibliIcons.loopTwigs;
         dom.sheetLoopBadge.classList.remove('hidden');
       } else if (mode === 'one') {
         dom.sheetLoopBadge.textContent = '1';
         dom.sheetLoopBadge.classList.remove('hidden');
       } else if (mode === 'acorn') {
-        dom.sheetLoopBadge.textContent = '🌰';
+        dom.sheetLoopBadge.innerHTML = GhibliIcons.totoroAcorn;
         dom.sheetLoopBadge.classList.remove('hidden');
       } else {
         dom.sheetLoopBadge.classList.add('hidden');
@@ -2136,16 +2273,16 @@
     }
     if (dom.sheetLoopStatusChip) {
       if (mode === 'all') {
-        dom.sheetLoopStatusChip.textContent = '🔁 Lặp vĩnh viễn (Toàn bộ)';
+        dom.sheetLoopStatusChip.innerHTML = `${GhibliIcons.loopTwigs} Lặp vĩnh viễn (Toàn bộ)`;
         dom.sheetLoopStatusChip.classList.remove('hidden');
       } else if (mode === 'one') {
-        dom.sheetLoopStatusChip.textContent = '🔂 Lặp 1 bài vĩnh viễn';
+        dom.sheetLoopStatusChip.innerHTML = `${GhibliIcons.loopSingle} Lặp 1 bài vĩnh viễn`;
         dom.sheetLoopStatusChip.classList.remove('hidden');
       } else if (mode === 'acorn') {
-        dom.sheetLoopStatusChip.textContent = '🌰 Lặp danh sách Hạt Dẻ';
+        dom.sheetLoopStatusChip.innerHTML = `${GhibliIcons.totoroAcorn} Lặp danh sách Hạt Dẻ`;
         dom.sheetLoopStatusChip.classList.remove('hidden');
       } else {
-        dom.sheetLoopStatusChip.textContent = '➡ Tắt lặp lại';
+        dom.sheetLoopStatusChip.innerHTML = `${GhibliIcons.arrowRight} Tắt lặp lại`;
         dom.sheetLoopStatusChip.classList.remove('hidden');
       }
     }
@@ -2165,6 +2302,7 @@
       dom.sheetShuffleBtn.classList.toggle('active', state.isShuffle);
     }
     if (dom.sheetShuffleStatusChip) {
+      dom.sheetShuffleStatusChip.innerHTML = `${GhibliIcons.shuffleWind} Trộn nhạc: ${state.isShuffle ? 'BẬT' : 'TẮT'}`;
       dom.sheetShuffleStatusChip.classList.toggle('hidden', !state.isShuffle);
     }
   }
@@ -2187,20 +2325,20 @@
       let rankLabel = `#${track.rank}`;
       if (track.rank === 1) {
         rankClass = 'rank-gold';
-        rankLabel = '🥇 1';
+        rankLabel = `${GhibliIcons.rankLeafGold} 1`;
       } else if (track.rank === 2) {
         rankClass = 'rank-silver';
-        rankLabel = '🥈 2';
+        rankLabel = `${GhibliIcons.rankLeafSilver} 2`;
       } else if (track.rank === 3) {
         rankClass = 'rank-bronze';
-        rankLabel = '🥉 3';
+        rankLabel = `${GhibliIcons.rankLeafBronze} 3`;
       }
       rankHtml = `<span class="chart-rank-badge ${rankClass}" title="Hạng #${track.rank}">${rankLabel}</span>`;
     }
 
     const playCountText = track.playCount || (track.views ? `${(track.views / 1e6).toFixed(1)}M lượt nghe` : null);
     const playCountHtml = playCountText
-      ? `<span class="track-card-views" title="Lượt nghe thực tế">${playCountText.startsWith('🔥') || playCountText.startsWith('📈') ? playCountText : `🔥 ${playCountText}`}</span>`
+      ? `<span class="track-card-views" title="Lượt nghe thực tế">${GhibliIcons.calciferFlame} ${playCountText.replace(/^[🔥📈]\s*/, '')}</span>`
       : '';
 
     card.innerHTML = `
@@ -2253,7 +2391,7 @@
       if (dom.trendingTracksGrid) {
         dom.trendingTracksGrid.innerHTML = `
           <div class="ghibli-loading-placeholder">
-            <div class="loading-leaf-spinner">🌿</div>
+            <div class="loading-leaf-spinner">${GhibliIcons.leafSprout}</div>
             <p class="loading-text">Đang cập nhật bảng xếp hạng ${curTimeframe === 'weekly' ? 'tuần này (7 ngày)' : 'hôm nay (24h)'}...</p>
           </div>
         `;
@@ -2451,7 +2589,7 @@
       } else {
         if (dom.searchEmptyState) {
           dom.searchEmptyState.innerHTML = `
-            <span class="empty-icon">🍂</span>
+            <span class="empty-icon">${GhibliIcons.autumnLeaf}</span>
             <h3>Không tìm thấy bài hát nào cho "${q}"</h3>
             <p>Hãy thử tìm bằng từ khóa khác xem sao nhé!</p>
           `;
@@ -2511,7 +2649,7 @@
         if (dom.albumsEmptyState) {
           dom.albumsEmptyState.classList.remove('hidden');
           dom.albumsEmptyState.innerHTML = `
-            <span class="empty-icon">💿</span>
+            <span class="empty-icon">${GhibliIcons.vinylGroove}</span>
             <h3>Không tìm thấy EP hay Album nào cho "${q || country}"</h3>
             <p>Hãy thử tìm bằng tên nghệ sĩ khác xem sao nhé!</p>
           `;
@@ -3181,7 +3319,7 @@
     if (state.queue.length === 0) {
       dom.queueListContainer.innerHTML = `
         <li style="padding: 20px; text-align: center; color: #7f5539; font-size: 0.9rem;">
-          Hàng đợi đang trống 🍃
+          Hàng đợi đang trống ${GhibliIcons.leafSprout}
         </li>
       `;
       return;
@@ -3268,9 +3406,9 @@
 
   function updateLikeButtonUI(trackId) {
     const isFav = state.favorites.some(t => t.id === trackId);
-    if (dom.likeBtn) dom.likeBtn.textContent = isFav ? '💚' : '🤍';
-    if (dom.sheetLikeBtn) dom.sheetLikeBtn.textContent = isFav ? '💚' : '🤍';
-    if (dom.stageLikeIcon) dom.stageLikeIcon.textContent = isFav ? '💚' : '🤍';
+    if (dom.likeBtn) dom.likeBtn.innerHTML = isFav ? GhibliIcons.leafHeartFilled : GhibliIcons.leafHeartOutline;
+    if (dom.sheetLikeBtn) dom.sheetLikeBtn.innerHTML = isFav ? GhibliIcons.leafHeartFilled : GhibliIcons.leafHeartOutline;
+    if (dom.stageLikeIcon) dom.stageLikeIcon.innerHTML = isFav ? GhibliIcons.leafHeartFilled : GhibliIcons.leafHeartOutline;
     if (dom.stageLikeText) dom.stageLikeText.textContent = isFav ? 'Đã thích' : 'Yêu thích';
     if (dom.stageLikeBtn) dom.stageLikeBtn.classList.toggle('active', isFav);
   }
@@ -3282,9 +3420,9 @@
     if (state.favorites.length === 0) {
       dom.favoriteTracksGrid.innerHTML = `
         <div class="search-empty-prompt">
-          <span class="empty-icon">🌱</span>
+          <span class="empty-icon">${GhibliIcons.leafSprout}</span>
           <h3>Chưa có bài hát yêu thích nào</h3>
-          <p>Bấm biểu tượng trái tim 💚 ở thanh phát nhạc để lưu vào đây nhé!</p>
+          <p>Bấm biểu tượng trái tim ${GhibliIcons.leafHeartFilled} ở thanh phát nhạc để lưu vào đây nhé!</p>
         </div>
       `;
       return;
@@ -3435,9 +3573,9 @@
 
         // Icon bưu chính 🕊️ khi dán link YouTube
         if (/youtube\.com|youtu\.be/i.test(val)) {
-          if (dom.searchTypeIcon) dom.searchTypeIcon.textContent = '🕊️';
+          if (dom.searchTypeIcon) dom.searchTypeIcon.innerHTML = GhibliIcons.whiteDove;
         } else {
-          if (dom.searchTypeIcon) dom.searchTypeIcon.textContent = '🔍';
+          if (dom.searchTypeIcon) dom.searchTypeIcon.innerHTML = GhibliIcons.brassLens;
         }
 
         clearTimeout(searchDebounceTimer);
@@ -3877,13 +4015,13 @@
         if (ambientText) ambientText.textContent = 'Đêm Rừng';
         if (sunIcon) sunIcon.classList.add('hidden');
         if (moonIcon) moonIcon.classList.remove('hidden');
-        if (ambientBtn) ambientBtn.title = 'Chuyển sang chế độ Ban Ngày ☀️';
+        if (ambientBtn) ambientBtn.title = 'Chuyển sang chế độ Ban Ngày';
       } else {
         document.body.classList.remove('twilight-mode');
         if (ambientText) ambientText.textContent = 'Ban Ngày';
         if (sunIcon) sunIcon.classList.remove('hidden');
         if (moonIcon) moonIcon.classList.add('hidden');
-        if (ambientBtn) ambientBtn.title = 'Chuyển sang chế độ Đêm Rừng Đom Đóm 🌙';
+        if (ambientBtn) ambientBtn.title = 'Chuyển sang chế độ Đêm Rừng Đom Đóm';
       }
       if (save) {
         try {
@@ -4715,7 +4853,7 @@
       dom.toggleLoginPasswordBtn.addEventListener('click', () => {
         const isPass = dom.loginPassword.type === 'password';
         dom.loginPassword.type = isPass ? 'text' : 'password';
-        dom.toggleLoginPasswordBtn.textContent = isPass ? '🙈' : '👁️';
+        dom.toggleLoginPasswordBtn.innerHTML = isPass ? GhibliIcons.eyeClosed : GhibliIcons.sketchedEye;
       });
     }
 
@@ -4723,7 +4861,7 @@
       dom.toggleRegisterPasswordBtn.addEventListener('click', () => {
         const isPass = dom.registerPassword.type === 'password';
         dom.registerPassword.type = isPass ? 'text' : 'password';
-        dom.toggleRegisterPasswordBtn.textContent = isPass ? '🙈' : '👁️';
+        dom.toggleRegisterPasswordBtn.innerHTML = isPass ? GhibliIcons.eyeClosed : GhibliIcons.sketchedEye;
       });
     }
 
