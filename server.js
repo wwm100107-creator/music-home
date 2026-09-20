@@ -264,18 +264,24 @@ async function getSearchClient() {
 }
 
 async function getStreamClient(forceNew = false) {
-  const cookie = getYouTubeCookie();
   if (!ytStreamInstance || forceNew) {
+    // ClientType.IOS là client tốt nhất cho background audio playback:
+    // Cung cấp luồng AAC 128kbps (itag 140) sạch, không bị BotGuard / LOGIN_REQUIRED chặn trên IP datacenter
     const config = {
-      client_type: cookie ? ClientType.MWEB : ClientType.VISIONOS,
+      client_type: ClientType.IOS,
       cache: new UniversalCache(false),
       generate_session_locally: false
     };
-    if (cookie) {
-      config.cookie = cookie;
+    try {
+      ytStreamInstance = await Innertube.create(config);
+      console.log('✅ YouTube Stream client initialized (IOS Client - Background Audio Stream)');
+    } catch (err) {
+      console.warn('⚠️ IOS Client init failed, fallback to VISIONOS:', err.message);
+      config.client_type = ClientType.VISIONOS;
+      const cookie = getYouTubeCookie();
+      if (cookie) config.cookie = cookie;
+      ytStreamInstance = await Innertube.create(config);
     }
-    ytStreamInstance = await Innertube.create(config);
-    console.log(`✅ YouTube Stream client initialized (${cookie ? 'MWEB with Authenticated Cookie' : 'VISIONOS'})`);
   }
   return ytStreamInstance;
 }
@@ -294,12 +300,26 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
   }
 
   let ytStream = await getStreamClient(forceRefresh);
-  let info = await ytStream.getBasicInfo(videoId);
-
-  if (info.playability_status?.status === 'LOGIN_REQUIRED') {
-    console.warn(`[Stream ${videoId}]: Got LOGIN_REQUIRED, re-initializing client with fresh cookie...`);
+  let info;
+  try {
+    info = await ytStream.getBasicInfo(videoId);
+  } catch (basicErr) {
+    console.warn(`[Stream ${videoId}]: getBasicInfo error, refreshing client:`, basicErr.message);
     ytStream = await getStreamClient(true);
     info = await ytStream.getBasicInfo(videoId);
+  }
+
+  if (info.playability_status?.status === 'LOGIN_REQUIRED') {
+    console.warn(`[Stream ${videoId}]: Got LOGIN_REQUIRED on primary client, trying TV_EMBEDDED fallback...`);
+    try {
+      const fallbackClient = await Innertube.create({
+        client_type: ClientType.TV_EMBEDDED,
+        cache: new UniversalCache(false),
+        generate_session_locally: false
+      });
+      info = await fallbackClient.getBasicInfo(videoId);
+      ytStream = fallbackClient;
+    } catch (_) {}
   }
 
   if (info.playability_status?.status && info.playability_status.status !== 'OK') {
@@ -314,8 +334,7 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
   const audioFormats = allFormats.filter(f => (f.mime_type?.startsWith('audio/') || f.has_audio));
 
   if (audioFormats.length === 0) {
-    const cookie = getYouTubeCookie();
-    throw new Error(`Không tìm thấy luồng âm thanh (${info.playability_status?.status || 'UNKNOWN'}: ${info.playability_status?.reason || 'No streaming data'} - Client: ${cookie ? 'MWEB' : 'VISIONOS'}, CookieLen: ${cookie ? cookie.length : 0})`);
+    throw new Error(`Không tìm thấy luồng âm thanh (${info.playability_status?.status || 'UNKNOWN'}: ${info.playability_status?.reason || 'No streaming data'})`);
   }
 
   // Ưu tiên itag 140 (AAC 128kbps) hoặc 251 (Opus) hoặc 139 (AAC 48kbps)
@@ -1643,7 +1662,7 @@ apiRouter.get('/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000,
     const rangeHeader = req.headers.range || 'bytes=0-';
     const upstreamHeaders = {
       'User-Agent':
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15',
+        'com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X;)',
       'Range': rangeHeader,
       'Accept': '*/*'
     };
@@ -1695,6 +1714,7 @@ apiRouter.get('/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000,
     if (!res.getHeader('accept-ranges')) {
       res.setHeader('accept-ranges', 'bytes');
     }
+    res.setHeader('cache-control', 'public, max-age=3600, s-maxage=3600');
 
     if (upstreamResponse.body) {
       const { Readable } = await import('stream');

@@ -40,7 +40,22 @@
     lyricsTrackId: null,
     currentUser: null,
     authToken: (() => { try { return localStorage.getItem('ghibli_auth_token') || null; } catch (_) { return null; } })(),
-    isSyncing: false
+    isSyncing: false,
+    isMobile: (() => {
+      try {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+      } catch (_) {
+        return false;
+      }
+    })(),
+    backgroundPlayback: (() => {
+      try {
+        const saved = localStorage.getItem('ghibli_bg_playback');
+        return saved !== null ? saved === 'true' : true;
+      } catch (_) {
+        return true;
+      }
+    })()
   };
 
   // Cache DOM
@@ -219,6 +234,8 @@
     sheetLoopBadge: document.getElementById('sheetLoopBadge'),
     sheetLoopStatusChip: document.getElementById('sheetLoopStatusChip'),
     sheetShuffleStatusChip: document.getElementById('sheetShuffleStatusChip'),
+    sheetBgPlaybackChip: document.getElementById('sheetBgPlaybackChip'),
+    sheetBgPlaybackText: document.getElementById('sheetBgPlaybackText'),
 
     // Spotify-Style Real-Time Synced Lyrics Elements
     lyricsToggleBtn: document.getElementById('lyricsToggleBtn'),
@@ -530,12 +547,24 @@
     `;
   }
 
-  // 1.4. Mobile Fullscreen Sheet Management
+  // 1.4. Mobile Background Playback UI
+  function updateBgPlaybackUI() {
+    if (!dom.sheetBgPlaybackChip) return;
+    const isEnabled = state.backgroundPlayback;
+    dom.sheetBgPlaybackChip.classList.toggle('active', isEnabled);
+    dom.sheetBgPlaybackChip.classList.toggle('disabled', !isEnabled);
+    if (dom.sheetBgPlaybackText) {
+      dom.sheetBgPlaybackText.innerHTML = `🎧 Phát nền (Tắt màn hình): <strong>${isEnabled ? 'BẬT' : 'TẮT'}</strong>`;
+    }
+  }
+
+  // 1.5. Mobile Fullscreen Sheet Management
   function openMobileFullscreenSheet() {
     if (!dom.mobileFullscreenSheet) return;
     dom.mobileFullscreenSheet.classList.remove('hidden');
     document.body.classList.add('sheet-open');
     triggerHaptic(12);
+    updateBgPlaybackUI();
     if (state.currentTrack) {
       updateNowPlayingUI(state.currentTrack);
     }
@@ -649,6 +678,31 @@
         e.stopPropagation();
         triggerHaptic(10);
         cycleLoopMode();
+      });
+    }
+
+    if (dom.sheetBgPlaybackChip) {
+      updateBgPlaybackUI();
+      dom.sheetBgPlaybackChip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        triggerHaptic(12);
+        state.backgroundPlayback = !state.backgroundPlayback;
+        try {
+          localStorage.setItem('ghibli_bg_playback', state.backgroundPlayback ? 'true' : 'false');
+        } catch (_) {}
+        updateBgPlaybackUI();
+        if (state.backgroundPlayback) {
+          showToast('🎧 Đã BẬT Phát Chạy Nền! Nhạc vẫn ngân vang khi bạn tắt màn hình hoặc đổi ứng dụng 🍃');
+          if (state.isPlaying && state.activeEngine === 'youtube' && state.currentTrack) {
+            const cur = (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') ? ytPlayer.getCurrentTime() : 0;
+            state.activeEngine = 'audio';
+            dom.audio.src = `/api/stream/${state.currentTrack.id}`;
+            dom.audio.currentTime = cur;
+            dom.audio.play().catch(() => {});
+          }
+        } else {
+          showToast('⏸️ Đã TẮT Phát Chạy Nền');
+        }
       });
     }
 
@@ -1407,13 +1461,16 @@
       dom.audio.pause();
     }
 
-    // 1. Luồng âm thanh trực tiếp (Drop Your Music, file tải lên, iTunes preview)
+    // 1. Luồng âm thanh trực tiếp (Drop Your Music, file tải lên, iTunes preview) hoặc Chế độ Background Playback trên Di động
     const directAudioSource = track.audioUrl || track.streamUrl || track.previewUrl;
+    const preferBackgroundAudio = directAudioSource || (state.isMobile && state.backgroundPlayback) || (!isYtReady);
 
-    if (directAudioSource) {
-      // Ưu tiên phát qua HTML5 Audio cho file âm thanh trực tiếp
+    if (preferBackgroundAudio) {
+      // Ưu tiên phát qua HTML5 Audio cho file âm thanh trực tiếp hoặc Background Playback trên di động
       state.activeEngine = 'audio';
-      dom.audio.src = directAudioSource;
+      const audioSource = directAudioSource || `/api/stream/${track.id}`;
+      dom.audio.src = audioSource;
+      dom.audio.load();
       const playPromise = dom.audio.play();
       if (playPromise !== undefined) {
         playPromise.then(() => {
@@ -1423,7 +1480,16 @@
         }).catch(audioErr => {
           if (audioErr.name === 'AbortError') return;
           console.warn('[Native Audio Engine Warning]:', audioErr.message);
-          setPlaybackVisualState(false);
+          // Fallback sang YouTube Engine nếu có sẵn
+          if (!directAudioSource && ytPlayer && isYtReady && typeof ytPlayer.loadVideoById === 'function') {
+            state.activeEngine = 'youtube';
+            ytPlayer.loadVideoById(track.id);
+            ytPlayer.playVideo();
+            setPlaybackVisualState(true);
+            updateMediaSession(track);
+          } else {
+            setPlaybackVisualState(false);
+          }
         });
       }
     } else {
@@ -1439,6 +1505,7 @@
         // Fallback qua audio element nếu player chưa sẵn sàng
         state.activeEngine = 'audio';
         dom.audio.src = `/api/stream/${track.id}`;
+        dom.audio.load();
         dom.audio.play().then(() => {
           setPlaybackVisualState(true);
           state.consecutiveErrors = 0;
@@ -3441,7 +3508,19 @@
 
     const actionHandlers = [
       ['play', () => {
-        if (!state.isPlaying) togglePlayPause();
+        if (!state.isPlaying) {
+          if (state.isMobile && state.backgroundPlayback && state.currentTrack && state.activeEngine === 'youtube') {
+            const curTime = (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') ? ytPlayer.getCurrentTime() : 0;
+            state.activeEngine = 'audio';
+            dom.audio.src = `/api/stream/${state.currentTrack.id}`;
+            dom.audio.currentTime = curTime;
+            dom.audio.play().then(() => {
+              setPlaybackVisualState(true);
+            }).catch(() => {});
+          } else {
+            togglePlayPause();
+          }
+        }
       }],
       ['pause', () => {
         if (state.isPlaying) togglePlayPause();
@@ -3492,6 +3571,39 @@
       }
     }
   }
+
+  // Lắng nghe sự kiện Tắt màn hình / Chuyển Tab / Chuyển ứng dụng (Mobile Background Handoff)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      // Khi người dùng khóa màn hình hoặc chuyển sang ứng dụng khác
+      if (state.isPlaying && state.backgroundPlayback && state.currentTrack) {
+        if (state.activeEngine === 'youtube' && ytPlayer) {
+          try {
+            const curTime = (typeof ytPlayer.getCurrentTime === 'function') ? ytPlayer.getCurrentTime() : 0;
+            state.activeEngine = 'audio';
+            dom.audio.src = `/api/stream/${state.currentTrack.id}`;
+            dom.audio.currentTime = curTime;
+            dom.audio.play().catch(e => console.warn('[Background Playback Handoff Warning]:', e.message));
+          } catch (_) {}
+        }
+        updateMediaSessionPlaybackState(true);
+      }
+    } else if (document.visibilityState === 'visible') {
+      if (state.isPlaying) {
+        setPlaybackVisualState(true);
+      }
+    }
+  });
+
+  // Mở khóa AudioSession ngay lần chạm đầu tiên trên thiết bị di động (iOS Safari Audio Unlock)
+  function unlockMobileAudioSession() {
+    if (dom.audio && !dom.audio.dataset.unlocked) {
+      dom.audio.dataset.unlocked = 'true';
+      dom.audio.load();
+    }
+  }
+  window.addEventListener('touchstart', unlockMobileAudioSession, { once: true, passive: true });
+  window.addEventListener('click', unlockMobileAudioSession, { once: true, passive: true });
 
   // ==========================================================================
   // 14. USER ACCOUNTS & MULTI-DEVICE CLOUD SYNCHRONIZATION
@@ -3727,6 +3839,13 @@
           window.__applyAmbientMode(shouldBeTwilight, false);
         }
 
+        // Khôi phục cài đặt Background Playback
+        if (data.user.settings && data.user.settings.backgroundPlayback !== undefined) {
+          state.backgroundPlayback = !!data.user.settings.backgroundPlayback;
+          try { localStorage.setItem('ghibli_bg_playback', state.backgroundPlayback ? 'true' : 'false'); } catch (_) {}
+          updateBgPlaybackUI();
+        }
+
         updateAccountUI();
         // Tự động đồng bộ ngược lại các bài hát vừa hợp nhất lên cloud
         debouncedCloudSync();
@@ -3907,7 +4026,8 @@
       settings: {
         theme: document.body.classList.contains('twilight-mode') ? 'twilight' : 'day',
         loopMode: state.loopMode || 'all',
-        volume: state.volume || 0.8
+        volume: state.volume || 0.8,
+        backgroundPlayback: state.backgroundPlayback !== false
       },
       customPlaylists: []
     };

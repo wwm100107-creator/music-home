@@ -909,10 +909,14 @@
       </button>
     </div>
 
-    <!-- Dòng hiển thị trạng thái chế độ lặp & trộn nhạc trên sheet -->
+    <!-- Dòng hiển thị trạng thái chế độ lặp, trộn nhạc & phát chạy nền trên sheet -->
     <div class="sheet-mode-status" id="sheetModeStatus">
       <span class="mode-status-chip" id="sheetLoopStatusChip">🔁 Lặp vĩnh viễn (Toàn bộ)</span>
       <span class="mode-status-chip hidden" id="sheetShuffleStatusChip">🔀 Trộn nhạc: BẬT</span>
+      <button type="button" class="mode-status-chip bg-playback-chip active" id="sheetBgPlaybackChip" title="Chạm để bật/tắt phát nhạc khi tắt màn hình">
+        <span class="bg-playback-dot"></span>
+        <span id="sheetBgPlaybackText">🎧 Phát nền (Tắt màn hình): <strong>BẬT</strong></span>
+      </button>
     </div>
 
     <!-- Thẻ Lời Bài Hát Chuẩn Spotify Trên Mobile Sheet -->
@@ -1231,7 +1235,7 @@
   </div>
 
   <!-- Thẻ Audio cốt lõi cho track preview / direct audio / VisionOS background stream -->
-  <audio id="audioElement" preload="auto" playsinline webkit-playsinline></audio>
+  <audio id="audioElement" preload="auto" playsinline webkit-playsinline x-webkit-airplay="allow"></audio>
 
   <!-- Container YouTube IFrame Engine ngầm (đảm bảo phát nhạc 100% không bao giờ lỗi luồng trên Vercel) -->
   <div id="ytPlayerContainer" style="position: fixed; width: 200px; height: 200px; bottom: 0; right: 0; opacity: 0.001; pointer-events: none; z-index: -1;"></div>
