@@ -924,13 +924,12 @@ apiRouter.get('/debug-stream/:videoId', async (req, res) => {
   const { videoId } = req.params;
   const cookie = getYouTubeCookie();
   const testClients = [
+    { type: ClientType.TV_SIMPLY, name: 'TV_SIMPLY', useCookie: false, genLocally: false },
+    { type: ClientType.MUSIC, name: 'MUSIC', useCookie: true, genLocally: false },
     { type: ClientType.WEB, name: 'WEB', useCookie: true, genLocally: false },
-    { type: ClientType.WEB, name: 'WEB_NO_COOKIE', useCookie: false, genLocally: false },
     { type: ClientType.MWEB, name: 'MWEB', useCookie: true, genLocally: false },
     { type: ClientType.VISIONOS, name: 'VISIONOS', useCookie: false, genLocally: true },
-    { type: ClientType.IOS, name: 'IOS', useCookie: false, genLocally: true },
-    { type: ClientType.ANDROID_VR, name: 'ANDROID_VR', useCookie: false, genLocally: true },
-    { type: ClientType.TV_EMBEDDED, name: 'TV_EMBEDDED', useCookie: false, genLocally: false }
+    { type: ClientType.IOS, name: 'IOS', useCookie: false, genLocally: true }
   ];
 
   const results = [];
@@ -948,10 +947,18 @@ apiRouter.get('/debug-stream/:videoId', async (req, res) => {
       const combined = info.streaming_data?.formats || [];
       const audio = [...adaptive, ...combined].filter(f => f.mime_type?.startsWith('audio/') || f.has_audio);
       let chosen = null;
+      let decipherError = null;
+      let decipheredUrl = null;
       try {
         chosen = info.chooseFormat({ type: 'audio', quality: 'best' });
+        if (chosen) {
+          decipheredUrl = chosen.url;
+          if (!decipheredUrl && typeof chosen.decipher === 'function') {
+            decipheredUrl = await chosen.decipher(yt.session.player);
+          }
+        }
       } catch (e) {
-        chosen = { error: e.message };
+        decipherError = e.message;
       }
       results.push({
         client: tc.name,
@@ -960,7 +967,8 @@ apiRouter.get('/debug-stream/:videoId', async (req, res) => {
         hasStreamingData: Boolean(info.streaming_data),
         audioCount: audio.length,
         chosenItag: chosen?.itag,
-        hasUrl: Boolean(chosen?.url)
+        hasUrl: Boolean(decipheredUrl),
+        decipherError
       });
     } catch (err) {
       results.push({
