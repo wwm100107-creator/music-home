@@ -360,10 +360,7 @@ function isLikelyBloatedMV(title, durationSec) {
   const t = (title || '').toLowerCase();
   const d = Number(durationSec) || 0;
 
-  const hasMvKeyword =
-    t.includes('official music video') ||
-    t.includes('official mv') ||
-    t.includes('music video') ||
+  const hasDramaKeyword =
     t.includes('phim ngắn') ||
     t.includes('short film') ||
     t.includes('drama ver') ||
@@ -371,8 +368,10 @@ function isLikelyBloatedMV(title, durationSec) {
     t.includes('cinematic') ||
     t.includes('full story');
 
-  if (hasMvKeyword && d > 240) return true;
-  if (d > 360 && (t.includes('mv') || t.includes('video'))) return true;
+  if (hasDramaKeyword && d > 360) return true;
+  // Chỉ coi là MV dư thời lượng nếu có từ khóa MV và dài trên 6 phút (360s)
+  if (d > 360 && (t.includes('official music video') || t.includes('official mv') || t.includes('music video'))) return true;
+  // Bất kỳ video nào dài trên 8 phút (480s)
   if (d > 480) return true;
 
   return false;
@@ -529,12 +528,8 @@ async function resolveAudioStream(videoId, forceRefresh = false, excludeClients 
   // 1. Trả về trực tiếp itag 140 (AAC 128kbps) tương thích 100% iOS WebKit & giải mã phần cứng Apple
   // 2. Không bị dính lỗi 403 Forbidden do YouTube CDN nhận diện đúng định dạng âm thanh di động
   const candidateClients = [
-    { type: ClientType.IOS, name: 'IOS', genLocally: true, useCookie: false, userAgent: 'com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X;)' },
     { type: ClientType.VISIONOS, name: 'VISIONOS', genLocally: true, useCookie: false, userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15' },
-    { type: ClientType.ANDROID, name: 'ANDROID', genLocally: true, useCookie: false, userAgent: 'com.google.android.youtube/21.03.36(Linux; U; Android 16; en_US; SM-S908E Build/TP1A.220624.014) gzip' },
-    { type: ClientType.TV_SIMPLY, name: 'TV_SIMPLY', genLocally: false, useCookie: false, userAgent: 'Mozilla/5.0 (ChromiumStylePlatform) Cobalt/Version' },
-    { type: ClientType.MUSIC, name: 'MUSIC', genLocally: false, useCookie: true, userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
-    { type: ClientType.WEB, name: 'WEB', genLocally: false, useCookie: true, userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+    { type: ClientType.IOS, name: 'IOS', genLocally: true, useCookie: false, userAgent: 'com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X;)' },
     { type: ClientType.MWEB, name: 'MWEB', genLocally: false, useCookie: true, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1' }
   ];
 
@@ -547,20 +542,7 @@ async function resolveAudioStream(videoId, forceRefresh = false, excludeClients 
     if (excludeClients.includes(cand.name)) continue;
     try {
       const yt = await getPooledCandidateClient(cand, cookie);
-      let info = await yt.getBasicInfo(targetVideoId);
-
-      // Nếu targetVideoId chưa được đổi và bài hát là MV dài lê thê, tìm bản clean song ngay từ info này
-      if (targetVideoId === videoId && info.basic_info) {
-        const rawTitle = info.basic_info.title || '';
-        const durSec = parseToDurationSec(info.basic_info.duration) || 0;
-        if (isLikelyBloatedMV(rawTitle, durSec)) {
-          const clean = await getCleanAudioTrack(yt, videoId, info.basic_info);
-          if (clean && clean.id && clean.id !== videoId) {
-            targetVideoId = clean.id;
-            info = await yt.getBasicInfo(targetVideoId);
-          }
-        }
-      }
+      const info = await yt.getBasicInfo(targetVideoId);
 
       if (info.playability_status?.status && info.playability_status.status !== 'OK') {
         console.warn(`[Stream ${targetVideoId}] Client ${cand.name} status:`, info.playability_status.status, info.playability_status.reason || '');
@@ -1598,14 +1580,19 @@ apiRouter.get('/search', rateLimit({ maxRequests: 50, windowMs: 60000, endpointN
         let title = item.title?.text || item.title || 'Unknown Title';
         let artist = item.artists?.[0]?.name || item.author?.name || '';
         const album = item.album?.name || '';
-        let duration = item.duration?.text || (item.duration ? String(item.duration) : '3:30');
-        let durationSec = item.duration?.seconds || 210;
+        let durationSec = parseToDurationSec(item.duration?.seconds || item.duration?.text || item.duration) || 210;
+        let duration = item.duration?.text || formatTimeSec(durationSec);
 
         // Bỏ qua nhạc spam bot AI, tuyển tập, mixtape
         if (isSpamTrack(title, artist, durationSec)) continue;
 
         let finalId = id;
-        if (isLikelyBloatedMV(title, durationSec)) {
+        const idKey = id.toLowerCase().trim();
+        if (KNOWN_CLEAN_TRACKS[idKey]) {
+          finalId = KNOWN_CLEAN_TRACKS[idKey].id;
+          duration = KNOWN_CLEAN_TRACKS[idKey].duration || duration;
+          durationSec = parseToDurationSec(duration) || durationSec;
+        } else if (isLikelyBloatedMV(title, durationSec)) {
           try {
             const clean = await getCleanAudioTrack(ytSearch, id, item);
             if (clean && clean.id) {

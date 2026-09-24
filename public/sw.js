@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const CACHE_NAME = 'antigravity-ghibli-v3-bg-audio';
+const CACHE_NAME = 'antigravity-ghibli-v4.3-bg-audio';
 
 // Danh sách các tài nguyên tĩnh cốt lõi cần lưu trữ offline
 const STATIC_ASSETS = [
@@ -37,13 +37,13 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('🍃 [Service Worker] Pre-caching Ghibli UI Shell...');
+      console.log('🍃 [Service Worker] Pre-caching Ghibli UI Shell v4.3...');
       return cache.addAll(STATIC_ASSETS);
     }).then(() => self.skipWaiting())
   );
 });
 
-// 2. ACTIVATE: Dọn dẹp các cache phiên bản cũ
+// 2. ACTIVATE: Dọn dẹp các cache phiên bản cũ ngay lập tức
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -59,7 +59,8 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. FETCH: Chiến lược Stale-While-Revalidate cho tài nguyên tĩnh, bỏ qua streaming audio động
+// 3. FETCH: Network-First cho mã nguồn (app.js, index.html) để luôn nhận bản vá mới nhất,
+// Cache-First cho tài nguyên hình ảnh/font tĩnh, bỏ qua streaming audio
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
@@ -77,24 +78,37 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Đối với file tĩnh (HTML, CSS, JS, Font, Image): Ưu tiên Cache để mở tức thì ngay cả khi Airplane Mode
+  // Đối với app.js và index.html: Network First để luôn nhận code mới nhất tức thì khi có mạng!
+  const isCodeAsset = url.pathname.endsWith('app.js') || url.pathname.endsWith('index.html') || url.pathname === '/' || url.pathname.endsWith('/');
+  if (isCodeAsset) {
+    event.respondWith(
+      fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, responseToCache));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // Đối với hình ảnh, font chữ: Ưu tiên Cache để mở tức thì ngay cả khi Airplane Mode
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Cập nhật ngầm (Stale-while-revalidate) khi có mạng
         fetch(request)
           .then((networkResponse) => {
             if (networkResponse && networkResponse.status === 200) {
               caches.open(CACHE_NAME).then((cache) => cache.put(request, networkResponse));
             }
           })
-          .catch(() => {
-            // Mất mạng / Chế độ máy bay -> an tâm dùng bản cache
-          });
+          .catch(() => {});
         return cachedResponse;
       }
 
-      // Chưa có trong cache -> lấy từ mạng và lưu vào cache nếu thành công
       return fetch(request)
         .then((response) => {
           if (!response || response.status !== 200 || response.type === 'opaque') {
@@ -107,7 +121,6 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Khi mất mạng và đang load trang HTML, trả về index.html từ cache
           if (request.mode === 'navigate') {
             return caches.match('./index.html');
           }

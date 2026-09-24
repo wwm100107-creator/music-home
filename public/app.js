@@ -571,26 +571,31 @@
 
   // Lấy thời lượng âm thanh chuẩn xác, khắc phục triệt để lỗi Safari iOS CoreAudio nhân đôi (2x) thời lượng AAC/fMP4
   function getEffectiveAudioDuration() {
-    const trackSec = state.currentTrack?.durationSec || parseDurationToSec(state.currentTrack?.duration);
+    // 1. Luôn ưu tiên parse trực tiếp từ chuỗi duration hiển thị trên thẻ card (VD: "4:50" -> 290s)
+    const cardTextSec = parseDurationToSec(state.currentTrack?.duration);
+    const metaNumSec = Number(state.currentTrack?.durationSec) || 0;
+
+    // expectedSec: chuỗi thời lượng người dùng thấy bên ngoài thẻ là chân lý cao nhất
+    const expectedSec = cardTextSec > 0 ? cardTextSec : (metaNumSec > 0 ? metaNumSec : 0);
     const audioDur = dom.audio?.duration;
 
     // Nếu không có audio duration hoặc audio duration không hợp lệ
     if (!audioDur || isNaN(audioDur) || !isFinite(audioDur)) {
-      return trackSec || 210;
+      return expectedSec || 210;
     }
 
-    // Nếu bài hát đã có metadata thời lượng chính thức từ YouTube Music API
-    if (trackSec && trackSec > 0) {
-      // Safari iOS WebKit CoreAudio Bug: Khi phát AAC-LC trong fragmented MP4 (fMP4 itag 140),
-      // Safari đọc sai tần số mẫu (44.1kHz thành 22.05kHz), làm duration bị nhân đôi x2
-      // (Ví dụ bài 227s - 3:47 Safari hiển thị thành 454s - 07:34).
-      const ratio = audioDur / trackSec;
-      if (ratio >= 1.6 && ratio <= 2.4) {
-        return trackSec; // Luôn ưu tiên thời lượng thực tế từ metadata chính thống của bài hát
+    // Nếu có expectedSec từ thông tin bài hát (ví dụ bài "4:50" -> expectedSec = 290s):
+    if (expectedSec > 0) {
+      // 1. Bug Safari iOS WebKit CoreAudio: Khi phát AAC-LC itag 140 trong fMP4,
+      // Safari ngộ nhận sample rate 44.1kHz thành 22.05kHz, sinh ra duration >= 1.35x expectedSec.
+      // Bất kỳ khi nào audioDur lớn hơn 1.35x expectedSec -> LẬP TỨC TRẢ VỀ expectedSec!
+      if (audioDur >= expectedSec * 1.35) {
+        return expectedSec;
       }
-      // Nếu audio.duration chênh lệch vô lý (> 15s) so với metadata YouTube thì ưu tiên metadata
-      if (Math.abs(audioDur - trackSec) > 15 && trackSec > 30) {
-        return trackSec;
+
+      // 2. Nếu audioDur chênh lệch quá 8 giây so với expectedSec (đối với bài > 30s)
+      if (Math.abs(audioDur - expectedSec) > 8 && expectedSec > 30) {
+        return expectedSec;
       }
     }
 
