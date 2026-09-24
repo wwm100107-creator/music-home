@@ -1929,7 +1929,7 @@
   setInterval(() => {
     if (state.isPlaying && !state.isScrubbing) {
       if (state.activeEngine === 'audio' || state.currentTrack?.previewUrl) {
-        if (dom.audio && dom.audio.duration) {
+        if (dom.audio && dom.audio.duration && !isNaN(dom.audio.duration) && isFinite(dom.audio.duration)) {
           const percent = (dom.audio.currentTime / dom.audio.duration) * 100;
           updateProgressUI(percent);
           if (dom.currentTime) dom.currentTime.textContent = formatTime(dom.audio.currentTime);
@@ -1937,6 +1937,19 @@
           if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = formatTime(dom.audio.currentTime);
           if (dom.sheetTotalTime) dom.sheetTotalTime.textContent = formatTime(dom.audio.duration);
           syncLyricsWithTime(dom.audio.currentTime);
+
+          // Tự động đồng bộ thời lượng thực tế của file âm thanh với thông tin bài hát
+          if (state.currentTrack && state.currentTrack.durationSec !== Math.round(dom.audio.duration)) {
+            state.currentTrack.durationSec = Math.round(dom.audio.duration);
+            state.currentTrack.duration = formatTime(dom.audio.duration);
+            if (dom.albumDetailTracksList) {
+              const matchedRow = dom.albumDetailTracksList.querySelector(`.album-detail-track-row[data-track-id="${state.currentTrack.id}"]`);
+              if (matchedRow) {
+                const durCol = matchedRow.querySelector('.col-duration');
+                if (durCol) durCol.textContent = formatTime(dom.audio.duration);
+              }
+            }
+          }
         }
       } else if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.getCurrentTime === 'function') {
         const cur = ytPlayer.getCurrentTime();
@@ -3697,8 +3710,22 @@
       });
 
       dom.audio.addEventListener('loadedmetadata', () => {
-        if (state.activeEngine === 'audio' && dom.audio.duration) {
-          if (dom.totalDuration) dom.totalDuration.textContent = formatTime(dom.audio.duration);
+        if (state.activeEngine === 'audio' && dom.audio.duration && !isNaN(dom.audio.duration) && isFinite(dom.audio.duration)) {
+          const realSec = Math.round(dom.audio.duration);
+          const formatted = formatTime(dom.audio.duration);
+          if (dom.totalDuration) dom.totalDuration.textContent = formatted;
+          if (dom.sheetTotalTime) dom.sheetTotalTime.textContent = formatted;
+          if (state.currentTrack) {
+            state.currentTrack.durationSec = realSec;
+            state.currentTrack.duration = formatted;
+            if (dom.albumDetailTracksList) {
+              const matchedRow = dom.albumDetailTracksList.querySelector(`.album-detail-track-row[data-track-id="${state.currentTrack.id}"]`);
+              if (matchedRow) {
+                const durCol = matchedRow.querySelector('.col-duration');
+                if (durCol) durCol.textContent = formatted;
+              }
+            }
+          }
           updateMediaSessionPosition(dom.audio.currentTime, dom.audio.duration);
         }
       });

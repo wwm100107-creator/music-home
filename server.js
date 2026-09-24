@@ -185,6 +185,7 @@ const streamCache = new BoundedCache(300, 45 * 60 * 1000);
 const trendingCache = new BoundedCache(50, 60 * 60 * 1000);
 const albumCache = new BoundedCache(80, 60 * 60 * 1000);
 const lyricsCache = new BoundedCache(300, 60 * 60 * 1000);
+const cleanTrackCache = new BoundedCache(500, 24 * 60 * 60 * 1000);
 
 // ============================================================================
 // 5. CIRCUIT BREAKER
@@ -293,10 +294,195 @@ async function getClients() {
   return { ytSearch, ytStream };
 }
 
+// ============================================================================
+// 6.1. CLEAN AUDIO RESOLVER (Chuẩn hóa bài hát về bản Studio Audio & Cắt bỏ MV dư thời lượng)
+// ============================================================================
+const KNOWN_CLEAN_TRACKS = {
+  // Wren Evans - Call Me (Official Studio: 3:35 thay vì MV kịch bản 6:15)
+  'wrcorytidddq': { id: '7pCmFA4y9Dk', duration: '3:35', durationSec: 215 },
+  'wrcorytidddq_call me': { id: '7pCmFA4y9Dk', duration: '3:35', durationSec: 215 },
+  'call me_wren evans': { id: '7pCmFA4y9Dk', duration: '3:35', durationSec: 215 },
+
+  // Sơn Tùng M-TP - Chúng Ta Của Hiện Tại (Official Audio: 5:02 thay vì Phim ngắn MV 14:51)
+  'psz1g9fmfeo': { id: 'bNp9pn0ni3I', duration: '5:02', durationSec: 302 },
+  'chúng ta của hiện tại_sơn tùng m-tp': { id: 'bNp9pn0ni3I', duration: '5:02', durationSec: 302 },
+
+  // Sơn Tùng M-TP - Đừng Làm Trái Tim Anh Đau (Official Audio: 4:42 thay vì MV 5:26)
+  'abpmzczzrfa': { id: 'NItL-whRVFo', duration: '4:42', durationSec: 282 },
+  'abpmzczzrfy': { id: 'NItL-whRVFo', duration: '4:42', durationSec: 282 },
+  'đừng làm trái tim anh đau_sơn tùng m-tp': { id: 'NItL-whRVFo', duration: '4:42', durationSec: 282 },
+
+  // Sơn Tùng M-TP - Em Của Ngày Hôm Qua (Official Audio: 4:24 thay vì MV 4:50)
+  'c3xo9fkoudg': { id: 'I_U4mU7Dq_4', duration: '4:24', durationSec: 264 },
+  'vt4kau-ziry': { id: 'I_U4mU7Dq_4', duration: '4:24', durationSec: 264 },
+  'em của ngày hôm qua_sơn tùng m-tp': { id: 'I_U4mU7Dq_4', duration: '4:24', durationSec: 264 },
+
+  // Sơn Tùng M-TP - Muộn Rồi Mà Sao Còn (Official Audio: 4:20 thay vì MV 5:02)
+  'fn7alfpgxii': { id: 'qHpE45b4INk', duration: '4:20', durationSec: 260 },
+  'muộn rồi mà sao còn_sơn tùng m-tp': { id: 'qHpE45b4INk', duration: '4:20', durationSec: 260 },
+
+  // Sơn Tùng M-TP - Nơi Này Có Anh (Official Audio: 4:20 thay vì MV 4:39)
+  'kn0id0pi3o0': { id: 'KN9_u-2v2fM', duration: '4:20', durationSec: 260 },
+  'nơi này có anh_sơn tùng m-tp': { id: 'KN9_u-2v2fM', duration: '4:20', durationSec: 260 },
+
+  // Kha - Kẻ Say Tình (Official Studio: 4:21 thay vì MV 6:18)
+  '4m1v3y-x4p4': { id: '4m1v3Y-X4p4', duration: '4:21', durationSec: 261 }
+};
+const KNOWN_LYRIC_TRACKS = KNOWN_CLEAN_TRACKS;
+
+function formatTimeSec(seconds) {
+  if (!seconds || isNaN(seconds)) return '03:30';
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function isLikelyBloatedMV(title, durationSec) {
+  const t = (title || '').toLowerCase();
+  const d = Number(durationSec) || 0;
+
+  const hasMvKeyword =
+    t.includes('official music video') ||
+    t.includes('official mv') ||
+    t.includes('music video') ||
+    t.includes('phim ngắn') ||
+    t.includes('short film') ||
+    t.includes('drama ver') ||
+    t.includes('the movie') ||
+    t.includes('cinematic') ||
+    t.includes('full story');
+
+  if (hasMvKeyword && d > 240) return true;
+  if (d > 360 && (t.includes('mv') || t.includes('video'))) return true;
+  if (d > 480) return true;
+
+  return false;
+}
+
+async function getCleanAudioTrack(yt, videoId, basicOrItemInfo = null) {
+  if (!videoId || typeof videoId !== 'string') return null;
+  const key = videoId.toLowerCase().trim();
+
+  // 1. Kiểm tra bảng tra nhanh các bản hit nổi tiếng (0ms)
+  if (KNOWN_CLEAN_TRACKS[key]) {
+    return { ...KNOWN_CLEAN_TRACKS[key], source: 'static_map' };
+  }
+
+  // 2. Kiểm tra bộ nhớ đệm LRU (0ms)
+  const cached = cleanTrackCache.get(key);
+  if (cached) return cached;
+
+  // 3. Lấy thông tin cơ bản nếu chưa được truyền vào
+  let rawTitle = basicOrItemInfo?.title?.text || basicOrItemInfo?.title?.toString() || '';
+  let rawArtist =
+    basicOrItemInfo?.authors?.[0]?.name ||
+    basicOrItemInfo?.artists?.[0]?.name ||
+    basicOrItemInfo?.author?.name ||
+    basicOrItemInfo?.author?.toString() ||
+    '';
+  let durationSec = Number(basicOrItemInfo?.duration?.seconds || basicOrItemInfo?.durationSec || basicOrItemInfo?.duration || 0);
+
+  const ytClient = yt || (await getSearchClient());
+
+  if (!rawTitle || !durationSec) {
+    try {
+      const info = await ytClient.getBasicInfo(videoId);
+      if (info && info.basic_info) {
+        rawTitle = rawTitle || info.basic_info.title || '';
+        rawArtist = rawArtist || info.basic_info.author || '';
+        durationSec = durationSec || info.basic_info.duration || 0;
+      }
+    } catch (infoErr) {
+      const fallbackObj = { id: videoId, durationSec: durationSec || 210, duration: formatTimeSec(durationSec || 210), source: 'fallback_error' };
+      cleanTrackCache.set(key, fallbackObj);
+      return fallbackObj;
+    }
+  }
+
+  // Kiểm tra tên bài hát + nghệ sĩ trong static map
+  const artistKey = `${rawTitle}_${rawArtist}`.toLowerCase();
+  if (KNOWN_CLEAN_TRACKS[artistKey]) {
+    cleanTrackCache.set(key, KNOWN_CLEAN_TRACKS[artistKey]);
+    return { ...KNOWN_CLEAN_TRACKS[artistKey], source: 'static_map' };
+  }
+
+  // Nếu bài hát không phải MV bị kéo dài thời lượng và có thời lượng hợp lý (<= 5p30)
+  if (!isLikelyBloatedMV(rawTitle, durationSec) && durationSec > 0 && durationSec <= 330) {
+    const res = { id: videoId, title: rawTitle, artist: rawArtist, duration: formatTimeSec(durationSec), durationSec, source: 'original_clean' };
+    cleanTrackCache.set(key, res);
+    return res;
+  }
+
+  // 4. Tìm kiếm bản Official Audio / Song chuẩn trên YouTube Music
+  const cleanTitle = rawTitle
+    .replace(/\[.*?\]|\(.*?\)/g, '')
+    .replace(/official\s*(music\s*video|mv|video|audio|lyric\s*video)/gi, '')
+    .replace(/phim ngắn ca nhạc|phim ngắn|short film/gi, '')
+    .replace(/ft\.?|feat\.?/gi, ' ')
+    .replace(/[-|•]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const cleanAuthor = rawArtist
+    .replace(/ - Topic|Official|Vevo|Channel/gi, '')
+    .trim();
+
+  const searchQuery = `${cleanTitle} ${cleanAuthor}`.trim();
+
+  if (ytClient.music && typeof ytClient.music.search === 'function') {
+    try {
+      const songRes = await ytClient.music.search(searchQuery, { type: 'song' });
+      const songs = songRes.songs?.contents || [];
+
+      for (const s of songs) {
+        const sDur = s.duration?.seconds;
+        const sId = s.id;
+        if (!sDur || !sId) continue;
+
+        // Nếu bản song này có thời lượng ngắn hơn MV đáng kể (loại bỏ kịch bản/thoại mở đầu)
+        // hoặc thời lượng chuẩn (2 - 6 phút) và là bản thu riêng biệt
+        const isBetterDuration = durationSec > sDur + 15 || (durationSec > 240 && sDur >= 120 && sDur <= 360);
+        if (isBetterDuration) {
+          const res = {
+            id: sId,
+            title: s.title?.text || s.title?.toString() || cleanTitle,
+            artist: s.artists?.[0]?.name || cleanAuthor,
+            duration: s.duration?.text || formatTimeSec(sDur),
+            durationSec: sDur,
+            source: 'yt_music_song'
+          };
+          cleanTrackCache.set(key, res);
+          return res;
+        }
+      }
+    } catch (searchErr) {
+      // Bỏ qua lỗi tìm kiếm và fallback
+    }
+  }
+
+  const res = { id: videoId, title: rawTitle, artist: rawArtist, duration: formatTimeSec(durationSec), durationSec, source: 'original_unmatched' };
+  cleanTrackCache.set(key, res);
+  return res;
+}
+
 // Helper resolve audio stream URL với hỗ trợ giải mã chữ ký & đa máy khách fallback
 async function resolveAudioStream(videoId, forceRefresh = false, excludeClients = []) {
+  if (!videoId) throw new Error('Missing videoId');
+
+  // 1. Tự động chuẩn hóa sang bản Audio Studio sạch nếu videoId là MV dài lê thê
+  let targetVideoId = videoId;
+  try {
+    const cleanTrack = await getCleanAudioTrack(null, videoId);
+    if (cleanTrack && cleanTrack.id && cleanTrack.id !== videoId) {
+      console.log(`[Stream Clean Audio] Chuyển đổi MV dài (${videoId}) sang bản Audio Studio chuẩn (${cleanTrack.id} - ${cleanTrack.duration || '3:30'})`);
+      targetVideoId = cleanTrack.id;
+    }
+  } catch (cleanErr) {
+    console.warn(`[Stream Clean Audio Warning for ${videoId}]:`, cleanErr.message);
+  }
+
   if (!forceRefresh && excludeClients.length === 0) {
-    const cached = streamCache.get(videoId);
+    const cached = streamCache.get(targetVideoId) || streamCache.get(videoId);
     if (cached) return cached;
   }
 
@@ -330,10 +516,10 @@ async function resolveAudioStream(videoId, forceRefresh = false, excludeClients 
       if (cand.useCookie && cookie) config.cookie = cookie;
 
       const yt = await Innertube.create(config);
-      const info = await yt.getBasicInfo(videoId);
+      const info = await yt.getBasicInfo(targetVideoId);
 
       if (info.playability_status?.status && info.playability_status.status !== 'OK') {
-        console.warn(`[Stream ${videoId}] Client ${cand.name} status:`, info.playability_status.status, info.playability_status.reason || '');
+        console.warn(`[Stream ${targetVideoId}] Client ${cand.name} status:`, info.playability_status.status, info.playability_status.reason || '');
         continue;
       }
 
@@ -357,7 +543,7 @@ async function resolveAudioStream(videoId, forceRefresh = false, excludeClients 
             try {
               resolvedUrl = await potentialFormat.decipher(yt.session.player);
             } catch (decErr) {
-              console.warn(`[Stream ${videoId}] Client ${cand.name} decipher failed:`, decErr.message);
+              console.warn(`[Stream ${targetVideoId}] Client ${cand.name} decipher failed:`, decErr.message);
             }
           }
 
@@ -371,7 +557,7 @@ async function resolveAudioStream(videoId, forceRefresh = false, excludeClients 
       }
     } catch (clientErr) {
       lastError = clientErr;
-      console.warn(`[Stream ${videoId}] Client ${cand.name} error:`, clientErr.message);
+      console.warn(`[Stream ${targetVideoId}] Client ${cand.name} error:`, clientErr.message);
     }
   }
 
@@ -390,6 +576,7 @@ async function resolveAudioStream(videoId, forceRefresh = false, excludeClients 
 
   const streamData = {
     videoId,
+    cleanVideoId: targetVideoId,
     url: streamUrl,
     itag: chosenFormat.itag,
     mimeType: chosenFormat.mime_type ? chosenFormat.mime_type.split(';')[0] : 'audio/mp4',
@@ -401,6 +588,9 @@ async function resolveAudioStream(videoId, forceRefresh = false, excludeClients 
 
   if (excludeClients.length === 0) {
     streamCache.set(videoId, streamData);
+    if (targetVideoId !== videoId) {
+      streamCache.set(targetVideoId, streamData);
+    }
   }
   return streamData;
 }
@@ -1105,11 +1295,12 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
       try {
         const pl = await ytSearch.music.getPlaylist(targetPlaylistId);
         const rawItems = pl.items || [];
+        const validCandidates = [];
 
         for (let i = 0; i < rawItems.length; i++) {
           const item = rawItems[i];
           const id = item.id || item.videoId || item.video_id;
-          if (!id || tracks.some(t => t.id === id)) continue;
+          if (!id || validCandidates.some(t => t.id === id)) continue;
 
           const rawTitle = item.title?.text || item.title || 'Unknown Title';
           const rawArtist = item.authors?.[0]?.name || item.artists?.[0]?.name || item.author?.name || '';
@@ -1120,25 +1311,45 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
 
           if (isSpamTrack(cleaned.title, cleaned.artist, durationSec)) continue;
 
-          const thumbnail = extractThumbnail(item.thumbnail || item.thumbnails);
-          const rank = tracks.length + 1;
-
-          tracks.push({
-            id,
-            title: cleaned.title,
-            artist: cleaned.artist,
-            artists: cleaned.artist ? [cleaned.artist] : [],
-            album: '',
-            duration,
-            durationSec,
-            thumbnail,
-            rank,
-            views: null,
-            playCount: getRealisticStreams(rank, timeframe)
-          });
-
-          if (tracks.length >= 20) break;
+          validCandidates.push({ item, id, cleaned, duration, durationSec });
+          if (validCandidates.length >= 20) break;
         }
+
+        const resolvedTracks = await Promise.all(
+          validCandidates.map(async (cand, idx) => {
+            let finalId = cand.id;
+            let finalDuration = cand.duration;
+            let finalDurationSec = cand.durationSec;
+
+            try {
+              const clean = await getCleanAudioTrack(ytSearch, cand.id, cand.item);
+              if (clean && clean.id) {
+                finalId = clean.id;
+                if (clean.duration) finalDuration = clean.duration;
+                if (clean.durationSec) finalDurationSec = clean.durationSec;
+              }
+            } catch (_) {}
+
+            const thumbnail = extractThumbnail(cand.item.thumbnail || cand.item.thumbnails);
+            const rank = idx + 1;
+
+            return {
+              id: finalId,
+              originalVideoId: cand.id,
+              title: cand.cleaned.title,
+              artist: cand.cleaned.artist,
+              artists: cand.cleaned.artist ? [cand.cleaned.artist] : [],
+              album: '',
+              duration: finalDuration,
+              durationSec: finalDurationSec,
+              thumbnail,
+              rank,
+              views: null,
+              playCount: getRealisticStreams(rank, timeframe)
+            };
+          })
+        );
+        tracks = resolvedTracks;
       } catch (chartErr) {
         console.warn(`[Charts Error] Không thể nạp playlist ${targetPlaylistId}:`, chartErr.message);
       }
@@ -1157,9 +1368,10 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
 
           if (searchResult) {
             const contents = searchResult.songs?.contents || searchResult.results || [];
+            const fallbackCandidates = [];
             for (const item of contents) {
               const id = item.id || item.videoId || item.video_id;
-              if (!id || tracks.some(t => t.id === id)) continue;
+              if (!id || tracks.some(t => t.id === id) || fallbackCandidates.some(t => t.id === id)) continue;
 
               const rawTitle = item.title?.text || item.title || 'Unknown Title';
               const rawArtist = item.artists?.[0]?.name || item.author?.name || '';
@@ -1170,25 +1382,45 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
 
               if (isSpamTrack(cleaned.title, cleaned.artist, durationSec)) continue;
 
-              const rank = tracks.length + 1;
-              const thumbnail = extractThumbnail(item.thumbnails || item.thumbnail);
-
-              tracks.push({
-                id,
-                title: cleaned.title,
-                artist: cleaned.artist,
-                artists: cleaned.artist ? [cleaned.artist] : [],
-                album: item.album?.name || '',
-                duration,
-                durationSec,
-                thumbnail,
-                rank,
-                views: null,
-                playCount: getRealisticStreams(rank, timeframe)
-              });
-
-              if (tracks.length >= 20) break;
+              fallbackCandidates.push({ item, id, cleaned, duration, durationSec });
+              if (tracks.length + fallbackCandidates.length >= 20) break;
             }
+
+            const resolvedCandidates = await Promise.all(
+              fallbackCandidates.map(async (cand) => {
+                let finalId = cand.id;
+                let finalDuration = cand.duration;
+                let finalDurationSec = cand.durationSec;
+
+                try {
+                  const clean = await getCleanAudioTrack(ytSearch, cand.id, cand.item);
+                  if (clean && clean.id) {
+                    finalId = clean.id;
+                    if (clean.duration) finalDuration = clean.duration;
+                    if (clean.durationSec) finalDurationSec = clean.durationSec;
+                  }
+                } catch (_) {}
+
+                const rank = tracks.length + 1;
+                const thumbnail = extractThumbnail(cand.item.thumbnails || cand.item.thumbnail);
+
+                return {
+                  id: finalId,
+                  originalVideoId: cand.id,
+                  title: cand.cleaned.title,
+                  artist: cand.cleaned.artist,
+                  artists: cand.cleaned.artist ? [cand.cleaned.artist] : [],
+                  album: cand.item.album?.name || '',
+                  duration: finalDuration,
+                  durationSec: finalDurationSec,
+                  thumbnail,
+                  rank,
+                  views: null,
+                  playCount: getRealisticStreams(rank, timeframe)
+                };
+              })
+            );
+            tracks.push(...resolvedCandidates);
           }
         } catch (err) {
           console.warn(`[Trending] Query "${query}" gặp lỗi:`, err.message);
@@ -1305,19 +1537,32 @@ apiRouter.get('/search', rateLimit({ maxRequests: 50, windowMs: 60000, endpointN
         const id = item.id || item.videoId || item.video_id;
         if (!id) continue;
 
-        const title = item.title?.text || item.title || 'Unknown Title';
-        const artist = item.artists?.[0]?.name || item.author?.name || '';
+        let title = item.title?.text || item.title || 'Unknown Title';
+        let artist = item.artists?.[0]?.name || item.author?.name || '';
         const album = item.album?.name || '';
-        const duration = item.duration?.text || (item.duration ? String(item.duration) : '3:30');
-        const durationSec = item.duration?.seconds || 210;
+        let duration = item.duration?.text || (item.duration ? String(item.duration) : '3:30');
+        let durationSec = item.duration?.seconds || 210;
 
         // Bỏ qua nhạc spam bot AI, tuyển tập, mixtape
         if (isSpamTrack(title, artist, durationSec)) continue;
 
+        let finalId = id;
+        if (isLikelyBloatedMV(title, durationSec)) {
+          try {
+            const clean = await getCleanAudioTrack(ytSearch, id, item);
+            if (clean && clean.id) {
+              finalId = clean.id;
+              if (clean.duration) duration = clean.duration;
+              if (clean.durationSec) durationSec = clean.durationSec;
+            }
+          } catch (_) {}
+        }
+
         const thumbnail = extractThumbnail(item.thumbnails || item.thumbnail);
 
         tracks.push({
-          id,
+          id: finalId,
+          originalVideoId: id,
           title,
           artist,
           artists: artist ? [artist] : [],
@@ -1562,20 +1807,6 @@ apiRouter.get('/albums', rateLimit({ maxRequests: 60, windowMs: 60000, endpointN
   }
 });
 
-// Map chuẩn hóa các bài hát có MV bị dài lê thê về đúng bản Official Lyric Video & thời lượng thực tế
-const KNOWN_LYRIC_TRACKS = {
-  // Call Me - Wren Evans (Bản Official Lyric Video LOI CHOI chuẩn 3:35 thay vì MV 6:15)
-  'wrcorytidddq': { id: 'DlION6FK-Yc', duration: '3:35', durationSec: 215 },
-  'wrcorytidddq_call me': { id: 'DlION6FK-Yc', duration: '3:35', durationSec: 215 },
-  'call me_wren evans': { id: 'DlION6FK-Yc', duration: '3:35', durationSec: 215 },
-  // Đừng Làm Trái Tim Anh Đau - Sơn Tùng M-TP (Bản Lyric Video chuẩn 4:42 thay vì MV 5:26)
-  'abpmzczzrfa': { id: 'NItL-whRVFo', duration: '4:42', durationSec: 282 },
-  'đừng làm trái tim anh đau_sơn tùng m-tp': { id: 'NItL-whRVFo', duration: '4:42', durationSec: 282 },
-  // Em Của Ngày Hôm Qua - Sơn Tùng M-TP (Bản audio chuẩn 4:24)
-  'c3xo9fkoudg': { id: 'I_U4mU7Dq_4', duration: '4:24', durationSec: 264 },
-  'vt4kau-ziry': { id: 'I_U4mU7Dq_4', duration: '4:24', durationSec: 264 }
-};
-
 // 10.4.2. Album Detail & Tracklist (Ưu tiên Official Lyrics Video & Chuẩn hóa thời lượng)
 apiRouter.get('/album/:albumId', rateLimit({ maxRequests: 80, windowMs: 60000, endpointName: 'album-details' }), async (req, res) => {
   const { albumId } = req.params;
@@ -1608,66 +1839,30 @@ apiRouter.get('/album/:albumId', rateLimit({ maxRequests: 80, windowMs: 60000, e
 
     const rawContents = albumData.contents || [];
 
-    // Tối ưu và chuẩn hóa: Lấy đúng bản Official Lyrics Video & thời lượng thực tế
+    // Tối ưu và chuẩn hóa: Lấy đúng bản Studio Audio / Official Lyrics Video & thời lượng thực tế
     const resolvedTracks = await Promise.all(
       rawContents.map(async (item) => {
-        let id = item.id || item.videoId;
+        const id = item.id || item.videoId;
         if (!id) return null;
 
         const trackTitle = item.title?.text || item.title?.toString() || 'Unknown Track';
         const trackArtist = item.author?.name || item.artists?.[0]?.name || artist;
         let duration = item.duration?.text || (item.duration ? String(item.duration) : '3:30');
         let durationSec = item.duration?.seconds || 210;
+        let finalId = id;
 
-        // 1. Kiểm tra bảng map các bài hát có Official Lyric Video chuẩn
-        const mapKey = (id || '').toLowerCase();
-        const artistKey = `${trackTitle}_${trackArtist}`.toLowerCase();
-        if (KNOWN_LYRIC_TRACKS[mapKey]) {
-          id = KNOWN_LYRIC_TRACKS[mapKey].id;
-          duration = KNOWN_LYRIC_TRACKS[mapKey].duration;
-          durationSec = KNOWN_LYRIC_TRACKS[mapKey].durationSec;
-          return { id, title: trackTitle, artist: trackArtist, album: title, duration, durationSec, thumbnail };
-        }
-        if (KNOWN_LYRIC_TRACKS[artistKey]) {
-          id = KNOWN_LYRIC_TRACKS[artistKey].id;
-          duration = KNOWN_LYRIC_TRACKS[artistKey].duration;
-          durationSec = KNOWN_LYRIC_TRACKS[artistKey].durationSec;
-          return { id, title: trackTitle, artist: trackArtist, album: title, duration, durationSec, thumbnail };
-        }
-
-        // 2. Kiểm tra nếu video bị gắn nhầm sang Official Music Video bị phình thời lượng (> 20s so với bản thu chuẩn)
         try {
-          const basicInfo = await ytSearch.getBasicInfo(id);
-          if (basicInfo && basicInfo.basic_info) {
-            const sec = basicInfo.basic_info.duration;
-            const rawTitle = (basicInfo.basic_info.title || '').toLowerCase();
-            const isBloatedMV = (sec && durationSec && sec > durationSec + 25) || 
-              ((rawTitle.includes('official music video') || rawTitle.includes('official mv')) && (sec > durationSec + 15));
-
-            if (isBloatedMV) {
-              // Tìm kiếm nhanh bản Official Lyric Video hoặc Song Audio chuẩn của YouTube Music
-              try {
-                const songRes = await ytSearch.music.search(`${trackArtist} ${trackTitle}`, { type: 'song' });
-                const cleanSong = songRes.songs?.contents?.[0];
-                if (cleanSong && cleanSong.id && cleanSong.id !== id) {
-                  id = cleanSong.id;
-                  duration = cleanSong.duration?.text || duration;
-                  durationSec = cleanSong.duration?.seconds || durationSec;
-                }
-              } catch (_) {}
-            } else if (sec && sec > 0) {
-              durationSec = sec;
-              const m = Math.floor(sec / 60);
-              const s = sec % 60;
-              duration = `${m}:${String(s).padStart(2, '0')}`;
-            }
+          const clean = await getCleanAudioTrack(ytSearch, id, item);
+          if (clean && clean.id) {
+            finalId = clean.id;
+            if (clean.duration) duration = clean.duration;
+            if (clean.durationSec) durationSec = clean.durationSec;
           }
-        } catch {
-          // Fallback giữ nguyên thời lượng ban đầu
-        }
+        } catch (_) {}
 
         return {
-          id,
+          id: finalId,
+          originalVideoId: id,
           title: trackTitle,
           artist: trackArtist,
           album: title,
@@ -1855,13 +2050,21 @@ apiRouter.get('/info/:videoId', async (req, res) => {
 
   try {
     const ytSearch = await getSearchClient();
-    const info = await ytSearch.getBasicInfo(videoId);
+    const cleanTrack = await getCleanAudioTrack(ytSearch, videoId);
+    const targetId = (cleanTrack && cleanTrack.id) ? cleanTrack.id : videoId;
+    const info = await ytSearch.getBasicInfo(targetId);
+    const sec = cleanTrack?.durationSec || info.basic_info?.duration || 210;
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+
     res.json({
-      id: videoId,
-      title: info.basic_info.title,
-      artist: info.basic_info.author,
-      duration: info.basic_info.duration,
-      thumbnail: extractThumbnail(info.basic_info.thumbnail)
+      id: targetId,
+      originalId: videoId,
+      title: cleanTrack?.title || info.basic_info?.title,
+      artist: cleanTrack?.artist || info.basic_info?.author,
+      duration: cleanTrack?.duration || `${m}:${String(s).padStart(2, '0')}`,
+      durationSec: sec,
+      thumbnail: extractThumbnail(info.basic_info?.thumbnail)
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch video info', message: err.message });
