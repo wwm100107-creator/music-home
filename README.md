@@ -2,6 +2,8 @@
 
 Trình phát nhạc mang âm hưởng thiên nhiên trong trẻo, hoài niệm của **Studio Ghibli** (lấy cảm hứng từ *My Neighbor Totoro*), hoạt động thuần túy trên nền tảng **Web Browser** (KHÔNG cần Electron hay app desktop), tích hợp **Cobalt API Ultra-fast Audio Streamer & Downloader**, Segmented Control Sidebar tấm gỗ và Cloud Sync đa thiết bị.
 
+> 📱 **Máy chủ Gia đình & Phát nhạc nền iOS:** Xem chi tiết kiến trúc máy chủ Android Termux & Cloudflare Tunnel tại [HOME_SERVER_ARCHITECTURE.md](./HOME_SERVER_ARCHITECTURE.md).
+
 ---
 
 ## 🍃 Các tính năng cốt lõi
