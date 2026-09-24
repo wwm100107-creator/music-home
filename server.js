@@ -915,6 +915,58 @@ apiRouter.get('/cookie-status', (req, res) => {
   });
 });
 
+apiRouter.get('/debug-stream/:videoId', async (req, res) => {
+  const { videoId } = req.params;
+  const cookie = getYouTubeCookie();
+  const testClients = [
+    { type: ClientType.WEB, name: 'WEB', useCookie: true, genLocally: false },
+    { type: ClientType.WEB, name: 'WEB_NO_COOKIE', useCookie: false, genLocally: false },
+    { type: ClientType.MWEB, name: 'MWEB', useCookie: true, genLocally: false },
+    { type: ClientType.VISIONOS, name: 'VISIONOS', useCookie: false, genLocally: true },
+    { type: ClientType.IOS, name: 'IOS', useCookie: false, genLocally: true },
+    { type: ClientType.ANDROID_VR, name: 'ANDROID_VR', useCookie: false, genLocally: true },
+    { type: ClientType.TV_EMBEDDED, name: 'TV_EMBEDDED', useCookie: false, genLocally: false }
+  ];
+
+  const results = [];
+  for (const tc of testClients) {
+    try {
+      const config = {
+        client_type: tc.type,
+        cache: new UniversalCache(false),
+        generate_session_locally: tc.genLocally
+      };
+      if (tc.useCookie && cookie) config.cookie = cookie;
+      const yt = await Innertube.create(config);
+      const info = await yt.getBasicInfo(videoId);
+      const adaptive = info.streaming_data?.adaptive_formats || [];
+      const combined = info.streaming_data?.formats || [];
+      const audio = [...adaptive, ...combined].filter(f => f.mime_type?.startsWith('audio/') || f.has_audio);
+      let chosen = null;
+      try {
+        chosen = info.chooseFormat({ type: 'audio', quality: 'best' });
+      } catch (e) {
+        chosen = { error: e.message };
+      }
+      results.push({
+        client: tc.name,
+        playability: info.playability_status?.status,
+        reason: info.playability_status?.reason,
+        hasStreamingData: Boolean(info.streaming_data),
+        audioCount: audio.length,
+        chosenItag: chosen?.itag,
+        hasUrl: Boolean(chosen?.url)
+      });
+    } catch (err) {
+      results.push({
+        client: tc.name,
+        error: err.message
+      });
+    }
+  }
+  res.json({ videoId, hasCookie: Boolean(cookie), results });
+});
+
 // 10.2. Location & Supported Countries
 apiRouter.get('/location', (req, res) => {
   const detectedCode = detectCountry(req);
