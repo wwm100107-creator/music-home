@@ -266,12 +266,12 @@ async function getSearchClient() {
 async function getStreamClient(forceNew = false) {
   if (!ytStreamInstance || forceNew) {
     const cookie = getYouTubeCookie();
-    // ClientType.IOS với generate_session_locally: true:
-    // 1. Tạo session giả lập iOS ngay tại máy chủ không gửi request bot-detection lên Google
+    // ClientType.VISIONOS với generate_session_locally: true:
+    // 1. VisionOS Apple Native Client cung cấp luồng trực tiếp không bị bot-guard chặn trên Vercel
     // 2. Trả về luồng AAC chất lượng cao (itag 140, audio/mp4) tương thích 100% phần cứng iPhone/iOS WebKit
     // 3. Không bao giờ bị dính lỗi LOGIN_REQUIRED trên các dải IP Vercel/Cloud Datacenter
     const config = {
-      client_type: ClientType.IOS,
+      client_type: ClientType.VISIONOS,
       cache: new UniversalCache(false),
       generate_session_locally: true
     };
@@ -279,10 +279,10 @@ async function getStreamClient(forceNew = false) {
 
     try {
       ytStreamInstance = await Innertube.create(config);
-      console.log('✅ YouTube Stream client initialized (IOS Native Client - Background Stream Ready)');
+      console.log('✅ YouTube Stream client initialized (VisionOS Native Client - Background Stream Ready)');
     } catch (err) {
-      console.warn('⚠️ IOS Client init failed, fallback to ANDROID_VR:', err.message);
-      config.client_type = ClientType.ANDROID_VR;
+      console.warn('⚠️ VisionOS Client init failed, fallback to IOS:', err.message);
+      config.client_type = ClientType.IOS;
       ytStreamInstance = await Innertube.create(config);
     }
   }
@@ -304,6 +304,7 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
 
   const cookie = getYouTubeCookie();
   const candidateClients = [
+    { type: ClientType.VISIONOS, name: 'VISIONOS' },
     { type: ClientType.IOS, name: 'IOS' },
     { type: ClientType.ANDROID_VR, name: 'ANDROID_VR' },
     { type: ClientType.ANDROID, name: 'ANDROID' }
