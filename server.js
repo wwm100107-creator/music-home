@@ -330,6 +330,25 @@ const KNOWN_CLEAN_TRACKS = {
 };
 const KNOWN_LYRIC_TRACKS = KNOWN_CLEAN_TRACKS;
 
+function parseToDurationSec(val) {
+  if (!val) return 0;
+  if (typeof val === 'number') return isNaN(val) ? 0 : Math.round(val);
+  if (typeof val === 'object') {
+    if (val.seconds && !isNaN(val.seconds)) return Number(val.seconds);
+    if (val.text) return parseToDurationSec(val.text);
+  }
+  const str = String(val).trim();
+  const parts = str.split(':').map(p => parseInt(p, 10));
+  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+    return parts[0] * 60 + parts[1];
+  }
+  if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  }
+  const n = parseInt(str, 10);
+  return isNaN(n) ? 0 : n;
+}
+
 function formatTimeSec(seconds) {
   if (!seconds || isNaN(seconds)) return '03:30';
   const m = Math.floor(seconds / 60);
@@ -380,7 +399,7 @@ async function getCleanAudioTrack(yt, videoId, basicOrItemInfo = null) {
     basicOrItemInfo?.author?.name ||
     basicOrItemInfo?.author?.toString() ||
     '';
-  let durationSec = Number(basicOrItemInfo?.duration?.seconds || basicOrItemInfo?.durationSec || basicOrItemInfo?.duration || 0);
+  let durationSec = parseToDurationSec(basicOrItemInfo?.duration?.seconds || basicOrItemInfo?.durationSec || basicOrItemInfo?.duration || 0);
 
   const ytClient = yt || (await getSearchClient());
 
@@ -390,7 +409,7 @@ async function getCleanAudioTrack(yt, videoId, basicOrItemInfo = null) {
       if (info && info.basic_info) {
         rawTitle = rawTitle || info.basic_info.title || '';
         rawArtist = rawArtist || info.basic_info.author || '';
-        durationSec = durationSec || info.basic_info.duration || 0;
+        durationSec = durationSec || parseToDurationSec(info.basic_info.duration) || 0;
       }
     } catch (infoErr) {
       const fallbackObj = { id: videoId, durationSec: durationSec || 210, duration: formatTimeSec(durationSec || 210), source: 'fallback_error' };
@@ -435,7 +454,7 @@ async function getCleanAudioTrack(yt, videoId, basicOrItemInfo = null) {
       const songs = songRes.songs?.contents || [];
 
       for (const s of songs) {
-        const sDur = s.duration?.seconds;
+        const sDur = parseToDurationSec(s.duration?.seconds || s.duration?.text || s.duration);
         const sId = s.id;
         if (!sDur || !sId) continue;
 
@@ -465,20 +484,39 @@ async function getCleanAudioTrack(yt, videoId, basicOrItemInfo = null) {
   return res;
 }
 
+// Bộ nhớ đệm Client Pool để không phải tạo mới Innertube (tiết kiệm 3s CPU cho Termux)
+const candidateClientPool = new Map();
+async function getPooledCandidateClient(cand, cookie) {
+  const poolKey = `${cand.name}:${Boolean(cand.useCookie && cookie)}`;
+  if (candidateClientPool.has(poolKey)) {
+    return candidateClientPool.get(poolKey);
+  }
+  const config = {
+    client_type: cand.type,
+    cache: new UniversalCache(false),
+    generate_session_locally: cand.genLocally
+  };
+  if (cand.useCookie && cookie) config.cookie = cookie;
+  const yt = await Innertube.create(config);
+  candidateClientPool.set(poolKey, yt);
+  return yt;
+}
+
 // Helper resolve audio stream URL với hỗ trợ giải mã chữ ký & đa máy khách fallback
 async function resolveAudioStream(videoId, forceRefresh = false, excludeClients = []) {
   if (!videoId) throw new Error('Missing videoId');
 
-  // 1. Tự động chuẩn hóa sang bản Audio Studio sạch nếu videoId là MV dài lê thê
+  const key = videoId.toLowerCase().trim();
+
+  // 1. Kiểm tra nhanh trong Static Map hoặc Cache (0ms)
   let targetVideoId = videoId;
-  try {
-    const cleanTrack = await getCleanAudioTrack(null, videoId);
-    if (cleanTrack && cleanTrack.id && cleanTrack.id !== videoId) {
-      console.log(`[Stream Clean Audio] Chuyển đổi MV dài (${videoId}) sang bản Audio Studio chuẩn (${cleanTrack.id} - ${cleanTrack.duration || '3:30'})`);
-      targetVideoId = cleanTrack.id;
+  if (KNOWN_CLEAN_TRACKS[key]) {
+    targetVideoId = KNOWN_CLEAN_TRACKS[key].id;
+  } else {
+    const cachedClean = cleanTrackCache.get(key);
+    if (cachedClean && cachedClean.id) {
+      targetVideoId = cachedClean.id;
     }
-  } catch (cleanErr) {
-    console.warn(`[Stream Clean Audio Warning for ${videoId}]:`, cleanErr.message);
   }
 
   if (!forceRefresh && excludeClients.length === 0) {
@@ -508,15 +546,21 @@ async function resolveAudioStream(videoId, forceRefresh = false, excludeClients 
   for (const cand of candidateClients) {
     if (excludeClients.includes(cand.name)) continue;
     try {
-      const config = {
-        client_type: cand.type,
-        cache: new UniversalCache(false),
-        generate_session_locally: cand.genLocally
-      };
-      if (cand.useCookie && cookie) config.cookie = cookie;
+      const yt = await getPooledCandidateClient(cand, cookie);
+      let info = await yt.getBasicInfo(targetVideoId);
 
-      const yt = await Innertube.create(config);
-      const info = await yt.getBasicInfo(targetVideoId);
+      // Nếu targetVideoId chưa được đổi và bài hát là MV dài lê thê, tìm bản clean song ngay từ info này
+      if (targetVideoId === videoId && info.basic_info) {
+        const rawTitle = info.basic_info.title || '';
+        const durSec = parseToDurationSec(info.basic_info.duration) || 0;
+        if (isLikelyBloatedMV(rawTitle, durSec)) {
+          const clean = await getCleanAudioTrack(yt, videoId, info.basic_info);
+          if (clean && clean.id && clean.id !== videoId) {
+            targetVideoId = clean.id;
+            info = await yt.getBasicInfo(targetVideoId);
+          }
+        }
+      }
 
       if (info.playability_status?.status && info.playability_status.status !== 'OK') {
         console.warn(`[Stream ${targetVideoId}] Client ${cand.name} status:`, info.playability_status.status, info.playability_status.reason || '');
@@ -1306,8 +1350,8 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
           const rawArtist = item.authors?.[0]?.name || item.artists?.[0]?.name || item.author?.name || '';
           const cleaned = cleanChartSong(rawTitle, rawArtist);
 
-          const duration = item.duration?.text || (item.duration ? String(item.duration) : '3:30');
-          const durationSec = item.duration?.seconds || 210;
+          const durationSec = parseToDurationSec(item.duration?.seconds || item.duration?.text || item.duration) || 210;
+          const duration = item.duration?.text || formatTimeSec(durationSec);
 
           if (isSpamTrack(cleaned.title, cleaned.artist, durationSec)) continue;
 
@@ -1317,18 +1361,25 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
 
         const resolvedTracks = await Promise.all(
           validCandidates.map(async (cand, idx) => {
+            const candKey = cand.id.toLowerCase().trim();
             let finalId = cand.id;
             let finalDuration = cand.duration;
             let finalDurationSec = cand.durationSec;
 
-            try {
-              const clean = await getCleanAudioTrack(ytSearch, cand.id, cand.item);
-              if (clean && clean.id) {
-                finalId = clean.id;
-                if (clean.duration) finalDuration = clean.duration;
-                if (clean.durationSec) finalDurationSec = clean.durationSec;
-              }
-            } catch (_) {}
+            if (KNOWN_CLEAN_TRACKS[candKey]) {
+              finalId = KNOWN_CLEAN_TRACKS[candKey].id;
+              finalDuration = KNOWN_CLEAN_TRACKS[candKey].duration || cand.duration;
+              finalDurationSec = parseToDurationSec(finalDuration) || cand.durationSec;
+            } else if (isLikelyBloatedMV(cand.cleaned.title, cand.durationSec)) {
+              try {
+                const clean = await getCleanAudioTrack(ytSearch, cand.id, cand.item);
+                if (clean && clean.id) {
+                  finalId = clean.id;
+                  if (clean.duration) finalDuration = clean.duration;
+                  if (clean.durationSec) finalDurationSec = clean.durationSec;
+                }
+              } catch (_) {}
+            }
 
             const thumbnail = extractThumbnail(cand.item.thumbnail || cand.item.thumbnails);
             const rank = idx + 1;
@@ -1377,8 +1428,8 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
               const rawArtist = item.artists?.[0]?.name || item.author?.name || '';
               const cleaned = cleanChartSong(rawTitle, rawArtist);
 
-              const duration = item.duration?.text || (item.duration ? String(item.duration) : '3:30');
-              const durationSec = item.duration?.seconds || 210;
+              const durationSec = parseToDurationSec(item.duration?.seconds || item.duration?.text || item.duration) || 210;
+              const duration = item.duration?.text || formatTimeSec(durationSec);
 
               if (isSpamTrack(cleaned.title, cleaned.artist, durationSec)) continue;
 
@@ -1388,18 +1439,25 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
 
             const resolvedCandidates = await Promise.all(
               fallbackCandidates.map(async (cand) => {
+                const candKey = cand.id.toLowerCase().trim();
                 let finalId = cand.id;
                 let finalDuration = cand.duration;
                 let finalDurationSec = cand.durationSec;
 
-                try {
-                  const clean = await getCleanAudioTrack(ytSearch, cand.id, cand.item);
-                  if (clean && clean.id) {
-                    finalId = clean.id;
-                    if (clean.duration) finalDuration = clean.duration;
-                    if (clean.durationSec) finalDurationSec = clean.durationSec;
-                  }
-                } catch (_) {}
+                if (KNOWN_CLEAN_TRACKS[candKey]) {
+                  finalId = KNOWN_CLEAN_TRACKS[candKey].id;
+                  finalDuration = KNOWN_CLEAN_TRACKS[candKey].duration || cand.duration;
+                  finalDurationSec = parseToDurationSec(finalDuration) || cand.durationSec;
+                } else if (isLikelyBloatedMV(cand.cleaned.title, cand.durationSec)) {
+                  try {
+                    const clean = await getCleanAudioTrack(ytSearch, cand.id, cand.item);
+                    if (clean && clean.id) {
+                      finalId = clean.id;
+                      if (clean.duration) finalDuration = clean.duration;
+                      if (clean.durationSec) finalDurationSec = clean.durationSec;
+                    }
+                  } catch (_) {}
+                }
 
                 const rank = tracks.length + 1;
                 const thumbnail = extractThumbnail(cand.item.thumbnails || cand.item.thumbnail);
@@ -1439,13 +1497,13 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
       }));
     }
 
-    // 4. Lấy lượt nghe thực tế (Live Views) trực tiếp từ YouTube cho các bài hát
+    // 4. Lấy lượt nghe thực tế (Live Views) trực tiếp từ YouTube cho top 3 bài hát (timeout 800ms)
     try {
-      const topTracks = tracks.slice(0, 20);
+      const topTracks = tracks.slice(0, 3);
       const viewsPromise = Promise.allSettled(
         topTracks.map(t => ytSearch.getBasicInfo ? ytSearch.getBasicInfo(t.id) : Promise.resolve(null))
       );
-      const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 2500));
+      const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 800));
       const results = await Promise.race([viewsPromise, timeoutPromise]);
 
       if (results && Array.isArray(results)) {
