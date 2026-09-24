@@ -8,10 +8,8 @@ import { Innertube, ClientType, UniversalCache, Platform } from 'youtubei.js';
 // Setup high-performance JavaScript evaluator for Innertube deciphering
 if (Platform && Platform.shim) {
   Platform.shim.eval = async (data, env) => {
-    const keys = Object.keys(env);
-    const values = Object.values(env);
-    const fn = new Function(...keys, data.output);
-    return fn(...values);
+    const fn = new Function('env', `${data.output}; return { ...env };`);
+    return fn(env);
   };
 }
 
@@ -304,13 +302,16 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
 
   const cookie = getYouTubeCookie();
   const candidateClients = [
-    { type: ClientType.VISIONOS, name: 'VISIONOS' },
-    { type: ClientType.IOS, name: 'IOS' },
-    { type: ClientType.ANDROID_VR, name: 'ANDROID_VR' },
-    { type: ClientType.ANDROID, name: 'ANDROID' }
+    { type: ClientType.TV_SIMPLY, name: 'TV_SIMPLY', genLocally: false, useCookie: false },
+    { type: ClientType.MUSIC, name: 'MUSIC', genLocally: false, useCookie: true },
+    { type: ClientType.WEB, name: 'WEB', genLocally: false, useCookie: true },
+    { type: ClientType.MWEB, name: 'MWEB', genLocally: false, useCookie: true },
+    { type: ClientType.VISIONOS, name: 'VISIONOS', genLocally: true, useCookie: false },
+    { type: ClientType.IOS, name: 'IOS', genLocally: true, useCookie: false }
   ];
 
   let chosenFormat = null;
+  let streamUrl = null;
   let activeYt = null;
   let lastError = null;
 
@@ -319,16 +320,16 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
       const config = {
         client_type: cand.type,
         cache: new UniversalCache(false),
-        generate_session_locally: true
+        generate_session_locally: cand.genLocally
       };
-      if (cookie) config.cookie = cookie;
+      if (cand.useCookie && cookie) config.cookie = cookie;
 
       const yt = await Innertube.create(config);
       const info = await yt.getBasicInfo(videoId);
 
       if (info.playability_status?.status && info.playability_status.status !== 'OK') {
         console.warn(`[Stream ${videoId}] Client ${cand.name} status:`, info.playability_status.status, info.playability_status.reason || '');
-        if (info.playability_status.status === 'LOGIN_REQUIRED') continue;
+        continue;
       }
 
       const adaptive = info.streaming_data?.adaptive_formats || [];
@@ -338,16 +339,29 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
 
       if (audioFormats.length > 0) {
         // Ưu tiên itag 140 (AAC 128kbps, audio/mp4) chuẩn Apple iOS hardware decoding
-        chosenFormat =
+        const potentialFormat =
           audioFormats.find(f => f.itag === 140) ||
           audioFormats.find(f => f.itag === 251) ||
           audioFormats.find(f => f.itag === 139) ||
           audioFormats.find(f => f.mime_type?.startsWith('audio/mp4')) ||
           audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
 
-        if (chosenFormat) {
-          activeYt = yt;
-          break;
+        if (potentialFormat) {
+          let resolvedUrl = potentialFormat.url;
+          if (!resolvedUrl && typeof potentialFormat.decipher === 'function') {
+            try {
+              resolvedUrl = await potentialFormat.decipher(yt.session.player);
+            } catch (decErr) {
+              console.warn(`[Stream ${videoId}] Client ${cand.name} decipher failed:`, decErr.message);
+            }
+          }
+
+          if (resolvedUrl) {
+            chosenFormat = potentialFormat;
+            streamUrl = resolvedUrl;
+            activeYt = yt;
+            break;
+          }
         }
       }
     } catch (clientErr) {
@@ -356,17 +370,8 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
     }
   }
 
-  if (!chosenFormat || !activeYt) {
+  if (!chosenFormat || !streamUrl) {
     throw new Error(`Không tìm thấy luồng âm thanh (${lastError ? lastError.message : 'No audio streams available'})`);
-  }
-
-  let streamUrl = chosenFormat.url;
-  if (!streamUrl && typeof chosenFormat.decipher === 'function') {
-    streamUrl = await chosenFormat.decipher(activeYt.session.player);
-  }
-
-  if (!streamUrl) {
-    throw new Error('Không thể giải mã luồng âm thanh cho bài hát này.');
   }
 
   try {
