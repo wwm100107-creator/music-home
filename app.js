@@ -549,6 +549,54 @@
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
 
+  // Chuyển đổi duration chuỗi/số sang số nguyên giây (hỗ trợ "mm:ss", "hh:mm:ss", { text, seconds })
+  function parseDurationToSec(val) {
+    if (!val) return 0;
+    if (typeof val === 'number') return isNaN(val) ? 0 : Math.round(val);
+    if (typeof val === 'object') {
+      if (val.seconds && !isNaN(val.seconds)) return Number(val.seconds);
+      if (val.text) return parseDurationToSec(val.text);
+    }
+    const str = String(val).trim();
+    const parts = str.split(':').map(p => parseInt(p, 10));
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      return parts[0] * 60 + parts[1];
+    }
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+    const n = parseInt(str, 10);
+    return isNaN(n) ? 0 : n;
+  }
+
+  // Lấy thời lượng âm thanh chuẩn xác, khắc phục triệt để lỗi Safari iOS CoreAudio nhân đôi (2x) thời lượng AAC/fMP4
+  function getEffectiveAudioDuration() {
+    const trackSec = state.currentTrack?.durationSec || parseDurationToSec(state.currentTrack?.duration);
+    const audioDur = dom.audio?.duration;
+
+    // Nếu không có audio duration hoặc audio duration không hợp lệ
+    if (!audioDur || isNaN(audioDur) || !isFinite(audioDur)) {
+      return trackSec || 210;
+    }
+
+    // Nếu bài hát đã có metadata thời lượng chính thức từ YouTube Music API
+    if (trackSec && trackSec > 0) {
+      // Safari iOS WebKit CoreAudio Bug: Khi phát AAC-LC trong fragmented MP4 (fMP4 itag 140),
+      // Safari đọc sai tần số mẫu (44.1kHz thành 22.05kHz), làm duration bị nhân đôi x2
+      // (Ví dụ bài 227s - 3:47 Safari hiển thị thành 454s - 07:34).
+      const ratio = audioDur / trackSec;
+      if (ratio >= 1.6 && ratio <= 2.4) {
+        return trackSec; // Luôn ưu tiên thời lượng thực tế từ metadata chính thống của bài hát
+      }
+      // Nếu audio.duration chênh lệch vô lý (> 15s) so với metadata YouTube thì ưu tiên metadata
+      if (Math.abs(audioDur - trackSec) > 15 && trackSec > 30) {
+        return trackSec;
+      }
+    }
+
+    return audioDur;
+  }
+
   // Nâng cấp độ phân giải hình ảnh sắc nét cao (High-Res 800x800)
   function upgradeThumbnailUrl(url) {
     if (!url || typeof url !== 'string') return 'wood_2.jpg';
@@ -1127,11 +1175,14 @@
         updateProgressUI(percent * 100);
 
         if (state.activeEngine === 'audio' || state.currentTrack?.previewUrl) {
-          if (dom.audio && dom.audio.duration) {
-            dom.audio.currentTime = percent * dom.audio.duration;
-            const t = formatTime(dom.audio.currentTime);
-            if (dom.currentTime) dom.currentTime.textContent = t;
-            if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = t;
+          if (dom.audio) {
+            const effDur = getEffectiveAudioDuration();
+            if (effDur > 0) {
+              dom.audio.currentTime = percent * effDur;
+              const t = formatTime(dom.audio.currentTime);
+              if (dom.currentTime) dom.currentTime.textContent = t;
+              if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = t;
+            }
           }
         } else if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.getDuration === 'function') {
           const dur = ytPlayer.getDuration();
@@ -1929,24 +1980,27 @@
   setInterval(() => {
     if (state.isPlaying && !state.isScrubbing) {
       if (state.activeEngine === 'audio' || state.currentTrack?.previewUrl) {
-        if (dom.audio && dom.audio.duration && !isNaN(dom.audio.duration) && isFinite(dom.audio.duration)) {
-          const percent = (dom.audio.currentTime / dom.audio.duration) * 100;
-          updateProgressUI(percent);
-          if (dom.currentTime) dom.currentTime.textContent = formatTime(dom.audio.currentTime);
-          if (dom.totalDuration) dom.totalDuration.textContent = formatTime(dom.audio.duration);
-          if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = formatTime(dom.audio.currentTime);
-          if (dom.sheetTotalTime) dom.sheetTotalTime.textContent = formatTime(dom.audio.duration);
-          syncLyricsWithTime(dom.audio.currentTime);
+        if (dom.audio) {
+          const effectiveDur = getEffectiveAudioDuration();
+          if (effectiveDur > 0) {
+            const percent = Math.min((dom.audio.currentTime / effectiveDur) * 100, 100);
+            updateProgressUI(percent);
+            if (dom.currentTime) dom.currentTime.textContent = formatTime(dom.audio.currentTime);
+            if (dom.totalDuration) dom.totalDuration.textContent = formatTime(effectiveDur);
+            if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = formatTime(dom.audio.currentTime);
+            if (dom.sheetTotalTime) dom.sheetTotalTime.textContent = formatTime(effectiveDur);
+            syncLyricsWithTime(dom.audio.currentTime);
 
-          // Tự động đồng bộ thời lượng thực tế của file âm thanh với thông tin bài hát
-          if (state.currentTrack && state.currentTrack.durationSec !== Math.round(dom.audio.duration)) {
-            state.currentTrack.durationSec = Math.round(dom.audio.duration);
-            state.currentTrack.duration = formatTime(dom.audio.duration);
-            if (dom.albumDetailTracksList) {
-              const matchedRow = dom.albumDetailTracksList.querySelector(`.album-detail-track-row[data-track-id="${state.currentTrack.id}"]`);
-              if (matchedRow) {
-                const durCol = matchedRow.querySelector('.col-duration');
-                if (durCol) durCol.textContent = formatTime(dom.audio.duration);
+            // Tự động đồng bộ thời lượng thực tế chuẩn vào thông tin bài hát
+            if (state.currentTrack && state.currentTrack.durationSec !== Math.round(effectiveDur)) {
+              state.currentTrack.durationSec = Math.round(effectiveDur);
+              state.currentTrack.duration = formatTime(effectiveDur);
+              if (dom.albumDetailTracksList) {
+                const matchedRow = dom.albumDetailTracksList.querySelector(`.album-detail-track-row[data-track-id="${state.currentTrack.id}"]`);
+                if (matchedRow) {
+                  const durCol = matchedRow.querySelector('.col-duration');
+                  if (durCol) durCol.textContent = formatTime(effectiveDur);
+                }
               }
             }
           }
@@ -2198,11 +2252,14 @@
     updateProgressUI(percent * 100);
 
     if (state.activeEngine === 'audio' || state.currentTrack?.previewUrl) {
-      if (dom.audio && dom.audio.duration) {
-        dom.audio.currentTime = percent * dom.audio.duration;
-        const t = formatTime(dom.audio.currentTime);
-        if (dom.currentTime) dom.currentTime.textContent = t;
-        if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = t;
+      if (dom.audio) {
+        const effDur = getEffectiveAudioDuration();
+        if (effDur > 0) {
+          dom.audio.currentTime = percent * effDur;
+          const t = formatTime(dom.audio.currentTime);
+          if (dom.currentTime) dom.currentTime.textContent = t;
+          if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = t;
+        }
       }
     } else if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.getDuration === 'function') {
       const dur = ytPlayer.getDuration();
@@ -2594,7 +2651,8 @@
           id: videoId,
           title: trackInfo.title || 'YouTube Track',
           artist: trackInfo.artist || 'YouTube',
-          duration: trackInfo.duration ? formatTime(trackInfo.duration) : '3:30',
+          duration: trackInfo.duration ? (typeof trackInfo.duration === 'string' && trackInfo.duration.includes(':') ? trackInfo.duration : formatTime(trackInfo.duration)) : '3:30',
+          durationSec: trackInfo.durationSec || parseDurationToSec(trackInfo.duration) || 210,
           thumbnail: trackInfo.thumbnail || 'wood_2.jpg'
         });
       } catch {
@@ -2603,6 +2661,7 @@
           title: 'YouTube Audio Track',
           artist: 'YouTube Stream',
           duration: '3:30',
+          durationSec: 210,
           thumbnail: 'wood_2.jpg'
         });
       }
@@ -3700,23 +3759,26 @@
     // Audio Element Events
     if (dom.audio) {
       dom.audio.addEventListener('timeupdate', () => {
-        if (state.activeEngine === 'audio' && !state.isScrubbing && dom.audio.duration) {
-          const percent = (dom.audio.currentTime / dom.audio.duration) * 100;
-          updateProgressUI(percent);
-          if (dom.currentTime) dom.currentTime.textContent = formatTime(dom.audio.currentTime);
-          updateMediaSessionPosition(dom.audio.currentTime, dom.audio.duration);
-          syncLyricsWithTime(dom.audio.currentTime);
+        if (state.activeEngine === 'audio' && !state.isScrubbing) {
+          const effectiveDuration = getEffectiveAudioDuration();
+          if (effectiveDuration > 0) {
+            const percent = Math.min((dom.audio.currentTime / effectiveDuration) * 100, 100);
+            updateProgressUI(percent);
+            if (dom.currentTime) dom.currentTime.textContent = formatTime(dom.audio.currentTime);
+            updateMediaSessionPosition(dom.audio.currentTime, effectiveDuration);
+            syncLyricsWithTime(dom.audio.currentTime);
+          }
         }
       });
 
       dom.audio.addEventListener('loadedmetadata', () => {
-        if (state.activeEngine === 'audio' && dom.audio.duration && !isNaN(dom.audio.duration) && isFinite(dom.audio.duration)) {
-          const realSec = Math.round(dom.audio.duration);
-          const formatted = formatTime(dom.audio.duration);
+        if (state.activeEngine === 'audio') {
+          const effectiveSec = getEffectiveAudioDuration();
+          const formatted = formatTime(effectiveSec);
           if (dom.totalDuration) dom.totalDuration.textContent = formatted;
           if (dom.sheetTotalTime) dom.sheetTotalTime.textContent = formatted;
           if (state.currentTrack) {
-            state.currentTrack.durationSec = realSec;
+            state.currentTrack.durationSec = Math.round(effectiveSec);
             state.currentTrack.duration = formatted;
             if (dom.albumDetailTracksList) {
               const matchedRow = dom.albumDetailTracksList.querySelector(`.album-detail-track-row[data-track-id="${state.currentTrack.id}"]`);
@@ -3726,7 +3788,7 @@
               }
             }
           }
-          updateMediaSessionPosition(dom.audio.currentTime, dom.audio.duration);
+          updateMediaSessionPosition(dom.audio.currentTime, effectiveSec);
         }
       });
 
@@ -4209,9 +4271,10 @@
       }],
       ['seekto', (details) => {
         if (details.seekTime === undefined || isNaN(details.seekTime)) return;
-        if (state.activeEngine === 'audio' && dom.audio && dom.audio.duration) {
+        if (state.activeEngine === 'audio' && dom.audio) {
+          const effDur = getEffectiveAudioDuration();
           dom.audio.currentTime = details.seekTime;
-          updateMediaSessionPosition(details.seekTime, dom.audio.duration);
+          updateMediaSessionPosition(details.seekTime, effDur);
         } else if (state.activeEngine === 'youtube' && ytPlayer && typeof ytPlayer.seekTo === 'function') {
           ytPlayer.seekTo(details.seekTime, true);
         }
@@ -4219,8 +4282,9 @@
       ['seekbackward', (details) => {
         const skip = details.seekOffset || 10;
         if (state.activeEngine === 'audio' && dom.audio) {
+          const effDur = getEffectiveAudioDuration();
           dom.audio.currentTime = Math.max(dom.audio.currentTime - skip, 0);
-          updateMediaSessionPosition(dom.audio.currentTime, dom.audio.duration);
+          updateMediaSessionPosition(dom.audio.currentTime, effDur);
         } else if (state.activeEngine === 'youtube' && ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
           ytPlayer.seekTo(Math.max(ytPlayer.getCurrentTime() - skip, 0), true);
         }
@@ -4228,8 +4292,9 @@
       ['seekforward', (details) => {
         const skip = details.seekOffset || 10;
         if (state.activeEngine === 'audio' && dom.audio) {
-          dom.audio.currentTime = Math.min(dom.audio.currentTime + skip, dom.audio.duration || 9999);
-          updateMediaSessionPosition(dom.audio.currentTime, dom.audio.duration);
+          const effDur = getEffectiveAudioDuration();
+          dom.audio.currentTime = Math.min(dom.audio.currentTime + skip, effDur);
+          updateMediaSessionPosition(dom.audio.currentTime, effDur);
         } else if (state.activeEngine === 'youtube' && ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
           ytPlayer.seekTo(ytPlayer.getCurrentTime() + skip, true);
         }
