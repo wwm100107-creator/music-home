@@ -36,7 +36,7 @@
        │     └─► Innertube (ClientType.IOS / itag 140 AAC 128kbps)
        │           └─► Residential IP (Google không chặn)
        │
-       └─► auto-sync.sh (Kiểm tra GitHub mỗi 10 phút -> Auto Git Pull & Restart)
+       └─► auto-sync.sh (Kiểm tra GitHub mỗi 2 phút -> Auto Git Pull & Restart)
 ```
 
 ### Tại sao kiến trúc này phát được nhạc nền trên iPhone?
@@ -67,8 +67,9 @@
 
 ### 3.2. `auto-sync.sh` (Auto-Deploy Daemon)
 * Tự động chạy ngầm:
-  - Cứ mỗi 10 phút kiểm tra commit mới nhất trên nhánh `main` của GitHub.
+  - Cứ mỗi 2 phút kiểm tra commit mới nhất trên nhánh `main` của GitHub.
   - Nếu có commit mới: tự động `git pull`, kiểm tra và cài đặt `npm install` nếu `package.json` thay đổi, sau đó tự khởi động lại `server.js` trong 1 giây.
+  - Tích hợp Watchdog tự động phục hồi nếu `server.js` bị dừng ngầm.
 
 ---
 
