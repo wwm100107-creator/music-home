@@ -294,28 +294,33 @@ async function getClients() {
 }
 
 // Helper resolve audio stream URL với hỗ trợ giải mã chữ ký & đa máy khách fallback
-async function resolveAudioStream(videoId, forceRefresh = false) {
-  if (!forceRefresh) {
+async function resolveAudioStream(videoId, forceRefresh = false, excludeClients = []) {
+  if (!forceRefresh && excludeClients.length === 0) {
     const cached = streamCache.get(videoId);
     if (cached) return cached;
   }
 
   const cookie = getYouTubeCookie();
+  // Ưu tiên IOS và VISIONOS (Native Client Apple có session tạo cục bộ):
+  // 1. Trả về trực tiếp itag 140 (AAC 128kbps) tương thích 100% iOS WebKit & giải mã phần cứng Apple
+  // 2. Không bị dính lỗi 403 Forbidden do YouTube CDN nhận diện đúng định dạng âm thanh di động
   const candidateClients = [
-    { type: ClientType.TV_SIMPLY, name: 'TV_SIMPLY', genLocally: false, useCookie: false },
-    { type: ClientType.MUSIC, name: 'MUSIC', genLocally: false, useCookie: true },
-    { type: ClientType.WEB, name: 'WEB', genLocally: false, useCookie: true },
-    { type: ClientType.MWEB, name: 'MWEB', genLocally: false, useCookie: true },
-    { type: ClientType.VISIONOS, name: 'VISIONOS', genLocally: true, useCookie: false },
-    { type: ClientType.IOS, name: 'IOS', genLocally: true, useCookie: false }
+    { type: ClientType.IOS, name: 'IOS', genLocally: true, useCookie: false, userAgent: 'com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X;)' },
+    { type: ClientType.VISIONOS, name: 'VISIONOS', genLocally: true, useCookie: false, userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15' },
+    { type: ClientType.ANDROID, name: 'ANDROID', genLocally: true, useCookie: false, userAgent: 'com.google.android.youtube/21.03.36(Linux; U; Android 16; en_US; SM-S908E Build/TP1A.220624.014) gzip' },
+    { type: ClientType.TV_SIMPLY, name: 'TV_SIMPLY', genLocally: false, useCookie: false, userAgent: 'Mozilla/5.0 (ChromiumStylePlatform) Cobalt/Version' },
+    { type: ClientType.MUSIC, name: 'MUSIC', genLocally: false, useCookie: true, userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+    { type: ClientType.WEB, name: 'WEB', genLocally: false, useCookie: true, userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+    { type: ClientType.MWEB, name: 'MWEB', genLocally: false, useCookie: true, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1' }
   ];
 
   let chosenFormat = null;
   let streamUrl = null;
-  let activeYt = null;
+  let chosenClient = null;
   let lastError = null;
 
   for (const cand of candidateClients) {
+    if (excludeClients.includes(cand.name)) continue;
     try {
       const config = {
         client_type: cand.type,
@@ -359,7 +364,7 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
           if (resolvedUrl) {
             chosenFormat = potentialFormat;
             streamUrl = resolvedUrl;
-            activeYt = yt;
+            chosenClient = cand;
             break;
           }
         }
@@ -370,7 +375,7 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
     }
   }
 
-  if (!chosenFormat || !streamUrl) {
+  if (!chosenFormat || !streamUrl || !chosenClient) {
     throw new Error(`Không tìm thấy luồng âm thanh (${lastError ? lastError.message : 'No audio streams available'})`);
   }
 
@@ -389,10 +394,14 @@ async function resolveAudioStream(videoId, forceRefresh = false) {
     itag: chosenFormat.itag,
     mimeType: chosenFormat.mime_type ? chosenFormat.mime_type.split(';')[0] : 'audio/mp4',
     contentLength: chosenFormat.content_length ? parseInt(chosenFormat.content_length, 10) : null,
-    bitrate: chosenFormat.bitrate
+    bitrate: chosenFormat.bitrate,
+    clientName: chosenClient.name,
+    userAgent: chosenClient.userAgent
   };
 
-  streamCache.set(videoId, streamData);
+  if (excludeClients.length === 0) {
+    streamCache.set(videoId, streamData);
+  }
   return streamData;
 }
 
@@ -1744,9 +1753,11 @@ apiRouter.get('/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000,
     const rangeHeader = req.headers.range || 'bytes=0-';
     const upstreamHeaders = {
       'User-Agent':
-        'com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X;)',
+        streamData.userAgent || 'com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X;)',
       'Range': rangeHeader,
-      'Accept': '*/*'
+      'Accept': '*/*',
+      'Origin': 'https://www.youtube.com',
+      'Referer': 'https://www.youtube.com'
     };
 
     const abortController = new AbortController();
@@ -1758,18 +1769,30 @@ apiRouter.get('/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000,
     });
 
     if (upstreamResponse.status === 403) {
-      console.warn(`[Stream] Upstream 403 for ${videoId}. Refreshing stream cache...`);
+      console.warn(`[Stream] Upstream 403 for ${videoId} with ${streamData.clientName || 'current client'}. Attempting fallback client...`);
       streamCache.delete(videoId);
-      streamData = await resolveAudioStream(videoId, true);
-      upstreamResponse = await fetch(streamData.url, {
-        headers: upstreamHeaders,
-        signal: abortController.signal
-      });
+      try {
+        streamData = await resolveAudioStream(videoId, true, streamData.clientName ? [streamData.clientName] : []);
+        const retryHeaders = {
+          ...upstreamHeaders,
+          'User-Agent': streamData.userAgent || upstreamHeaders['User-Agent']
+        };
+        upstreamResponse = await fetch(streamData.url, {
+          headers: retryHeaders,
+          signal: abortController.signal
+        });
+      } catch (retryErr) {
+        console.warn(`[Stream Retry Fail for ${videoId}]:`, retryErr.message);
+      }
     }
 
     if (!upstreamResponse.ok && upstreamResponse.status !== 206) {
-      console.warn(`[Stream Proxy Fail] Status ${upstreamResponse.status}. Attempting 302 redirect fallback...`);
-      return res.redirect(302, streamData.url);
+      console.warn(`[Stream Proxy Fail] Status ${upstreamResponse.status}. Video stream unavailable.`);
+      return res.status(upstreamResponse.status || 502).json({
+        error: 'Stream upstream failed',
+        status: upstreamResponse.status,
+        videoId
+      });
     }
 
     circuitBreaker.recordSuccess();
