@@ -251,6 +251,7 @@ const streamCache = new BoundedCache(300, 45 * 60 * 1000);
 const trendingCache = new BoundedCache(50, 60 * 60 * 1000);
 const albumCache = new BoundedCache(80, 60 * 60 * 1000);
 const lyricsCache = new BoundedCache(300, 60 * 60 * 1000);
+const youtubeCaptionCache = new BoundedCache(300, 6 * 60 * 60 * 1000);
 const cleanTrackCache = new BoundedCache(500, 24 * 60 * 60 * 1000);
 
 // ============================================================================
@@ -2368,6 +2369,231 @@ function parseLRC(lrcText) {
   return parsed.sort((a, b) => a.time - b.time);
 }
 
+function normalizeLyricsAlignmentToken(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^\p{L}\p{N}]/gu, '');
+}
+
+async function fetchYouTubeCaptionWords(videoId) {
+  if (!/^[\w-]{11}$/.test(String(videoId || ''))) return [];
+  const cacheKey = `yt-captions:${videoId}`;
+  const cachedCaptions = youtubeCaptionCache.get(cacheKey);
+  if (cachedCaptions) return cachedCaptions;
+
+  const loadCaptions = (async () => {
+    try {
+      const youtube = await getSearchClient();
+      const videoInfo = await youtube.getInfo(videoId);
+      const transcriptInfo = await videoInfo.getTranscript();
+      const segments = transcriptInfo.transcript?.content?.body?.initial_segments || [];
+      const captionWords = [];
+
+      for (const segment of segments) {
+        const snippet = segment.snippet?.toString?.().trim() || '';
+        if (!snippet || /^\[.*\]$/u.test(snippet)) continue;
+
+        const tokens = snippet.match(/\S+/gu) || [];
+        const normalizedTokens = tokens.map(text => ({ text, normalized: normalizeLyricsAlignmentToken(text) }))
+          .filter(token => token.normalized);
+        if (!normalizedTokens.length) continue;
+
+        const startMs = Number(segment.start_ms);
+        const endMs = Number(segment.end_ms);
+        if (!Number.isFinite(startMs) || startMs < 0) continue;
+
+        const startTime = startMs / 1000;
+        const endTime = Number.isFinite(endMs) && endMs > startMs
+          ? endMs / 1000
+          : startTime + Math.max(0.35, normalizedTokens.length * 0.28);
+        const totalWeight = normalizedTokens.reduce((sum, token) => sum + Math.max(1, Math.sqrt(Array.from(token.text).length)), 0);
+        let elapsedWeight = 0;
+
+        for (const token of normalizedTokens) {
+          captionWords.push({
+            ...token,
+            time: startTime + ((endTime - startTime) * elapsedWeight / totalWeight)
+          });
+          elapsedWeight += Math.max(1, Math.sqrt(Array.from(token.text).length));
+        }
+
+        if (captionWords.length > 1800) return [];
+      }
+
+      return captionWords;
+    } catch {
+      return [];
+    }
+  })();
+
+  let timeoutId;
+  try {
+    const captionWords = await Promise.race([
+      loadCaptions,
+      new Promise(resolve => {
+        timeoutId = setTimeout(() => resolve([]), 4500);
+      })
+    ]);
+    youtubeCaptionCache.set(cacheKey, captionWords, captionWords.length ? 6 * 60 * 60 * 1000 : 5 * 60 * 1000);
+    return captionWords;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function alignLyricsLinesToYouTubeCaptions(lines, captionWords) {
+  if (!Array.isArray(lines) || !Array.isArray(captionWords) || captionWords.length < 8) return null;
+
+  const lyricWordChunks = lines.map(line => {
+    const text = String(line?.text || '').trim();
+    if (/^\[.*\]$/u.test(text)) return [];
+    return (text.match(/\S+\s*/gu) || []).map(word => ({ text: word, tokenIndex: -1 }));
+  });
+  const lyricTokens = [];
+
+  lyricWordChunks.forEach((words, lineIndex) => {
+    words.forEach((word, wordIndex) => {
+      const normalized = normalizeLyricsAlignmentToken(word.text);
+      if (!normalized) return;
+      word.tokenIndex = lyricTokens.length;
+      lyricTokens.push({ normalized, lineIndex, wordIndex, time: null });
+    });
+  });
+
+  const lyricCount = lyricTokens.length;
+  const captionCount = captionWords.length;
+  if (lyricCount < 8 || (lyricCount + 1) * (captionCount + 1) > 1500000) return null;
+
+  // Sequence alignment tolerates small caption omissions/recognition errors while preserving order.
+  const columns = captionCount + 1;
+  const cellCount = (lyricCount + 1) * columns;
+  const distance = new Uint32Array(cellCount);
+  const trace = new Uint8Array(cellCount);
+
+  for (let i = 1; i <= lyricCount; i++) {
+    distance[i * columns] = i;
+    trace[i * columns] = 2; // lyric word omitted from captions
+  }
+  for (let j = 1; j <= captionCount; j++) {
+    distance[j] = j;
+    trace[j] = 3; // extra caption word
+  }
+
+  for (let i = 1; i <= lyricCount; i++) {
+    const lyricToken = lyricTokens[i - 1].normalized;
+    for (let j = 1; j <= captionCount; j++) {
+      const cell = i * columns + j;
+      const diagonal = distance[(i - 1) * columns + j - 1] + (lyricToken === captionWords[j - 1].normalized ? 0 : 1);
+      const omitLyric = distance[(i - 1) * columns + j] + 1;
+      const extraCaption = distance[i * columns + j - 1] + 1;
+
+      let best = diagonal;
+      let direction = 1;
+      if (omitLyric < best) {
+        best = omitLyric;
+        direction = 2;
+      }
+      if (extraCaption < best) {
+        best = extraCaption;
+        direction = 3;
+      }
+      distance[cell] = best;
+      trace[cell] = direction;
+    }
+  }
+
+  let i = lyricCount;
+  let j = captionCount;
+  let matchedCount = 0;
+  while (i > 0 || j > 0) {
+    const direction = trace[i * columns + j];
+    if (i > 0 && j > 0 && direction === 1) {
+      if (lyricTokens[i - 1].normalized === captionWords[j - 1].normalized) {
+        lyricTokens[i - 1].time = captionWords[j - 1].time;
+        matchedCount++;
+      }
+      i--;
+      j--;
+    } else if (i > 0 && (direction === 2 || j === 0)) {
+      i--;
+    } else if (j > 0) {
+      j--;
+    } else {
+      break;
+    }
+  }
+
+  const lyricCoverage = matchedCount / lyricCount;
+  const overallCoverage = matchedCount / Math.max(lyricCount, captionCount);
+  if (matchedCount < Math.min(10, lyricCount) || lyricCoverage < 0.72 || overallCoverage < 0.58) return null;
+
+  // Nội suy các từ bị phụ đề bỏ sót giữa các từ đã khớp.
+  const previousAnchor = new Int32Array(lyricCount);
+  const nextAnchor = new Int32Array(lyricCount);
+  let anchor = -1;
+  for (let tokenIndex = 0; tokenIndex < lyricCount; tokenIndex++) {
+    if (lyricTokens[tokenIndex].time !== null) anchor = tokenIndex;
+    previousAnchor[tokenIndex] = anchor;
+  }
+  anchor = -1;
+  for (let tokenIndex = lyricCount - 1; tokenIndex >= 0; tokenIndex--) {
+    if (lyricTokens[tokenIndex].time !== null) anchor = tokenIndex;
+    nextAnchor[tokenIndex] = anchor;
+  }
+
+  for (let tokenIndex = 0; tokenIndex < lyricCount; tokenIndex++) {
+    if (lyricTokens[tokenIndex].time !== null) continue;
+    const previous = previousAnchor[tokenIndex];
+    const next = nextAnchor[tokenIndex];
+    if (previous >= 0 && next >= 0) {
+      const progress = (tokenIndex - previous) / (next - previous);
+      lyricTokens[tokenIndex].time = lyricTokens[previous].time +
+        ((lyricTokens[next].time - lyricTokens[previous].time) * progress);
+    } else if (next >= 0) {
+      lyricTokens[tokenIndex].time = Math.max(0, lyricTokens[next].time - ((next - tokenIndex) * 0.32));
+    } else if (previous >= 0) {
+      lyricTokens[tokenIndex].time = lyricTokens[previous].time + ((tokenIndex - previous) * 0.32);
+    }
+  }
+
+  const alignedLines = lines.map((line, lineIndex) => {
+    const words = lyricWordChunks[lineIndex].map((word, wordIndex) => {
+      if (word.tokenIndex >= 0) {
+        return { text: word.text, time: parseFloat(lyricTokens[word.tokenIndex].time.toFixed(3)) };
+      }
+
+      const previousWord = lyricWordChunks[lineIndex].slice(0, wordIndex).reverse().find(item => item.tokenIndex >= 0);
+      const nextWord = lyricWordChunks[lineIndex].slice(wordIndex + 1).find(item => item.tokenIndex >= 0);
+      const time = previousWord
+        ? lyricTokens[previousWord.tokenIndex].time
+        : nextWord
+          ? lyricTokens[nextWord.tokenIndex].time
+          : Number(line?.time) || 0;
+      return { text: word.text, time: parseFloat(time.toFixed(3)) };
+    });
+
+    const firstWordTime = words.find(word => normalizeLyricsAlignmentToken(word.text))?.time;
+    return {
+      ...line,
+      time: firstWordTime ?? (Number.isFinite(Number(line?.time)) ? Number(line.time) : 0),
+      words,
+      wordsEstimated: false
+    };
+  });
+
+  for (let lineIndex = 0; lineIndex < alignedLines.length; lineIndex++) {
+    if (lyricWordChunks[lineIndex].length > 0) continue;
+    const nextLine = alignedLines.slice(lineIndex + 1).find((line, index) => lyricWordChunks[lineIndex + 1 + index]?.length > 0);
+    const previousLine = alignedLines.slice(0, lineIndex).reverse().find((line, index) => lyricWordChunks[lineIndex - 1 - index]?.length > 0);
+    alignedLines[lineIndex].time = nextLine?.time ?? previousLine?.time ?? 0;
+  }
+
+  return { lines: alignedLines, matchedCount, confidence: lyricCoverage };
+}
+
 /**
  * Lựa chọn ứng viên lời bài hát tốt nhất từ LRCLIB search.
  * BẢO VỆ NGHIÊM NGẶT TUYỆT ĐỐI KHÔNG BỊ "RÂU ÔNG NÀY CẮM CẰM BÀ KIA":
@@ -2375,7 +2601,7 @@ function parseLRC(lrcText) {
  * - Loại bỏ hoàn toàn các bài khác tên (ví dụ tìm 'Người Dưng' thì loại bỏ 'Thiệp Hồng Người Dưng', 'Người Lạ Ơi').
  * - Ưu tiên bản ghi khớp nghệ sĩ, có lời đồng bộ (synced) và có thời lượng sát bài đang phát.
  */
-function selectBestLyricCandidateStrict(results, targetDur, cleanTitle, cleanArtist) {
+function selectBestLyricCandidateStrict(results, targetDur, cleanTitle, cleanArtist, syncedOnly = false) {
   if (!Array.isArray(results) || results.length === 0) return null;
 
   const normExpectedTitle = normalizeForComparison(cleanTitle);
@@ -2386,7 +2612,7 @@ function selectBestLyricCandidateStrict(results, targetDur, cleanTitle, cleanArt
   const candidates = [];
 
   for (const r of results) {
-    if (!r || (!r.syncedLyrics && !r.plainLyrics && !r.instrumental)) continue;
+    if (!r || (syncedOnly && !r.syncedLyrics) || (!r.syncedLyrics && !r.plainLyrics && !r.instrumental)) continue;
 
     const normTrack = normalizeForComparison(r.trackName);
     const normArtist = normalizeForComparison(r.artistName);
@@ -2662,42 +2888,38 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
       }
     }
 
-    // 2. Fallback search: tìm theo cả tên bài hát + nghệ sĩ và lọc qua selectBestLyricCandidateStrict
-    if (!lyricData || (!lyricData.syncedLyrics && !lyricData.plainLyrics && !lyricData.instrumental)) {
-      try {
-        const searchQuery = cleanArtist ? `${cleanTitle} ${cleanArtist}` : cleanTitle;
-        const searchResp = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(searchQuery)}`, {
-          headers: LRCLIB_HEADERS
-        });
-        if (searchResp.ok) {
-          const results = await searchResp.json();
-          const best = selectBestLyricCandidateStrict(results, durSec, cleanTitle, cleanArtist);
-          if (best) {
-            lyricData = best;
-            lyricData.source = 'lrclib';
-          }
-        }
-      } catch {
-        // Tiếp tục thử fallback 3
-      }
-    }
+    // 2. Tra cứu thêm các bản có timestamp ngay cả khi /api/get đã tìm thấy lời thường.
+    // Bản khớp tên/nghệ sĩ/thời lượng có syncedLyrics sẽ được ưu tiên để tránh bắt người
+    // dùng tự căn lại từng bài; nếu chỉ có lời thường thì vẫn giữ làm phương án dự phòng.
+    if (!lyricData?.syncedLyrics && !lyricData?.instrumental) {
+      const searchQueries = [
+        cleanArtist ? `${cleanTitle} ${cleanArtist}` : cleanTitle,
+        cleanTitle
+      ].filter((query, index, allQueries) => query && allQueries.indexOf(query) === index);
 
-    // 3. Fallback search chỉ theo tên bài hát đã làm sạch – BẮT BUỘC qua bộ lọc nghiêm ngặt
-    if (!lyricData || (!lyricData.syncedLyrics && !lyricData.plainLyrics && !lyricData.instrumental)) {
-      try {
-        const searchResp = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(cleanTitle)}`, {
-          headers: LRCLIB_HEADERS
-        });
-        if (searchResp.ok) {
+      for (const searchQuery of searchQueries) {
+        try {
+          const searchResp = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(searchQuery)}`, {
+            headers: LRCLIB_HEADERS
+          });
+          if (!searchResp.ok) continue;
+
           const results = await searchResp.json();
-          const best = selectBestLyricCandidateStrict(results, durSec, cleanTitle, cleanArtist);
-          if (best) {
+          const bestSynced = selectBestLyricCandidateStrict(results, durSec, cleanTitle, cleanArtist, true);
+          const best = bestSynced || (!lyricData
+            ? selectBestLyricCandidateStrict(results, durSec, cleanTitle, cleanArtist)
+            : null);
+          if (!best) continue;
+
+          if (best.syncedLyrics || !lyricData) {
             lyricData = best;
             lyricData.source = 'lrclib';
           }
+
+          if (lyricData.syncedLyrics) break;
+        } catch {
+          // Thử truy vấn kế tiếp; nếu đều lỗi, lời plain đã tìm được vẫn dùng được.
         }
-      } catch {
-        // Tiếp tục thử Genius
       }
     }
 
@@ -2737,18 +2959,44 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
 
     const isInstrumental = Boolean(lyricData.instrumental);
     const parsedLines = parseLRC(lyricData.syncedLyrics || lyricData.plainLyrics || '');
-    const hasSynced = parsedLines.length > 0;
+    const hasNativeWordTimings = parsedLines.some(line => Array.isArray(line.words) && line.words.length > 1);
+    let captionAlignment = null;
+
+    // Nếu chưa có timestamp từng từ, thử đồng bộ ca từ với phụ đề của đúng video đang phát.
+    // Chỉ nhận kết quả khi nội dung caption khớp phần lớn lời gốc để không lấy nhầm video.
+    if (!isInstrumental && !hasNativeWordTimings && videoId) {
+      const sourceLines = parsedLines.length
+        ? parsedLines
+        : String(lyricData.syncedLyrics || lyricData.plainLyrics || '')
+          .split(/\r?\n/)
+          .map(text => text.trim())
+          .filter(Boolean)
+          .map(text => ({ text }));
+
+      if (sourceLines.length) {
+        const captionWords = await fetchYouTubeCaptionWords(videoId);
+        captionAlignment = alignLyricsLinesToYouTubeCaptions(sourceLines, captionWords);
+      }
+    }
+
+    const resultLines = captionAlignment?.lines || parsedLines;
+    const hasSynced = parsedLines.length > 0 || Boolean(captionAlignment);
 
     const payload = {
       success: true,
-      synced: hasSynced && parsedLines.length > 0,
+      synced: hasSynced,
       instrumental: isInstrumental,
       source: lyricData.source || 'lrclib',
       trackName: lyricData.trackName || cleanTitle,
       artistName: lyricData.artistName || cleanArtist,
       duration: lyricData.duration || null,
-      lines: parsedLines,
-      plain: lyricData.plainLyrics || ''
+      lines: resultLines,
+      plain: lyricData.plainLyrics || '',
+      ...(captionAlignment ? {
+        synced: true,
+        syncMethod: 'youtube-captions',
+        syncConfidence: parseFloat(captionAlignment.confidence.toFixed(3))
+      } : {})
     };
 
     lyricsCache.set(cacheKey, payload);
@@ -2756,6 +3004,40 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
   } catch (err) {
     console.error('[Lyrics Fetch Error]:', err.message);
     res.status(500).json({ success: false, error: 'Không thể tải lời bài hát: ' + err.message });
+  }
+});
+
+apiRouter.post('/lyrics/align', rateLimit({ maxRequests: 30, windowMs: 60000, endpointName: 'lyrics-align' }), async (req, res) => {
+  const videoId = String(req.body?.videoId || '').trim();
+  const inputLines = req.body?.lines;
+  if (!/^[\w-]{11}$/.test(videoId) || !Array.isArray(inputLines) || inputLines.length === 0 || inputLines.length > 1200) {
+    return res.status(400).json({ success: false, aligned: false, error: 'Dữ liệu căn lời không hợp lệ.' });
+  }
+
+  const lines = inputLines
+    .filter(line => line && typeof line.text === 'string' && line.text.trim())
+    .map(line => ({
+      text: line.text.trim(),
+      ...(Number.isFinite(Number(line.time)) ? { time: Number(line.time) } : {})
+    }));
+  if (!lines.length || lines.reduce((sum, line) => sum + line.text.length, 0) > 75000) {
+    return res.status(400).json({ success: false, aligned: false, error: 'Lời bài hát vượt giới hạn căn chỉnh.' });
+  }
+
+  try {
+    const captionWords = await fetchYouTubeCaptionWords(videoId);
+    const alignment = alignLyricsLinesToYouTubeCaptions(lines, captionWords);
+    if (!alignment) return res.json({ success: true, aligned: false });
+
+    return res.json({
+      success: true,
+      aligned: true,
+      lines: alignment.lines,
+      confidence: parseFloat(alignment.confidence.toFixed(3))
+    });
+  } catch (err) {
+    console.warn('[Lyrics Caption Alignment]:', err.message);
+    return res.json({ success: true, aligned: false });
   }
 });
 

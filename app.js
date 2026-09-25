@@ -1772,6 +1772,43 @@
     return entries;
   }
 
+  async function autoAlignLyricsWithVideoCaptions(track) {
+    const videoId = String(track?.id || '');
+    if (!/^[\w-]{11}$/.test(videoId) || !Array.isArray(state.lyrics) || !state.lyrics.length) return;
+
+    const requestedTrackId = track.id;
+    const controller = lyricsAbortController;
+    try {
+      const response = await fetch('/api/lyrics/align', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videoId,
+          lines: state.lyrics.map(line => ({ text: line.text, time: line.time }))
+        }),
+        signal: controller?.signal
+      });
+      if (!response.ok) return;
+
+      const result = await response.json();
+      if (!result.aligned || !Array.isArray(result.lines) ||
+          state.currentTrack?.id !== requestedTrackId || state.lyricsTrackId !== requestedTrackId) return;
+
+      state.lyrics = result.lines;
+      state.activeLyricIndex = -1;
+      const confidence = Math.round((Number(result.confidence) || 0) * 100);
+      if (dom.lyricsSyncBadge) {
+        dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.sparkleStar} Tự căn theo phụ đề video${confidence ? ` • Khớp ${confidence}%` : ''}`;
+      }
+      renderLyricsLines(state.lyrics);
+      syncLyricsWithTime(getCurrentAudioTime());
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.debug('[Lyrics Caption Alignment]:', err.message);
+      }
+    }
+  }
+
   function renderLyricsLines(lines) {
     if (!dom.lyricsLinesContainer) return;
     dom.lyricsLinesContainer.innerHTML = lines.map((item, idx) => {
@@ -2026,6 +2063,7 @@
           if (curTime > 0) {
             syncLyricsWithTime(curTime);
           }
+          if (hasEstimatedWords) autoAlignLyricsWithVideoCaptions(track);
           return;
         }
       }
@@ -2041,6 +2079,7 @@
       }
       if (dom.sheetLyricsNextText) dom.sheetLyricsNextText.textContent = state.lyrics[1]?.text || '';
       syncLyricsWithTime(getCurrentAudioTime());
+      autoAlignLyricsWithVideoCaptions(track);
       return;
     }
 
@@ -2108,9 +2147,14 @@
         state.lyrics = estimateTimedLyricsWords(data.lines);
         const hasEstimatedWords = state.lyrics.some(line => line.wordsEstimated);
         if (dom.lyricsSyncBadge) {
-          dom.lyricsSyncBadge.innerHTML = hasEstimatedWords
-            ? `${GhibliIcons.sparkleStar} Đồng bộ theo dòng • Karaoke ước lượng từng từ`
-            : `${GhibliIcons.sparkleStar} Đồng bộ thời gian thực (Karaoke)`;
+          if (data.syncMethod === 'youtube-captions') {
+            const confidence = Math.round((Number(data.syncConfidence) || 0) * 100);
+            dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.sparkleStar} Tự căn theo phụ đề video${confidence ? ` • Khớp ${confidence}%` : ''}`;
+          } else {
+            dom.lyricsSyncBadge.innerHTML = hasEstimatedWords
+              ? `${GhibliIcons.sparkleStar} Đồng bộ theo dòng • Karaoke ước lượng từng từ`
+              : `${GhibliIcons.sparkleStar} Đồng bộ thời gian thực (Karaoke)`;
+          }
         }
 
         renderLyricsLines(state.lyrics);
