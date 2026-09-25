@@ -2150,6 +2150,10 @@
           if (data.syncMethod === 'youtube-captions') {
             const confidence = Math.round((Number(data.syncConfidence) || 0) * 100);
             dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.sparkleStar} Tự căn theo phụ đề video${confidence ? ` • Khớp ${confidence}%` : ''}`;
+          } else if (data.syncMethod === 'lyricsfile-word-sync') {
+            dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.sparkleStar} LRCLIB • Đồng bộ karaoke từng từ`;
+          } else if (data.syncMethod === 'lrc-word-sync') {
+            dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.sparkleStar} LRC • Đồng bộ karaoke từng từ`;
           } else {
             dom.lyricsSyncBadge.innerHTML = hasEstimatedWords
               ? `${GhibliIcons.sparkleStar} Đồng bộ theo dòng • Karaoke ước lượng từng từ`
