@@ -1645,6 +1645,133 @@
     showToast(`🎯 Đã căn chuẩn câu hát này khớp với thời điểm ${formatTime(curTime)} (Độ lệch: ${sign}${calculatedOffset.toFixed(1)}s)`);
   }
 
+  function getLyricDurationSeconds() {
+    if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.getDuration === 'function') {
+      const youtubeDuration = Number(ytPlayer.getDuration());
+      if (Number.isFinite(youtubeDuration) && youtubeDuration > 0) return youtubeDuration;
+    }
+
+    if (state.activeEngine === 'audio' && dom.audio) {
+      const audioDuration = Number(dom.audio.duration);
+      if (Number.isFinite(audioDuration) && audioDuration > 0) {
+        return getEffectiveAudioDuration() || audioDuration;
+      }
+    }
+
+    return Number(state.currentTrack?.durationSec) || parseDurationToSec(state.currentTrack?.duration) || 210;
+  }
+
+  // Lời tiếng Việt thường được ghi theo âm tiết cách nhau bởi dấu cách. Mỗi âm tiết
+  // là một nhịp highlight karaoke nhỏ. Ngôn ngữ không tách từ bằng dấu cách dùng Segmenter.
+  function splitLyricIntoWords(text) {
+    const trimmed = String(text || '').trim();
+    if (!trimmed) return [];
+
+    const spaceDelimitedWords = trimmed.match(/\S+\s*/gu) || [];
+    const needsLanguageSegmentation = !/\s/u.test(trimmed) &&
+      /[\u0E00-\u0E7F\u3040-\u30FF\u3400-\u9FFF\uAC00-\uD7AF]/u.test(trimmed);
+    if (!needsLanguageSegmentation) return spaceDelimitedWords;
+
+    if (typeof Intl.Segmenter === 'function') {
+      const wordSegments = [...new Intl.Segmenter(undefined, { granularity: 'word' }).segment(trimmed)]
+        .map(segment => segment.segment)
+        .filter(segment => /\S/u.test(segment));
+      if (wordSegments.length > 1) return wordSegments;
+
+      const graphemes = [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(trimmed)]
+        .map(segment => segment.segment);
+      if (graphemes.length > 1) return graphemes;
+    }
+
+    return Array.from(trimmed);
+  }
+
+  function getLyricWordWeight(word) {
+    return Math.max(1, Math.sqrt(Array.from(String(word || '').trim()).length));
+  }
+
+  function createEstimatedWordTimings(text, startTime, duration) {
+    const words = splitLyricIntoWords(text);
+    if (!words.length) return [];
+
+    const totalWeight = words.reduce((sum, word) => sum + getLyricWordWeight(word), 0);
+    let elapsedWeight = 0;
+    return words.map(word => {
+      const time = startTime + (Math.max(0, duration) * elapsedWeight / totalWeight);
+      elapsedWeight += getLyricWordWeight(word);
+      return { time: parseFloat(time.toFixed(3)), text: word };
+    });
+  }
+
+  function estimateTimedLyricsWords(lines) {
+    if (!Array.isArray(lines)) return [];
+    return lines.map((line, index) => {
+      const text = String(line?.text || '').trim();
+      const existingWords = Array.isArray(line?.words)
+        ? line.words.filter(word => word && typeof word.text === 'string' && word.text.length > 0)
+        : [];
+      if (existingWords.length || /^\[.*\]$/u.test(text)) return line;
+
+      const startTime = Number.isFinite(Number(line?.time)) ? Number(line.time) : 0;
+      const nextLine = lines.slice(index + 1).find(next => Number(next?.time) > startTime + 0.05);
+      const nextTime = Number(nextLine?.time);
+      const words = splitLyricIntoWords(text);
+      if (!words.length) return { ...line, words: [], wordsEstimated: true };
+
+      const wordWeight = words.reduce((sum, word) => sum + getLyricWordWeight(word), 0);
+      const nominalDuration = Math.min(5, Math.max(0.7, wordWeight * 0.36));
+      const gap = nextTime - startTime;
+      const estimatedDuration = gap > 0.05 ? Math.min(gap, nominalDuration) : nominalDuration;
+      return {
+        ...line,
+        words: createEstimatedWordTimings(text, startTime, estimatedDuration),
+        wordsEstimated: true
+      };
+    });
+  }
+
+  function estimatePlainLyricsTimings(plainText) {
+    const sourceLines = String(plainText || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    if (!sourceLines.length) return [];
+
+    const entries = sourceLines.map(text => ({
+      text,
+      isSectionHeader: /^\[.*\]$/u.test(text)
+    }));
+    const lyricEntries = entries.filter(entry => !entry.isSectionHeader);
+    const entryWeights = new Map(lyricEntries.map(entry => {
+      const words = splitLyricIntoWords(entry.text);
+      return [entry, words.reduce((sum, word) => sum + getLyricWordWeight(word), 0) || 1];
+    }));
+    const totalWeight = [...entryWeights.values()].reduce((sum, weight) => sum + weight, 0) || 1;
+    const duration = getLyricDurationSeconds();
+    const introTime = Math.min(5, duration * 0.035);
+    const lyricsDuration = Math.max(1, duration * 0.88);
+    let elapsedWeight = 0;
+
+    for (const entry of entries) {
+      if (entry.isSectionHeader) continue;
+      const weight = entryWeights.get(entry) || 1;
+      const lineDuration = lyricsDuration * weight / totalWeight;
+      entry.time = introTime + (lyricsDuration * elapsedWeight / totalWeight);
+      entry.words = createEstimatedWordTimings(entry.text, entry.time, lineDuration);
+      entry.wordsEstimated = true;
+      elapsedWeight += weight;
+    }
+
+    // Giữ tiêu đề đoạn [Verse]/[Chorus] trong lời hiển thị nhưng không highlight như ca từ.
+    for (let index = 0; index < entries.length; index++) {
+      const entry = entries[index];
+      if (!entry.isSectionHeader) continue;
+      const nextLyric = entries.slice(index + 1).find(item => !item.isSectionHeader);
+      const previousLyric = entries.slice(0, index).reverse().find(item => !item.isSectionHeader);
+      entry.time = nextLyric?.time ?? previousLyric?.time ?? introTime;
+      entry.words = [];
+    }
+
+    return entries;
+  }
+
   function renderLyricsLines(lines) {
     if (!dom.lyricsLinesContainer) return;
     dom.lyricsLinesContainer.innerHTML = lines.map((item, idx) => {
@@ -1707,7 +1834,8 @@
       }
     }
 
-    const lineChanged = currentIdx !== state.activeLyricIndex;
+    const previousIdx = state.activeLyricIndex;
+    const lineChanged = currentIdx !== previousIdx;
     state.activeLyricIndex = currentIdx;
 
     // Cập nhật giao diện trên Sân Khấu Lời Nhạc
@@ -1715,14 +1843,20 @@
       const lineEls = dom.lyricsLinesContainer.children;
       for (let i = 0; i < lineEls.length; i++) {
         const el = lineEls[i];
+        const wordEls = el.querySelectorAll('.lyric-word');
         if (i === currentIdx) {
           el.classList.add('active');
           el.classList.remove('past');
         } else if (i < currentIdx) {
           el.classList.remove('active');
           el.classList.add('past');
+          wordEls.forEach(wordEl => {
+            wordEl.classList.remove('active');
+            wordEl.classList.add('past');
+          });
         } else {
           el.classList.remove('active', 'past');
+          wordEls.forEach(wordEl => wordEl.classList.remove('active', 'past'));
         }
       }
 
@@ -1866,8 +2000,13 @@
       if (isLrc) {
         const parsedLines = parseLRC(track.lyrics);
         if (parsedLines.length > 0) {
-          state.lyrics = parsedLines;
-          if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '✨ Lời đồng bộ do tác giả đính kèm';
+          state.lyrics = estimateTimedLyricsWords(parsedLines);
+          const hasEstimatedWords = state.lyrics.some(line => line.wordsEstimated);
+          if (dom.lyricsSyncBadge) {
+            dom.lyricsSyncBadge.textContent = hasEstimatedWords
+              ? '✨ Đồng bộ theo dòng • Karaoke ước lượng từng từ'
+              : '✨ Lời đồng bộ do tác giả đính kèm';
+          }
           renderLyricsLines(state.lyrics);
 
           if (dom.sheetLyricsActiveText) {
@@ -1891,20 +2030,17 @@
         }
       }
 
-      // Ngược lại: Lời dạng văn bản thường (Plain Text)
-      state.lyrics = [];
-      if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.quillScroll} Lời bài hát do tác giả đính kèm`;
-      const plainLines = track.lyrics.split(/\r?\n/).filter(l => l.trim().length > 0);
-      if (dom.lyricsLinesContainer) {
-        dom.lyricsLinesContainer.innerHTML = plainLines.map(line => `
-          <div class="lyric-line past" style="opacity: 0.88; font-size: 1.35rem; text-align: center; margin-bottom: 14px;">
-            ${escapeHtml(line)}
-          </div>
-        `).join('');
+      // Lời văn bản thường không có mốc thời gian: ước lượng nhịp theo thời lượng bài.
+      state.lyrics = estimatePlainLyricsTimings(track.lyrics);
+      if (dom.lyricsSyncBadge) {
+        dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.quillScroll} Karaoke ước lượng từ lời tác giả đính kèm`;
       }
+      renderLyricsLines(state.lyrics);
       if (dom.sheetLyricsActiveText) {
-        dom.sheetLyricsActiveText.textContent = plainLines[0] || 'Lời bài hát có sẵn';
+        dom.sheetLyricsActiveText.textContent = state.lyrics[0]?.text || 'Lời bài hát có sẵn';
       }
+      if (dom.sheetLyricsNextText) dom.sheetLyricsNextText.textContent = state.lyrics[1]?.text || '';
+      syncLyricsWithTime(getCurrentAudioTime());
       return;
     }
 
@@ -1969,8 +2105,13 @@
       }
 
       if (data.synced && Array.isArray(data.lines) && data.lines.length > 0) {
-        state.lyrics = data.lines;
-        if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.sparkleStar} Đồng bộ thời gian thực (Karaoke)`;
+        state.lyrics = estimateTimedLyricsWords(data.lines);
+        const hasEstimatedWords = state.lyrics.some(line => line.wordsEstimated);
+        if (dom.lyricsSyncBadge) {
+          dom.lyricsSyncBadge.innerHTML = hasEstimatedWords
+            ? `${GhibliIcons.sparkleStar} Đồng bộ theo dòng • Karaoke ước lượng từng từ`
+            : `${GhibliIcons.sparkleStar} Đồng bộ thời gian thực (Karaoke)`;
+        }
 
         renderLyricsLines(state.lyrics);
 
@@ -1992,31 +2133,15 @@
           syncLyricsWithTime(curTime);
         }
       } else if (data.plain) {
-        state.lyrics = [];
         const sourceLabel = data.source === 'genius' ? 'Genius.com' : 'Cơ sở dữ liệu gốc';
-        if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.quillScroll} Lời bài hát từ ${sourceLabel} (Chưa đồng bộ nhịp)`;
-
-        const plainLines = data.plain.split(/\r?\n/).filter(l => l.trim().length > 0);
-        if (dom.lyricsLinesContainer) {
-          dom.lyricsLinesContainer.innerHTML = `
-            <div class="lyrics-plain-container" style="max-width: 680px; margin: 0 auto; padding: 20px 14px; line-height: 2;">
-              <div style="text-align: center; margin-bottom: 24px; font-size: 0.92rem; opacity: 0.75; font-style: italic;">
-                ${GhibliIcons.quillScroll} Ca từ gốc chính thức được xác thực • Tuyệt đối không tự bịa đặt lời
-              </div>
-              ${plainLines.map(line => {
-                const trimmed = line.trim();
-                const isSectionHeader = /^\[.*\]$/.test(trimmed);
-                if (isSectionHeader) {
-                  return `<div style="font-weight: 700; color: var(--accent-color, #e07a5f); margin-top: 24px; margin-bottom: 8px; font-size: 1.15rem; text-align: center; letter-spacing: 0.5px;">${escapeHtml(trimmed)}</div>`;
-                }
-                return `<div class="lyric-line past" style="opacity: 0.92; font-size: 1.4rem; text-align: center; margin-bottom: 12px; transition: color 0.3s ease;">${escapeHtml(trimmed)}</div>`;
-              }).join('')}
-            </div>
-          `;
-        }
+        state.lyrics = estimatePlainLyricsTimings(data.plain);
+        if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.quillScroll} Karaoke ước lượng • Lời từ ${sourceLabel}`;
+        renderLyricsLines(state.lyrics);
         if (dom.sheetLyricsActiveText) {
-          dom.sheetLyricsActiveText.textContent = plainLines[0] || 'Lời bài hát chính thức';
+          dom.sheetLyricsActiveText.textContent = state.lyrics[0]?.text || 'Lời bài hát chính thức';
         }
+        if (dom.sheetLyricsNextText) dom.sheetLyricsNextText.textContent = state.lyrics[1]?.text || '';
+        syncLyricsWithTime(getCurrentAudioTime());
       } else {
         state.lyrics = [];
         const isAi = data.reason === 'ai_generated';
