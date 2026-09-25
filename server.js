@@ -2204,6 +2204,136 @@ function selectBestLyricCandidate(results, targetDur) {
   return results[0];
 }
 
+function isAiGeneratedTrack(title, artist) {
+  const combined = `${title || ''} ${artist || ''}`.toLowerCase();
+  return /\b(suno|suno\.ai|udio|udio\.ai|ai cover|ai song|ai generated|tạo bởi ai|ai tạo|vocaloid|ai singer|ai music|text to song|diff-svc|so-vits)\b/i.test(combined);
+}
+
+// ============================================================================
+// GENIUS.COM INTEGRATION & CAREFUL PARSING (GROUND TRUTH LYRICS)
+// ============================================================================
+async function fetchGeniusLyrics(cleanTitle, cleanArtist) {
+  if (!cleanTitle) return null;
+  const query = cleanArtist ? `${cleanTitle} ${cleanArtist}` : cleanTitle;
+  const token = process.env.GENIUS_ACCESS_TOKEN || process.env.GENIUS_API_KEY || '';
+
+  try {
+    let songUrl = null;
+    let songTitle = cleanTitle;
+    let artistName = cleanArtist;
+
+    // 1. Thử dùng Genius API nếu có token cấu hình
+    if (token) {
+      try {
+        const apiRes = await fetch(`https://api.genius.com/search?q=${encodeURIComponent(query)}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'User-Agent': 'MusicHome/1.0 (https://github.com/wwm100107-creator/music-home)'
+          }
+        });
+        if (apiRes.ok) {
+          const apiData = await apiRes.json();
+          const songHit = apiData.response?.hits?.find(h => h.type === 'song')?.result;
+          if (songHit) {
+            songUrl = songHit.url;
+            songTitle = songHit.title || cleanTitle;
+            artistName = songHit.primary_artist?.name || cleanArtist;
+          }
+        }
+      } catch (err) {
+        console.warn('[Genius API Search Warning]:', err.message);
+      }
+    }
+
+    // 2. Fallback tìm link trang lời Genius qua DuckDuckGo HTML
+    if (!songUrl) {
+      try {
+        const ddgRes = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent('site:genius.com ' + query + ' lyrics')}`, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+          }
+        });
+        if (ddgRes.ok) {
+          const html = await ddgRes.text();
+          const regex = /uddg=([^&]+)/g;
+          let m;
+          while ((m = regex.exec(html)) !== null) {
+            const decoded = decodeURIComponent(m[1]);
+            if (decoded.includes('genius.com') && decoded.includes('-lyrics')) {
+              songUrl = decoded;
+              break;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[Genius DDG Lookup Warning]:', err.message);
+      }
+    }
+
+    if (!songUrl) return null;
+
+    // 3. Tải nội dung trang web Genius
+    let pageHtml = '';
+    try {
+      const pageRes = await fetch(songUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'vi,en;q=0.9'
+        }
+      });
+      if (pageRes.ok) {
+        pageHtml = await pageRes.text();
+      }
+    } catch {
+      // Bỏ qua lỗi mạng
+    }
+
+    if (!pageHtml || pageHtml.length < 500) return null;
+
+    // 4. Bóc tách thẻ chứa lời bài hát từ Genius HTML
+    const containerMatches = [...pageHtml.matchAll(/<div[^>]*data-lyrics-container="true"[^>]*>([\s\S]*?)<\/div>/gi)];
+    let rawLyrics = '';
+    if (containerMatches.length > 0) {
+      rawLyrics = containerMatches.map(m => m[1]).join('\n');
+    } else {
+      const fallbackMatches = [...pageHtml.matchAll(/<div[^>]*class="[^"]*Lyrics__Container[^"]*"[^>]*>([\s\S]*?)<\/div>/gi)];
+      if (fallbackMatches.length > 0) {
+        rawLyrics = fallbackMatches.map(m => m[1]).join('\n');
+      }
+    }
+
+    if (!rawLyrics) return null;
+
+    // 5. Làm sạch HTML, giữ nguyên ca từ gốc
+    const cleanedText = rawLyrics
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&#x27;/g, "'")
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    if (!cleanedText || cleanedText.length < 20) return null;
+
+    return {
+      source: 'genius',
+      plainLyrics: cleanedText,
+      trackName: songTitle,
+      artistName: artistName,
+      url: songUrl
+    };
+  } catch (err) {
+    console.warn('[Genius Processing Warning]:', err.message);
+    return null;
+  }
+}
+
 apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpointName: 'lyrics' }), async (req, res) => {
   const rawTitle = req.query.title || req.query.track || '';
   const rawArtist = req.query.artist || '';
@@ -2223,6 +2353,22 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
     return res.json({ ...cached, cached: true });
   }
 
+  // 0. Nhận diện tác phẩm do AI tạo: Minh bạch trung thực, không tự bịa lời
+  if (isAiGeneratedTrack(rawTitle, rawArtist)) {
+    const aiPayload = {
+      success: false,
+      reason: 'ai_generated',
+      synced: false,
+      instrumental: false,
+      lines: [],
+      plain: '',
+      message: 'Chưa có dữ liệu cho phần lời bài hát này',
+      detail: 'Bài hát được xác định do AI tạo (Suno, Udio, AI Cover) hoặc biểu diễn bởi giọng ca ảo nên hiện chưa có dữ liệu lời bài hát chính thức.'
+    };
+    lyricsCache.set(cacheKey, aiPayload, 24 * 60 * 60 * 1000);
+    return res.json(aiPayload);
+  }
+
   const LRCLIB_HEADERS = {
     'User-Agent': 'MusicHome/1.0 (https://github.com/wwm100107-creator/music-home)'
   };
@@ -2238,6 +2384,7 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
         const resp = await fetch(getUrl, { headers: LRCLIB_HEADERS });
         if (resp.ok) {
           lyricData = await resp.json();
+          if (lyricData) lyricData.source = 'lrclib';
         }
       } catch {
         // bỏ qua để thử fallback search
@@ -2253,7 +2400,11 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
         });
         if (searchResp.ok) {
           const results = await searchResp.json();
-          lyricData = selectBestLyricCandidate(results, durSec);
+          const best = selectBestLyricCandidate(results, durSec);
+          if (best) {
+            lyricData = best;
+            lyricData.source = 'lrclib';
+          }
         }
       } catch {
         // Tiếp tục thử fallback 3
@@ -2268,23 +2419,48 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
         });
         if (searchResp.ok) {
           const results = await searchResp.json();
-          lyricData = selectBestLyricCandidate(results, durSec);
+          const best = selectBestLyricCandidate(results, durSec);
+          if (best) {
+            lyricData = best;
+            lyricData.source = 'lrclib';
+          }
         }
       } catch {
-        // Không tìm thấy
+        // Tiếp tục thử Genius
       }
     }
 
-    if (!lyricData) {
+    // 4. Fallback sang GENIUS.COM nếu chưa có lời từ LRCLIB
+    if (!lyricData || (!lyricData.syncedLyrics && !lyricData.plainLyrics && !lyricData.instrumental)) {
+      try {
+        const geniusResult = await fetchGeniusLyrics(cleanTitle, cleanArtist);
+        if (geniusResult) {
+          lyricData = {
+            trackName: geniusResult.trackName,
+            artistName: geniusResult.artistName,
+            plainLyrics: geniusResult.plainLyrics,
+            source: 'genius',
+            duration: durSec
+          };
+        }
+      } catch (err) {
+        console.warn('[Genius Fallback Error]:', err.message);
+      }
+    }
+
+    // 5. Nếu không tìm thấy ở bất kỳ nguồn nào: Tuyệt đối không tự bịa đặt lời
+    if (!lyricData || (!lyricData.syncedLyrics && !lyricData.plainLyrics && !lyricData.instrumental)) {
       const notFoundPayload = {
         success: false,
+        reason: 'no_data',
         synced: false,
         instrumental: false,
         lines: [],
         plain: '',
-        message: 'Chưa có lời cho bài hát này'
+        message: 'Chưa có dữ liệu cho phần lời bài hát này',
+        detail: 'Tác phẩm có thể quá mới chưa cập nhật lời, hoặc bản ghi âm đặc biệt chưa có dữ liệu ca từ chính thức.'
       };
-      lyricsCache.set(cacheKey, notFoundPayload, 10 * 60 * 1000);
+      lyricsCache.set(cacheKey, notFoundPayload, 15 * 60 * 1000);
       return res.json(notFoundPayload);
     }
 
@@ -2296,6 +2472,7 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
       success: true,
       synced: hasSynced && parsedLines.length > 0,
       instrumental: isInstrumental,
+      source: lyricData.source || 'lrclib',
       trackName: lyricData.trackName || cleanTitle,
       artistName: lyricData.artistName || cleanArtist,
       duration: lyricData.duration || null,

@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const CACHE_NAME = 'antigravity-ghibli-v4.3-bg-audio';
+const CACHE_NAME = 'antigravity-ghibli-v4.4-ground-truth-lyrics';
 
 // Danh sách các tài nguyên tĩnh cốt lõi cần lưu trữ offline
 const STATIC_ASSETS = [
