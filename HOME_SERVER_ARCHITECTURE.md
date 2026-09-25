@@ -64,6 +64,8 @@
   }
   ```
 * Cơ chế tự động luân chuyển máy khách (Fallback retry) nếu gặp sự cố mã phản hồi.
+* Khóa ký phiên đăng nhập được tự tạo và lưu trong `.auth-secret` khi chạy trên máy chủ gia đình. Endpoint tài khoản cần máy chủ có ổ đĩa lưu trữ bền vững nên không bật trên Vercel.
+* Hồ sơ tài khoản được lưu trong `.local-data/users.json` trên Android để tránh công khai hash mật khẩu qua API lưu trữ không xác thực. Dữ liệu từ kho tài khoản cũ được nhập một lần khi người dùng đăng nhập; các endpoint tài khoản yêu cầu máy chủ có ổ đĩa lưu trữ bền vững.
 
 ### 3.2. `auto-sync.sh` (Auto-Deploy Daemon)
 * Tự động chạy ngầm:

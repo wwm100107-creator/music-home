@@ -65,7 +65,7 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  // Không can thiệp vào các luồng âm thanh YouTube, Catbox, Cobalt hoặc API backend POST/PUT
+  // Không can thiệp vào các luồng âm thanh YouTube, Catbox hoặc API backend POST/PUT
   if (
     request.method !== 'GET' ||
     url.pathname.startsWith('/api/') ||

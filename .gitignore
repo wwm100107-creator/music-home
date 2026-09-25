@@ -1,6 +1,9 @@
 node_modules/
 .vercel/
 .env
+.auth-secret
+.local-data/
+data/users.json
 .DS_Store
 *.log
 references/

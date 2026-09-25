@@ -1,6 +1,6 @@
-# MUSIC HOME • Studio Ghibli & Totoro Vibe (Cobalt Audio & Cloud Sync Engine)
+# MUSIC HOME • Studio Ghibli & Totoro Vibe (YouTube Audio Stream & Cloud Sync)
 
-Trình phát nhạc mang âm hưởng thiên nhiên trong trẻo, hoài niệm của **Studio Ghibli** (lấy cảm hứng từ *My Neighbor Totoro*), hoạt động thuần túy trên nền tảng **Web Browser** (KHÔNG cần Electron hay app desktop), tích hợp **Cobalt API Ultra-fast Audio Streamer & Downloader**, Segmented Control Sidebar tấm gỗ và Cloud Sync đa thiết bị.
+Trình phát nhạc trên trình duyệt lấy cảm hứng từ khung cảnh thiên nhiên trong *My Neighbor Totoro*. Giao diện dùng HTML/CSS/JavaScript thuần; backend Node.js/Express tìm nhạc và proxy luồng âm thanh YouTube. Ứng dụng cũng có lời bài hát, đồng bộ tài khoản, chia sẻ nhạc cộng đồng và giao diện PWA cho điện thoại.
 
 > 📱 **Máy chủ Gia đình & Phát nhạc nền iOS:** Xem chi tiết kiến trúc máy chủ Android Termux & Cloudflare Tunnel tại [HOME_SERVER_ARCHITECTURE.md](./HOME_SERVER_ARCHITECTURE.md).
 
@@ -8,15 +8,12 @@ Trình phát nhạc mang âm hưởng thiên nhiên trong trẻo, hoài niệm c
 
 ## 🍃 Các tính năng cốt lõi
 
-### 1. 🕊️ Smart Search Bar & Cobalt API Ultra-fast Audio Streamer & Downloader
+### 1. 🕊️ Tìm kiếm và phát nhạc
 - **Smart Input Detection**: Tự động phân loại đầu vào:
-  - Nếu nhập chữ thường (Keyword): Tự động tìm kiếm & lọc bài hát ngay trong danh sách phát hiện tại, bấm Enter để phát ngay.
-  - Nếu dán đường dẫn URL (YouTube, TikTok, SoundCloud, Twitter/X...): Tự động chuyển icon sang bồ câu bưu chính 🕊️ và kích hoạt tải siêu tốc.
-- **Cobalt API Integration**:
-  - Gửi `POST` đến `https://api.cobalt.tools/api/json` với payload `{ url, isAudioOnly: true }`.
-  - Nạp Direct Stream URL vào `<audio src="...">` để phát ngay tức thì mà không cần chờ tải xong toàn bộ.
-- **Lưu File Cục Bộ (File System Access API)**:
-  - Sử dụng `showSaveFilePicker` ngầm nhắc người dùng lưu tệp MP3 vĩnh viễn vào ổ cứng máy tính.
+  - Nếu nhập từ khóa: Gửi yêu cầu tìm kiếm đến backend và hiển thị danh sách kết quả để chọn phát.
+  - Nếu dán URL YouTube, ứng dụng lấy thông tin video qua backend rồi phát bằng luồng `/api/stream/:videoId`.
+- Backend dùng `youtubei.js` để tìm video và lấy luồng YouTube; luồng được proxy qua server để hỗ trợ phát bằng trình duyệt.
+- Khi tìm kiếm YouTube không có kết quả, server có thể dùng iTunes làm nguồn dự phòng cho các bản preview.
 - **Loading Animation Ghibli**:
   - Trong lúc trích xuất dữ liệu, hiển thị CSS Animation độc đáo: **Bầy bồ hóng than Susuwatari gắng sức kéo một nốt nhạc vàng óng khổng lồ (🎵 Tug-of-war Note Drag)**.
   - Bắt lỗi `try/catch` an toàn, có âm thanh dự phòng giữ mạch cảm xúc không bị ngắt quãng.
@@ -26,13 +23,15 @@ Trình phát nhạc mang âm hưởng thiên nhiên trong trẻo, hoài niệm c
 - Chuyển động vật lý mượt mà: `transform: translateY()` với đường cong `transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)`.
 - Ràng buộc Active State: Khi dừng ở mục nào, Icon và Chữ mục đó nổi lên và phóng to nhẹ (`scale(1.08)`), nằm lọt thỏm cân đối bên trong tấm gỗ và **tuyệt đối không bao giờ tràn ra ngoài ranh giới**.
 
-### 3. 🔥 Thanh Phát Nhạc Dây Leo & Chú Lửa Calcifer (f.jpg)
+### 3. 🔥 Thanh Phát Nhạc Dây Leo & Chú Lửa Calcifer
 - Thanh tiến trình lượn sóng SVG xanh ngọc dịu mát như nhánh dây leo trong rừng già.
-- Cục chạy (Thumb) sử dụng ảnh `f.jpg` kết hợp `mix-blend-mode: multiply` để khử hoàn toàn nền trắng, kèm animation phập phồng ấm áp (`calciferBreathe`).
+- Cục chạy dùng ảnh `fire.gif` kèm animation phập phồng ấm áp.
 
-### 4. ☁️ Cloud Sync & Tài Khoản (Supabase BaaS / Local Storage Multi-Tab)
+### 4. ☁️ Tài khoản và đồng bộ
 - **Ghibli Handwritten Letter Modal**: Modal đăng nhập / đăng ký thiết kế như một lá thư tay bằng giấy da rơi chao nghiêng.
-- Lưu trữ và đồng bộ danh sách bài hát qua Supabase Cloud hoặc Local Storage.
+- Hồ sơ tài khoản được lưu riêng trên máy chủ Android tại `.local-data/users.json`; dữ liệu từ kho cũ được nhập một lần khi người dùng đăng nhập hoặc đăng ký.
+- Máy chủ gia đình tự tạo khóa ký phiên đăng nhập và lưu trong `.auth-secret`. Tài khoản cần máy chủ có ổ đĩa lưu trữ bền vững; các endpoint tài khoản sẽ không bật trên Vercel.
+- Danh sách nhạc cộng đồng vẫn dùng `restful-api.dev` để chia sẻ giữa các người dùng.
 
 ### 5. 🌰 Chế độ Loop 4 trạng thái & Tích chọn Hạt Dẻ (Acorn Custom Loop)
 - Loop All -> Loop One -> Custom Loop (Hạt Dẻ 🌰) -> Loop Off.
@@ -40,9 +39,10 @@ Trình phát nhạc mang âm hưởng thiên nhiên trong trẻo, hoài niệm c
 ---
 
 ## 🚀 Cách mở và sử dụng
-1. Mở file `index.html` trực tiếp trên trình duyệt (Chrome, Edge, Brave, Firefox).
-2. **Dán link nhạc**: Dán liên kết YouTube, TikTok hoặc SoundCloud vào ô tìm kiếm trên đầu trang để thưởng thức ngay.
-3. **Mở thư mục nhạc trên máy**: Bấm nút **"Your Library"** trên Sidebar để chọn thư mục nhạc MP3 offline.
+1. Cài dependencies bằng `npm install`, sau đó chạy `npm start`.
+2. Mở `http://localhost:3000` trên trình duyệt. Các tính năng tìm kiếm và phát nhạc cần backend Node.js hoạt động.
+3. **Tìm nhạc**: Nhập tên bài hát hoặc dán liên kết YouTube vào ô tìm kiếm.
+4. **Chia sẻ nhạc**: Mở mục **"Drop Your Music"** để tải bài hát và ảnh bìa lên danh sách cộng đồng.
 5. **Chọn bài lặp Hạt Dẻ**: Bấm phím `L` hoặc nút Loop cho đến khi hiện biểu tượng hạt dẻ `🌰`, sau đó tích vào các bài hát bạn muốn lặp.
 
 ---

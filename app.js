@@ -104,7 +104,7 @@
 
   function replaceEmojisWithGhibliIcons(text) {
     if (!text || typeof text !== 'string') return text;
-    return text
+    return escapeHtml(text)
       .replace(/🔋/g, GhibliIcons.leafBattery)
       .replace(/🎤/g, GhibliIcons.vintageMic)
       .replace(/🌰/g, GhibliIcons.totoroAcorn)
@@ -849,7 +849,7 @@
     if (dom.batterySaverTotoro) {
       if (state.currentUser && state.currentUser.avatar) {
         if (state.currentUser.avatar.startsWith('data:') || state.currentUser.avatar.startsWith('http')) {
-          dom.batterySaverTotoro.innerHTML = `<img src="${state.currentUser.avatar}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; opacity: 0.6;" alt="avatar">`;
+          dom.batterySaverTotoro.innerHTML = `<img src="${escapeHtml(state.currentUser.avatar)}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; opacity: 0.6;" alt="avatar">`;
         } else {
           dom.batterySaverTotoro.textContent = state.currentUser.avatar;
         }
@@ -1648,10 +1648,11 @@
   function renderLyricsLines(lines) {
     if (!dom.lyricsLinesContainer) return;
     dom.lyricsLinesContainer.innerHTML = lines.map((item, idx) => {
+      const time = Number.isFinite(Number(item.time)) ? Number(item.time) : 0;
       return `
-        <div class="lyric-line" data-index="${idx}" data-time="${item.time}">
+        <div class="lyric-line" data-index="${idx}" data-time="${time}">
           <span class="lyric-text">${escapeHtml(item.text || '♪')}</span>
-          <button type="button" class="line-sync-anchor-btn" data-time="${item.time}" title="Căn chuẩn bài hát theo câu này">${GhibliIcons.compassAnchor}</button>
+          <button type="button" class="line-sync-anchor-btn" data-time="${time}" title="Căn chuẩn bài hát theo câu này">${GhibliIcons.compassAnchor}</button>
         </div>
       `;
     }).join('');
@@ -2447,6 +2448,11 @@
     card.className = 'nature-track-card';
     card.dataset.id = track.id;
 
+    const title = escapeHtml(track.title || 'Bài hát chưa có tên');
+    const artist = escapeHtml(track.artist || 'Nghệ sĩ');
+    const thumbnail = escapeHtml(track.thumbnail || 'wood_2.jpg');
+    const duration = escapeHtml(track.duration || '3:30');
+
     if (state.currentTrack?.id === track.id) {
       card.classList.add('active-playing');
     }
@@ -2454,7 +2460,7 @@
     let rankHtml = '';
     if (track.rank) {
       let rankClass = 'rank-other';
-      let rankLabel = `#${track.rank}`;
+      let rankLabel = `#${escapeHtml(track.rank)}`;
       if (track.rank === 1) {
         rankClass = 'rank-gold';
         rankLabel = `${GhibliIcons.rankLeafGold} 1`;
@@ -2465,29 +2471,29 @@
         rankClass = 'rank-bronze';
         rankLabel = `${GhibliIcons.rankLeafBronze} 3`;
       }
-      rankHtml = `<span class="chart-rank-badge ${rankClass}" title="Hạng #${track.rank}">${rankLabel}</span>`;
+      rankHtml = `<span class="chart-rank-badge ${rankClass}" title="Hạng #${escapeHtml(track.rank)}">${rankLabel}</span>`;
     }
 
     const playCountText = track.playCount || (track.views ? `${(track.views / 1e6).toFixed(1)}M lượt nghe` : null);
     const playCountHtml = playCountText
-      ? `<span class="track-card-views" title="Lượt nghe thực tế">${GhibliIcons.calciferFlame} ${playCountText.replace(/^[🔥📈]\s*/, '')}</span>`
+      ? `<span class="track-card-views" title="Lượt nghe thực tế">${GhibliIcons.calciferFlame} ${escapeHtml(String(playCountText).replace(/^[🔥📈]\s*/, ''))}</span>`
       : '';
 
     card.innerHTML = `
       <div class="card-glare" aria-hidden="true"></div>
       <div class="track-card-vinyl-disc" aria-hidden="true"></div>
       <div class="track-card-thumb-shell">
-        <img src="${track.thumbnail || 'wood_2.jpg'}" alt="${track.title}" class="track-card-img" loading="lazy">
+        <img src="${thumbnail}" alt="${title}" class="track-card-img" loading="lazy">
         ${rankHtml}
         <div class="track-card-play-overlay">
           <span class="play-icon-triangle">▶</span>
         </div>
       </div>
       <div class="track-card-info">
-        <span class="track-card-title" title="${track.title}">${track.title}</span>
-        <span class="track-card-artist" title="${track.artist}">${track.artist || 'Nghệ sĩ'}</span>
+        <span class="track-card-title" title="${title}">${title}</span>
+        <span class="track-card-artist" title="${artist}">${artist}</span>
         <div class="track-card-meta-row">
-          <span class="track-card-duration">${track.duration || '3:30'}</span>
+          <span class="track-card-duration">${duration}</span>
           ${playCountHtml}
         </div>
       </div>
@@ -2724,7 +2730,7 @@
         if (dom.searchEmptyState) {
           dom.searchEmptyState.innerHTML = `
             <span class="empty-icon">${GhibliIcons.autumnLeaf}</span>
-            <h3>Không tìm thấy bài hát nào cho "${q}"</h3>
+            <h3>Không tìm thấy bài hát nào cho "${escapeHtml(q)}"</h3>
             <p>Hãy thử tìm bằng từ khóa khác xem sao nhé!</p>
           `;
           dom.searchEmptyState.classList.remove('hidden');
@@ -2784,7 +2790,7 @@
           dom.albumsEmptyState.classList.remove('hidden');
           dom.albumsEmptyState.innerHTML = `
             <span class="empty-icon">${GhibliIcons.vinylGroove}</span>
-            <h3>Không tìm thấy EP hay Album nào cho "${q || country}"</h3>
+            <h3>Không tìm thấy EP hay Album nào cho "${escapeHtml(q || country)}"</h3>
             <p>Hãy thử tìm bằng tên nghệ sĩ khác xem sao nhé!</p>
           `;
         }
@@ -2806,17 +2812,23 @@
       card.className = 'album-card';
       card.dataset.albumId = album.id;
 
+      const title = escapeHtml(album.title || 'Album chưa có tên');
+      const artist = escapeHtml(album.artist || 'Nghệ sĩ');
+      const thumbnail = escapeHtml(upgradeThumbnailUrl(album.thumbnail) || 'wood_2.jpg');
+      const type = escapeHtml(album.type || 'Album');
+      const year = escapeHtml(album.year || '');
+
       card.innerHTML = `
         <div class="album-sleeve-wrap">
           <div class="album-vinyl-disc"></div>
-          <img src="${upgradeThumbnailUrl(album.thumbnail)}" alt="${album.title}" class="album-cover-img" loading="lazy" onerror="this.src='wood_2.jpg'">
+          <img src="${thumbnail}" alt="${title}" class="album-cover-img" loading="lazy" onerror="this.src='wood_2.jpg'">
           <button class="album-play-overlay-btn" title="Phát toàn bộ album">▶</button>
         </div>
-        <h3 class="album-card-title" title="${album.title}">${album.title}</h3>
-        <p class="album-card-artist" title="${album.artist}">${album.artist}</p>
+        <h3 class="album-card-title" title="${title}">${title}</h3>
+        <p class="album-card-artist" title="${artist}">${artist}</p>
         <div class="album-card-footer">
-          <span class="album-card-badge">${album.type || 'Album'}</span>
-          <span class="album-card-year">${album.year || ''}</span>
+          <span class="album-card-badge">${type}</span>
+          <span class="album-card-year">${year}</span>
         </div>
       `;
 
@@ -2922,6 +2934,9 @@
       const row = document.createElement('div');
       row.className = 'album-detail-track-row';
       row.dataset.trackId = track.id;
+      const title = escapeHtml(track.title || 'Bài hát chưa có tên');
+      const artist = escapeHtml(track.artist || '');
+      const duration = escapeHtml(track.duration || '3:30');
       if (state.currentTrack && state.currentTrack.id === track.id) {
         row.classList.add('is-active');
       }
@@ -2929,10 +2944,10 @@
       row.innerHTML = `
         <span class="col-num">${idx + 1}</span>
         <div class="col-main">
-          <div class="col-title" title="${track.title}">${track.title}</div>
-          <div class="col-artist" title="${track.artist || ''}">${track.artist || ''}</div>
+          <div class="col-title" title="${title}">${title}</div>
+          <div class="col-artist" title="${artist}">${artist}</div>
         </div>
-        <span class="col-duration">${track.duration || '3:30'}</span>
+        <span class="col-duration">${duration}</span>
         <div class="col-action">
           <button class="album-detail-track-play-btn" title="Phát bài này">▶</button>
         </div>
@@ -3052,18 +3067,22 @@
       const card = document.createElement('div');
       card.className = 'community-track-card';
       card.dataset.trackId = track.id;
+      const title = escapeHtml(track.title || 'Bài hát chưa có tên');
+      const artist = escapeHtml(track.artist || 'Nghệ sĩ');
+      const thumbnail = escapeHtml(upgradeThumbnailUrl(track.thumbnail || 'bg.jpg'));
+      const duration = escapeHtml(track.duration || '03:30');
 
       card.innerHTML = `
         <div class="community-card-sleeve">
           <div class="community-card-vinyl"></div>
-          <img src="${upgradeThumbnailUrl(track.thumbnail)}" alt="${track.title}" class="community-card-img" loading="lazy" onerror="this.src='bg.jpg'">
+          <img src="${thumbnail}" alt="${title}" class="community-card-img" loading="lazy" onerror="this.src='bg.jpg'">
           <button class="community-card-play-btn" title="Phát bài này">▶</button>
         </div>
-        <h3 class="community-card-title" title="${track.title}">${track.title}</h3>
-        <p class="community-card-artist" title="${track.artist}">${track.artist}</p>
+        <h3 class="community-card-title" title="${title}">${title}</h3>
+        <p class="community-card-artist" title="${artist}">${artist}</p>
         <div class="community-card-footer">
           <span class="community-card-badge">Community Drop</span>
-          <span class="community-card-dur">${track.duration || '03:30'}</span>
+          <span class="community-card-dur">${duration}</span>
         </div>
       `;
 
@@ -3464,6 +3483,9 @@
       li.className = `nature-song-card ${track.id === state.currentTrack?.id ? 'active' : ''}`;
 
       const isAcornChecked = state.customLoopIds.has(track.id);
+      const title = escapeHtml(track.title || 'Bài hát chưa có tên');
+      const artist = escapeHtml(track.artist || '');
+      const duration = escapeHtml(track.duration || '');
 
       li.innerHTML = `
         <div class="card-left-group">
@@ -3473,9 +3495,9 @@
             <span class="acorn-checkbox-icon"></span>
           </label>
           <span class="leaf-num-stamp">${idx + 1}</span>
-          <div class="card-song-details" title="${track.title}">
-            <span class="card-title">${track.title}</span>
-            <span class="card-subtext">${track.artist || ''} • ${track.duration || ''}</span>
+          <div class="card-song-details" title="${title}">
+            <span class="card-title">${title}</span>
+            <span class="card-subtext">${artist} • ${duration}</span>
           </div>
         </div>
       `;
@@ -4405,12 +4427,22 @@
 
   function renderAvatarToElement(el, avatarSrc) {
     if (!el) return;
-    const src = avatarSrc || 'bg.jpg';
-    if (typeof src === 'string' && (src.startsWith('data:image/') || src.startsWith('http') || src.includes('.jpg') || src.includes('.png') || src.includes('.webp') || src.includes('.svg'))) {
-      el.innerHTML = `<img src="${src}" alt="Avatar" class="user-avatar-img">`;
-    } else {
-      el.innerHTML = `<img src="bg.jpg" alt="Avatar" class="user-avatar-img">`;
+    const src = typeof avatarSrc === 'string' ? avatarSrc.trim() : '';
+    const isAllowedImageData = /^data:image\/(?:png|jpe?g|gif|webp|svg\+xml);/i.test(src);
+    let safeSrc = isAllowedImageData ? src : 'bg.jpg';
+    if (!isAllowedImageData && src) {
+      try {
+        const parsedUrl = new URL(src, window.location.href);
+        if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') {
+          safeSrc = src;
+        }
+      } catch {}
     }
+    const image = document.createElement('img');
+    image.className = 'user-avatar-img';
+    image.alt = 'Avatar';
+    image.src = safeSrc;
+    el.replaceChildren(image);
   }
 
   function processImageFile(file, maxWidth = 180, maxHeight = 180) {

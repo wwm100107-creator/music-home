@@ -1,3 +1,6 @@
 references/
 node_modules/
 .git
+data/users.json
+.auth-secret
+.local-data/

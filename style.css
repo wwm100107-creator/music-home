@@ -5,7 +5,7 @@
  * - background.mp4: Fullscreen dynamic video background
  * - taskbar.png: Left glassmorphic sidebar with precise icons & typography
  * - wood.jpg / wood.png: Active "Playlists" wooden plank with Kodama spirit
- * - f.jpg / f.png: Calcifer flame thumb riding along wavy vine progress bar
+ * - fire.gif: Calcifer flame thumb riding along wavy vine progress bar
  * ============================================================================
  * 
  * HỆ THỐNG SKILLS ĐƯỢC ÁP DỤNG TRONG CSS:
@@ -2559,7 +2559,7 @@ body.twilight-mode .queue-toggle-btn:hover {
 }
 
 /* --------------------------------------------------------------------------
-   6. MODAL LÁ THƯ TAY GHIBLI (SUPABASE CLOUD SYNC)
+   6. MODAL LÁ THƯ TAY GHIBLI (ACCOUNT CLOUD SYNC)
    [SKILL: /animate & /impeccable]
    -------------------------------------------------------------------------- */
 .auth-modal-overlay {
@@ -9459,4 +9459,3 @@ body.eco-mode-active .nature-overlay {
 body.eco-mode-active .magic-cursor-canvas {
   display: none !important;
 }
-

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import crypto from 'crypto';
+import fs from 'node:fs';
 import { fileURLToPath } from 'url';
 import { Innertube, ClientType, UniversalCache, Platform } from 'youtubei.js';
 
@@ -15,6 +16,71 @@ if (Platform && Platform.shim) {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const LOCAL_DATA_DIRECTORY = path.join(__dirname, '.local-data');
+const IS_SERVERLESS = Boolean(
+  process.env.VERCEL ||
+  process.env.VERCEL_ENV ||
+  process.env.NOW_REGION ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME
+);
+
+function readLocalJson(filename) {
+  const paths = [
+    path.join(LOCAL_DATA_DIRECTORY, filename),
+    path.join(__dirname, 'data', filename)
+  ];
+
+  for (const filePath of paths) {
+    try {
+      if (!fs.existsSync(filePath)) continue;
+      const contents = fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, '');
+      return JSON.parse(contents);
+    } catch {}
+  }
+
+  return null;
+}
+
+function writeLocalJson(filename, value) {
+  fs.mkdirSync(LOCAL_DATA_DIRECTORY, { recursive: true, mode: 0o700 });
+  const filePath = path.join(LOCAL_DATA_DIRECTORY, filename);
+  fs.writeFileSync(filePath, JSON.stringify(value, null, 2), { encoding: 'utf8', mode: 0o600 });
+  try {
+    fs.chmodSync(filePath, 0o600);
+  } catch {}
+}
+
+const AUTH_SECRET_PATH = path.join(__dirname, '.auth-secret');
+
+function loadAuthSecret() {
+  const configuredSecret = process.env.AUTH_SECRET?.trim();
+  if (configuredSecret) {
+    return configuredSecret.length >= 32 ? configuredSecret : '';
+  }
+
+  if (IS_SERVERLESS) return '';
+
+  try {
+    const existingSecret = fs.readFileSync(AUTH_SECRET_PATH, 'utf8').trim();
+    if (existingSecret.length >= 32) return existingSecret;
+    return '';
+  } catch {}
+
+  const generatedSecret = crypto.randomBytes(32).toString('hex');
+  try {
+    fs.writeFileSync(AUTH_SECRET_PATH, generatedSecret, { flag: 'wx', mode: 0o600 });
+    return generatedSecret;
+  } catch {
+    try {
+      const existingSecret = fs.readFileSync(AUTH_SECRET_PATH, 'utf8').trim();
+      return existingSecret.length >= 32 ? existingSecret : '';
+    } catch {
+      return '';
+    }
+  }
+}
+
+const AUTH_SECRET = loadAuthSecret();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1106,14 +1172,28 @@ const FALLBACK_TRENDING_TRACKS = [
 app.use(cors());
 app.use(express.json());
 
-// Phục vụ file tĩnh trực tiếp từ thư mục gốc và thư mục public
-app.use(express.static(__dirname));
+// Chỉ phục vụ nội dung web từ public để tránh lộ mã nguồn và dữ liệu trong thư mục gốc.
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================================================
 // 10. DUAL-MOUNT API ROUTER (Mounts on both /api and / for maximum compatibility)
 // ============================================================================
 const apiRouter = express.Router();
+apiRouter.use('/auth', (req, res, next) => {
+  if (IS_SERVERLESS) {
+    return res.status(503).json({
+      success: false,
+      error: 'Tính năng tài khoản cần máy chủ có ổ đĩa lưu trữ bền vững; hãy truy cập máy chủ Android gia đình.'
+    });
+  }
+  if (AUTH_SECRET) return next();
+
+  const configuredSecret = process.env.AUTH_SECRET?.trim();
+  const error = configuredSecret
+    ? 'AUTH_SECRET must contain at least 32 characters.'
+    : 'Configure AUTH_SECRET with at least 32 characters before enabling account features.';
+  return res.status(503).json({ success: false, error });
+});
 
 // 10.1. Health Check
 apiRouter.get('/health', (req, res) => {
@@ -2700,17 +2780,9 @@ async function fetchCommunityTracks() {
   }
 
   if (!inMemoryCommunityTracks) {
-    try {
-      const fs = await import('fs');
-      const localFilePath = path.join(__dirname, 'data', 'community_tracks.json');
-      if (fs.existsSync(localFilePath)) {
-        const raw = fs.readFileSync(localFilePath, 'utf8');
-        inMemoryCommunityTracks = JSON.parse(raw);
-        lastCommunityFetch = now;
-      }
-    } catch {
-      inMemoryCommunityTracks = [];
-    }
+    const localTracks = readLocalJson('community_tracks.json');
+    inMemoryCommunityTracks = Array.isArray(localTracks) ? localTracks : [];
+    lastCommunityFetch = now;
   }
 
   return inMemoryCommunityTracks || [];
@@ -2738,10 +2810,7 @@ async function saveCommunityTracks(tracks) {
   }
 
   try {
-    const fs = await import('fs');
-    const dataDir = path.join(__dirname, 'data');
-    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-    fs.writeFileSync(path.join(dataDir, 'community_tracks.json'), JSON.stringify(tracks, null, 2), 'utf8');
+    writeLocalJson('community_tracks.json', tracks);
   } catch {
     // Read-only serverless environment ignore
   }
@@ -2837,8 +2906,7 @@ apiRouter.post('/drop/upload', async (req, res) => {
 // ============================================================================
 // 10.5. USER AUTHENTICATION & MULTI-DEVICE CLOUD SYNC (PBKDF2 & HMAC TOKEN)
 // ============================================================================
-const USER_ACCOUNTS_CONTAINER_ID = 'ff808181a09d98f701a0bda7546a4e23';
-const AUTH_SECRET = process.env.AUTH_SECRET || 'ghibli_sound_sanctuary_secret_key_2026';
+const LEGACY_USER_ACCOUNTS_CONTAINER_ID = 'ff808181a09d98f701a0bda7546a4e23';
 let inMemoryUsers = null;
 let lastUsersFetch = 0;
 
@@ -2874,73 +2942,70 @@ function verifyToken(token) {
   }
 }
 
-async function fetchUsersFromCloud() {
+async function importLegacyUsersFromCloud() {
+  try {
+    const res = await fetch(`https://api.restful-api.dev/objects/${LEGACY_USER_ACCOUNTS_CONTAINER_ID}`, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(5000)
+    });
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    const users = json?.data?.users;
+    return users && typeof users === 'object' && !Array.isArray(users) ? users : null;
+  } catch (err) {
+    console.warn('[Legacy Account Import Error]:', err.message);
+    return null;
+  }
+}
+
+async function loadUsers() {
   const now = Date.now();
   if (inMemoryUsers && (now - lastUsersFetch < 5000)) {
     return inMemoryUsers;
   }
 
-  try {
-    const res = await fetch(`https://api.restful-api.dev/objects/${USER_ACCOUNTS_CONTAINER_ID}`, {
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(5000)
-    });
-    if (res.ok) {
-      const json = await res.json();
-      if (json && json.data && typeof json.data.users === 'object') {
-        inMemoryUsers = json.data.users || {};
-        lastUsersFetch = now;
-        return inMemoryUsers;
-      }
-    }
-  } catch (err) {
-    console.warn('[Fetch Remote Users Error]:', err.message);
+  const localUsersPath = path.join(LOCAL_DATA_DIRECTORY, 'users.json');
+  if (fs.existsSync(localUsersPath)) {
+    const localUsers = readLocalJson('users.json');
+    inMemoryUsers = localUsers && typeof localUsers === 'object' && !Array.isArray(localUsers)
+      ? localUsers
+      : {};
+    lastUsersFetch = now;
+    return inMemoryUsers;
   }
 
-  if (!inMemoryUsers) {
+  // One-time import of existing accounts. New writes stay on the persistent home server.
+  const importedUsers = await importLegacyUsersFromCloud();
+  if (importedUsers) {
+    inMemoryUsers = importedUsers;
     try {
-      const fs = await import('fs');
-      const localFilePath = path.join(__dirname, 'data', 'users.json');
-      if (fs.existsSync(localFilePath)) {
-        const raw = fs.readFileSync(localFilePath, 'utf8');
-        inMemoryUsers = JSON.parse(raw);
-        lastUsersFetch = now;
-      }
-    } catch {
-      inMemoryUsers = {};
+      writeLocalJson('users.json', importedUsers);
+    } catch (err) {
+      console.warn('[Legacy Account Import Save Error]:', err.message);
     }
+    lastUsersFetch = now;
+    return inMemoryUsers;
   }
+
+  const localUsers = readLocalJson('users.json');
+  inMemoryUsers = localUsers && typeof localUsers === 'object' && !Array.isArray(localUsers)
+    ? localUsers
+    : {};
+  try {
+    writeLocalJson('users.json', inMemoryUsers);
+  } catch (err) {
+    console.warn('[Local Account Save Error]:', err.message);
+  }
+  lastUsersFetch = now;
 
   return inMemoryUsers || {};
 }
 
-async function saveUsersToCloud(usersMap) {
+async function saveUsers(usersMap) {
   inMemoryUsers = usersMap;
   lastUsersFetch = Date.now();
-
-  try {
-    await fetch(`https://api.restful-api.dev/objects/${USER_ACCOUNTS_CONTAINER_ID}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'musichome_users_v1',
-        data: {
-          users: usersMap,
-          lastUpdated: new Date().toISOString()
-        }
-      }),
-      signal: AbortSignal.timeout(6000)
-    });
-  } catch (err) {
-    console.warn('[Save Remote Users Error]:', err.message);
-  }
-
-  try {
-    const fs = await import('fs');
-    const dataDir = path.join(__dirname, 'data');
-    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-    fs.writeFileSync(path.join(dataDir, 'users.json'), JSON.stringify(usersMap, null, 2), 'utf8');
-  } catch {}
+  writeLocalJson('users.json', usersMap);
 }
 
 function getAuthUserFromReq(req) {
@@ -2972,7 +3037,7 @@ apiRouter.post('/auth/register', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Mật khẩu phải có độ dài tối thiểu 6 ký tự' });
     }
 
-    const users = await fetchUsersFromCloud();
+    const users = await loadUsers();
     if (users[cleanUsername]) {
       return res.status(409).json({ success: false, error: 'Tên đăng nhập này đã được sử dụng. Vui lòng chọn tên khác nhé!' });
     }
@@ -2997,7 +3062,7 @@ apiRouter.post('/auth/register', async (req, res) => {
     };
 
     users[cleanUsername] = newUser;
-    await saveUsersToCloud(users);
+    await saveUsers(users);
 
     const token = generateToken(userId, cleanUsername);
     const safeProfile = {
@@ -3033,7 +3098,7 @@ apiRouter.post('/auth/login', async (req, res) => {
     }
 
     const cleanUsername = String(username).trim().toLowerCase();
-    const users = await fetchUsersFromCloud();
+    const users = await loadUsers();
     const user = users[cleanUsername];
 
     if (!user || !verifyPassword(String(password), user.passwordHash, user.passwordSalt)) {
@@ -3041,7 +3106,7 @@ apiRouter.post('/auth/login', async (req, res) => {
     }
 
     user.lastActive = new Date().toISOString();
-    await saveUsersToCloud(users);
+    await saveUsers(users);
 
     const token = generateToken(user.id, user.username);
     const safeProfile = {
@@ -3076,7 +3141,7 @@ apiRouter.get('/auth/me', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn' });
     }
 
-    const users = await fetchUsersFromCloud();
+    const users = await loadUsers();
     const user = users[authData.username];
     if (!user || user.id !== authData.userId) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy thông tin tài khoản' });
@@ -3110,10 +3175,10 @@ apiRouter.post('/auth/sync', async (req, res) => {
     }
 
     const { favorites, settings, myDroppedMusic, customPlaylists, avatar, displayName } = req.body || {};
-    const users = await fetchUsersFromCloud();
+    const users = await loadUsers();
     const user = users[authData.username];
 
-    if (!user) {
+    if (!user || user.id !== authData.userId) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy người dùng' });
     }
 
@@ -3151,7 +3216,7 @@ apiRouter.post('/auth/sync', async (req, res) => {
     }
 
     user.lastActive = new Date().toISOString();
-    await saveUsersToCloud(users);
+    await saveUsers(users);
 
     res.json({
       success: true,
@@ -3180,9 +3245,9 @@ apiRouter.get('/auth/backup/export', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Vui lòng đăng nhập để xuất dữ liệu sao lưu' });
     }
 
-    const users = await fetchUsersFromCloud();
+    const users = await loadUsers();
     const user = users[authData.username];
-    if (!user) {
+    if (!user || user.id !== authData.userId) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy người dùng' });
     }
 
@@ -3218,10 +3283,10 @@ apiRouter.post('/auth/backup/import', async (req, res) => {
     }
 
     const { favorites, settings, myDroppedMusic, customPlaylists } = req.body || {};
-    const users = await fetchUsersFromCloud();
+    const users = await loadUsers();
     const user = users[authData.username];
 
-    if (!user) {
+    if (!user || user.id !== authData.userId) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy người dùng' });
     }
 
@@ -3239,7 +3304,7 @@ apiRouter.post('/auth/backup/import', async (req, res) => {
     }
 
     user.lastActive = new Date().toISOString();
-    await saveUsersToCloud(users);
+    await saveUsers(users);
 
     res.json({
       success: true,
