@@ -2187,21 +2187,84 @@ function parseLRC(lrcText) {
   return parsed.sort((a, b) => a.time - b.time);
 }
 
-function selectBestLyricCandidate(results, targetDur) {
+/**
+ * Tính độ tương đồng đơn giản giữa 2 chuỗi (Jaccard trên ký tự bigram).
+ * Trả về giá trị từ 0 (hoàn toàn khác nhau) đến 1 (giống nhau hoàn toàn).
+ */
+function stringSimilarity(a, b) {
+  if (!a || !b) return 0;
+  const normalize = s => s.toLowerCase().replace(/[^a-z0-9\u00C0-\u024F\u1E00-\u1EFF\s]/gi, '').trim();
+  const na = normalize(a);
+  const nb = normalize(b);
+  if (na === nb) return 1;
+  const getBigrams = str => {
+    const s = new Set();
+    for (let i = 0; i < str.length - 1; i++) s.add(str.slice(i, i + 2));
+    return s;
+  };
+  const sa = getBigrams(na);
+  const sb = getBigrams(nb);
+  if (sa.size === 0 || sb.size === 0) return 0;
+  let intersection = 0;
+  for (const bi of sa) if (sb.has(bi)) intersection++;
+  return (2 * intersection) / (sa.size + sb.size);
+}
+
+/**
+ * Chọn ứng viên lời bài hát tốt nhất từ danh sách kết quả LRCLIB.
+ *
+ * Quy tắc lọc chặt:
+ * 1. Ưu tiên kết quả có lời đồng bộ (syncedLyrics) trước.
+ * 2. Chỉ chấp nhận kết quả có thời lượng sai lệch ≤ MAX_DUR_DIFF giây so với bài thật.
+ * 3. Chỉ chấp nhận kết quả có độ tương đồng tiêu đề ≥ MIN_TITLE_SIMILARITY.
+ * 4. Nếu không có ứng viên nào vượt qua: trả về null (thà không có còn hơn sai).
+ */
+function selectBestLyricCandidate(results, targetDur, expectedTitle, expectedArtist) {
   if (!Array.isArray(results) || results.length === 0) return null;
-  const syncedList = results.filter(r => r && r.syncedLyrics);
-  if (syncedList.length > 0) {
-    if (targetDur && targetDur > 0) {
-      // Sắp xếp theo độ chênh lệch thời lượng nhỏ nhất so với bài hát đang phát thực tế
-      syncedList.sort((a, b) => {
-        const diffA = Math.abs((a.duration || 0) - targetDur);
-        const diffB = Math.abs((b.duration || 0) - targetDur);
-        return diffA - diffB;
-      });
+
+  // Ngưỡng sai lệch thời lượng tối đa cho phép (giây)
+  const MAX_DUR_DIFF = 8;
+  // Ngưỡng tương đồng tiêu đề tối thiểu (0–1)
+  const MIN_TITLE_SIMILARITY = 0.45;
+
+  const score = (r) => {
+    let s = 0;
+
+    // --- Kiểm tra tương đồng tiêu đề ---
+    const titleSim = expectedTitle
+      ? Math.max(
+          stringSimilarity(r.trackName || '', expectedTitle),
+          stringSimilarity(r.trackName || '', expectedTitle.split(/\s+/).slice(0, 3).join(' '))
+        )
+      : 1;
+
+    if (titleSim < MIN_TITLE_SIMILARITY) return -1; // loại bỏ hoàn toàn
+
+    // --- Kiểm tra sai lệch thời lượng ---
+    if (targetDur && targetDur > 0 && r.duration) {
+      const diff = Math.abs((r.duration || 0) - targetDur);
+      if (diff > MAX_DUR_DIFF) return -1; // loại bỏ hoàn toàn
+      s += (MAX_DUR_DIFF - diff); // điểm cao hơn nếu thời lượng sát hơn
     }
-    return syncedList[0];
-  }
-  return results[0];
+
+    // --- Bonus cho lời đồng bộ ---
+    if (r.syncedLyrics) s += 20;
+
+    // --- Bonus cho khớp nghệ sĩ ---
+    if (expectedArtist && r.artistName) {
+      const artistSim = stringSimilarity(r.artistName, expectedArtist);
+      s += artistSim * 10;
+    }
+
+    return s;
+  };
+
+  const scored = results
+    .map(r => ({ r, s: score(r) }))
+    .filter(x => x.s >= 0)
+    .sort((a, b) => b.s - a.s);
+
+  return scored.length > 0 ? scored[0].r : null;
 }
 
 function isAiGeneratedTrack(title, artist) {
@@ -2338,6 +2401,8 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
   const rawTitle = req.query.title || req.query.track || '';
   const rawArtist = req.query.artist || '';
   const durationRaw = req.query.duration;
+  // videoId được gửi kèm từ client để làm khoá cache duy nhất, tránh nhầm lẫn giữa các bài hát
+  const videoId = req.query.videoId || req.query.id || '';
 
   if (!rawTitle) {
     return res.status(400).json({ success: false, error: 'Thiếu tham số title' });
@@ -2347,7 +2412,15 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
   const cleanArtist = (rawArtist || '').replace(/\s*-\s*topic/gi, '').trim();
   const durSec = parseDurationToSeconds(durationRaw);
 
-  const cacheKey = `lyrics:${cleanTitle.toLowerCase()}:${cleanArtist.toLowerCase()}:${durSec || 0}`;
+  if (!cleanTitle) {
+    return res.status(400).json({ success: false, error: 'Tiêu đề bài hát không hợp lệ sau khi làm sạch' });
+  }
+
+  // Khoá cache ưu tiên videoId nếu có (luôn duy nhất); fallback về title+artist+duration
+  const cacheKey = videoId
+    ? `lyrics:vid:${videoId}`
+    : `lyrics:${cleanTitle.toLowerCase()}:${cleanArtist.toLowerCase()}:${durSec || 0}`;
+
   const cached = lyricsCache.get(cacheKey);
   if (cached) {
     return res.json({ ...cached, cached: true });
@@ -2376,15 +2449,25 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
   try {
     let lyricData = null;
 
-    // 1. Thử lấy chính xác bằng LRCLIB /api/get
+    // 1. Thử lấy chính xác bằng LRCLIB /api/get (exact match theo title + artist + duration)
     if (cleanTitle && cleanArtist) {
       try {
         let getUrl = `https://lrclib.net/api/get?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(cleanArtist)}`;
         if (durSec) getUrl += `&duration=${durSec}`;
         const resp = await fetch(getUrl, { headers: LRCLIB_HEADERS });
         if (resp.ok) {
-          lyricData = await resp.json();
-          if (lyricData) lyricData.source = 'lrclib';
+          const candidate = await resp.json();
+          // Xác thực: tiêu đề bài hát phải khớp đủ mức – tránh LRCLIB trả về bài sai
+          if (candidate && (candidate.syncedLyrics || candidate.plainLyrics || candidate.instrumental)) {
+            const titleSim = stringSimilarity(candidate.trackName || '', cleanTitle);
+            const durDiff = durSec && candidate.duration ? Math.abs(candidate.duration - durSec) : 0;
+            if (titleSim >= 0.4 && durDiff <= 10) {
+              lyricData = candidate;
+              lyricData.source = 'lrclib';
+            } else {
+              console.warn(`[Lyrics /api/get] Loại bỏ kết quả sai: "${candidate.trackName}" (titleSim=${titleSim.toFixed(2)}, durDiff=${durDiff}s)`);
+            }
+          }
         }
       } catch {
         // bỏ qua để thử fallback search
@@ -2400,7 +2483,7 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
         });
         if (searchResp.ok) {
           const results = await searchResp.json();
-          const best = selectBestLyricCandidate(results, durSec);
+          const best = selectBestLyricCandidate(results, durSec, cleanTitle, cleanArtist);
           if (best) {
             lyricData = best;
             lyricData.source = 'lrclib';
@@ -2411,7 +2494,7 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
       }
     }
 
-    // 3. Fallback search chỉ theo tên bài hát đã làm sạch và so khớp thời lượng
+    // 3. Fallback search chỉ theo tên bài hát đã làm sạch – vẫn phải qua filter chặt
     if (!lyricData || (!lyricData.syncedLyrics && !lyricData.plainLyrics && !lyricData.instrumental)) {
       try {
         const searchResp = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(cleanTitle)}`, {
@@ -2419,7 +2502,7 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
         });
         if (searchResp.ok) {
           const results = await searchResp.json();
-          const best = selectBestLyricCandidate(results, durSec);
+          const best = selectBestLyricCandidate(results, durSec, cleanTitle, cleanArtist);
           if (best) {
             lyricData = best;
             lyricData.source = 'lrclib';

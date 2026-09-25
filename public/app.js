@@ -1874,7 +1874,9 @@
       const params = new URLSearchParams({
         title: track.title,
         artist: track.artist || '',
-        duration: track.durationSec || track.duration || ''
+        duration: track.durationSec || track.duration || '',
+        // Gửi kèm videoId để server dùng làm khoá cache duy nhất – ngăn lyrics bài này lọt sang bài khác
+        videoId: track.id || ''
       });
 
       const response = await fetch(`/api/lyrics?${params.toString()}`, {
