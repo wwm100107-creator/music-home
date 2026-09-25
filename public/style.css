@@ -7704,6 +7704,19 @@ body.twilight-mode .bg-playback-chip.disabled {
   color: #4a5d4e;
 }
 
+.stage-lyrics-card-wrapper .lyric-word {
+  transition: color 0.12s ease, text-shadow 0.12s ease;
+}
+
+.stage-lyrics-card-wrapper .lyric-word.active {
+  color: #d8f3dc;
+  text-shadow: 0 0 14px rgba(216, 243, 220, 0.7);
+}
+
+.stage-lyrics-card-wrapper .lyric-word.past {
+  color: rgba(127, 201, 94, 0.72);
+}
+
 /* Trạng thái tải & không có lời / không lời (Instrumental) */
 .lyrics-loading-state,
 .lyrics-empty-state,

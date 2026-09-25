@@ -1649,9 +1649,18 @@
     if (!dom.lyricsLinesContainer) return;
     dom.lyricsLinesContainer.innerHTML = lines.map((item, idx) => {
       const time = Number.isFinite(Number(item.time)) ? Number(item.time) : 0;
+      const words = Array.isArray(item.words)
+        ? item.words.filter(word => word && typeof word.text === 'string' && word.text.length > 0)
+        : [];
+      const lyricText = words.length
+        ? words.map((word, wordIdx) => {
+          const wordTime = Number.isFinite(Number(word.time)) ? Number(word.time) : time;
+          return `<span class="lyric-word" data-word-index="${wordIdx}" data-time="${wordTime}">${escapeHtml(word.text)}</span>`;
+        }).join('')
+        : escapeHtml(item.text || '♪');
       return `
         <div class="lyric-line" data-index="${idx}" data-time="${time}">
-          <span class="lyric-text">${escapeHtml(item.text || '♪')}</span>
+          <span class="lyric-text">${lyricText}</span>
           <button type="button" class="line-sync-anchor-btn" data-time="${time}" title="Căn chuẩn bài hát theo câu này">${GhibliIcons.compassAnchor}</button>
         </div>
       `;
@@ -1698,11 +1707,11 @@
       }
     }
 
-    if (currentIdx === state.activeLyricIndex) return;
+    const lineChanged = currentIdx !== state.activeLyricIndex;
     state.activeLyricIndex = currentIdx;
 
     // Cập nhật giao diện trên Sân Khấu Lời Nhạc
-    if (dom.lyricsLinesContainer) {
+    if (lineChanged && dom.lyricsLinesContainer) {
       const lineEls = dom.lyricsLinesContainer.children;
       for (let i = 0; i < lineEls.length; i++) {
         const el = lineEls[i];
@@ -1725,8 +1734,23 @@
       }
     }
 
-    // Cập nhật thẻ Lời bài hát trên Mobile Fullscreen Sheet
-    if (currentIdx >= 0 && state.lyrics[currentIdx]) {
+    // Đồng bộ từng từ khi nguồn lời cung cấp timestamp karaoke nâng cao.
+    if (dom.lyricsLinesContainer && currentIdx >= 0) {
+      const activeLine = dom.lyricsLinesContainer.children[currentIdx];
+      const wordEls = activeLine?.querySelectorAll('.lyric-word') || [];
+      let activeWordIdx = -1;
+      wordEls.forEach((wordEl, idx) => {
+        const wordTime = Number(wordEl.dataset.time);
+        if (Number.isFinite(wordTime) && effectiveTime >= wordTime) activeWordIdx = idx;
+      });
+      wordEls.forEach((wordEl, idx) => {
+        wordEl.classList.toggle('active', idx === activeWordIdx);
+        wordEl.classList.toggle('past', idx < activeWordIdx);
+      });
+    }
+
+    // Cập nhật thẻ Lời bài hát trên Mobile Fullscreen Sheet khi chuyển dòng.
+    if (lineChanged && currentIdx >= 0 && state.lyrics[currentIdx]) {
       if (dom.sheetLyricsActiveText) {
         dom.sheetLyricsActiveText.textContent = state.lyrics[currentIdx].text;
       }
@@ -1753,25 +1777,57 @@
       }
     }
 
-    const timeTagRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g;
+    const lineTimeTagRegex = /\[(\d{1,3}):(\d{2})(?:[.,](\d{1,3}))?\]/g;
+    const wordTimeTagRegex = /<(\d{1,3}):(\d{2})(?:[.,](\d{1,3}))?>/g;
+    const toSeconds = match => {
+      const minutes = parseInt(match[1], 10);
+      const seconds = parseInt(match[2], 10);
+      const fraction = match[3] ? parseFloat(`0.${match[3]}`) : 0;
+      return minutes * 60 + seconds + fraction;
+    };
+    const withOffset = time => parseFloat(Math.max(0, time + fileOffsetSec).toFixed(2));
 
     for (const line of lines) {
       if (/^\[[a-zA-Z]+:/.test(line)) continue;
 
-      const matches = [...line.matchAll(timeTagRegex)];
-      if (matches.length > 0) {
-        const text = line.replace(timeTagRegex, '').trim();
-        for (const m of matches) {
-          const minutes = parseInt(m[1], 10);
-          const seconds = parseInt(m[2], 10);
-          const fraction = m[3] ? parseFloat('0.' + m[3]) : 0;
-          let totalSeconds = minutes * 60 + seconds + fraction;
-          if (fileOffsetSec) {
-            totalSeconds = Math.max(0, totalSeconds + fileOffsetSec);
-          }
-          totalSeconds = parseFloat(totalSeconds.toFixed(2));
-          parsed.push({ time: totalSeconds, text });
+      const lineMatches = [...line.matchAll(lineTimeTagRegex)];
+      const content = line.replace(lineTimeTagRegex, '').trim();
+      const wordMatches = [...content.matchAll(wordTimeTagRegex)];
+      if (!lineMatches.length && !wordMatches.length) continue;
+
+      const words = [];
+      const appendWord = (time, segment) => {
+        if (!segment) return;
+        let wordText = segment;
+        const previousText = words[words.length - 1]?.text || '';
+        if (previousText && !/\s$/u.test(previousText) && !/^\s/u.test(wordText) &&
+            /[\p{Script=Latin}\p{N}]$/u.test(previousText) && /^[\p{Script=Latin}\p{N}]/u.test(wordText)) {
+          wordText = ` ${wordText}`;
         }
+        words.push({ time: withOffset(time), text: wordText });
+      };
+      let text = content;
+      if (wordMatches.length) {
+        let cursor = 0;
+        let segmentTime = lineMatches.length ? toSeconds(lineMatches[0]) : toSeconds(wordMatches[0]);
+        for (const wordMatch of wordMatches) {
+          const segment = content.slice(cursor, wordMatch.index);
+          appendWord(segmentTime, segment);
+          segmentTime = toSeconds(wordMatch);
+          cursor = wordMatch.index + wordMatch[0].length;
+        }
+        const lastSegment = content.slice(cursor);
+        appendWord(segmentTime, lastSegment);
+        text = words.map(word => word.text).join('').trim();
+      }
+
+      const times = lineMatches.length ? lineMatches.map(toSeconds) : [toSeconds(wordMatches[0])];
+      for (const time of times) {
+        parsed.push({
+          time: withOffset(time),
+          text,
+          ...(words.length ? { words } : {})
+        });
       }
     }
     return parsed.sort((a, b) => a.time - b.time);
@@ -1805,7 +1861,7 @@
     // ========================================================================
     if (track.lyrics && typeof track.lyrics === 'string' && track.lyrics.trim().length > 0) {
       state.lyricsLoading = false;
-      const isLrc = /\[\d{1,2}:\d{2}(?:\.\d{1,3})?\]/.test(track.lyrics);
+      const isLrc = /(?:\[|<)\d{1,3}:\d{2}(?:[.,]\d{1,3})?(?:\]|>)/.test(track.lyrics);
 
       if (isLrc) {
         const parsedLines = parseLRC(track.lyrics);

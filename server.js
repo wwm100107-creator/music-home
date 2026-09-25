@@ -2312,25 +2312,57 @@ function parseLRC(lrcText) {
     }
   }
 
-  const timeTagRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g;
+  const lineTimeTagRegex = /\[(\d{1,3}):(\d{2})(?:[.,](\d{1,3}))?\]/g;
+  const wordTimeTagRegex = /<(\d{1,3}):(\d{2})(?:[.,](\d{1,3}))?>/g;
+  const toSeconds = match => {
+    const minutes = parseInt(match[1], 10);
+    const seconds = parseInt(match[2], 10);
+    const fraction = match[3] ? parseFloat(`0.${match[3]}`) : 0;
+    return minutes * 60 + seconds + fraction;
+  };
+  const withOffset = time => parseFloat(Math.max(0, time + fileOffsetSec).toFixed(2));
 
   for (const line of lines) {
     if (/^\[[a-zA-Z]+:/.test(line)) continue;
 
-    const matches = [...line.matchAll(timeTagRegex)];
-    if (matches.length > 0) {
-      const text = line.replace(timeTagRegex, '').trim();
-      for (const m of matches) {
-        const minutes = parseInt(m[1], 10);
-        const seconds = parseInt(m[2], 10);
-        const fraction = m[3] ? parseFloat('0.' + m[3]) : 0;
-        let totalSeconds = minutes * 60 + seconds + fraction;
-        if (fileOffsetSec) {
-          totalSeconds = Math.max(0, totalSeconds + fileOffsetSec);
-        }
-        totalSeconds = parseFloat(totalSeconds.toFixed(2));
-        parsed.push({ time: totalSeconds, text });
+    const lineMatches = [...line.matchAll(lineTimeTagRegex)];
+    const content = line.replace(lineTimeTagRegex, '').trim();
+    const wordMatches = [...content.matchAll(wordTimeTagRegex)];
+    if (!lineMatches.length && !wordMatches.length) continue;
+
+    const wordTimes = [];
+    const appendWord = (time, segment) => {
+      if (!segment) return;
+      let wordText = segment;
+      const previousText = wordTimes[wordTimes.length - 1]?.text || '';
+      if (previousText && !/\s$/u.test(previousText) && !/^\s/u.test(wordText) &&
+          /[\p{Script=Latin}\p{N}]$/u.test(previousText) && /^[\p{Script=Latin}\p{N}]/u.test(wordText)) {
+        wordText = ` ${wordText}`;
       }
+      wordTimes.push({ time: withOffset(time), text: wordText });
+    };
+    let text = content;
+    if (wordMatches.length) {
+      let cursor = 0;
+      let segmentTime = lineMatches.length ? toSeconds(lineMatches[0]) : toSeconds(wordMatches[0]);
+      for (const wordMatch of wordMatches) {
+        const segment = content.slice(cursor, wordMatch.index);
+        appendWord(segmentTime, segment);
+        segmentTime = toSeconds(wordMatch);
+        cursor = wordMatch.index + wordMatch[0].length;
+      }
+      const lastSegment = content.slice(cursor);
+      appendWord(segmentTime, lastSegment);
+      text = wordTimes.map(word => word.text).join('').trim();
+    }
+
+    const times = lineMatches.length ? lineMatches.map(toSeconds) : [toSeconds(wordMatches[0])];
+    for (const time of times) {
+      parsed.push({
+        time: withOffset(time),
+        text,
+        ...(wordTimes.length ? { words: wordTimes } : {})
+      });
     }
   }
   return parsed.sort((a, b) => a.time - b.time);
@@ -2704,8 +2736,8 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
     }
 
     const isInstrumental = Boolean(lyricData.instrumental);
-    const hasSynced = Boolean(lyricData.syncedLyrics);
-    const parsedLines = hasSynced ? parseLRC(lyricData.syncedLyrics) : [];
+    const parsedLines = parseLRC(lyricData.syncedLyrics || lyricData.plainLyrics || '');
+    const hasSynced = parsedLines.length > 0;
 
     const payload = {
       success: true,
