@@ -1346,21 +1346,13 @@ apiRouter.get('/location', (req, res) => {
 // ============================================================================
 // 10.3. OFFICIAL CHART METRICS HELPERS
 // ============================================================================
-function formatViews(count) {
+function formatYouTubeVideoViews(count) {
   const n = Number(count);
   if (!n || isNaN(n)) return null;
-  if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(1) + 'B lượt nghe';
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M lượt nghe';
-  if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K lượt nghe';
-  return n + ' lượt nghe';
-}
-
-function getRealisticStreams(rank, timeframe = 'daily') {
-  const isDaily = timeframe === 'daily';
-  const baseRank1 = isDaily ? 8_700_000 : 32_500_000;
-  const decay = Math.pow(0.91, Math.max(0, rank - 1));
-  const streams = Math.round(baseRank1 * decay);
-  return formatViews(streams);
+  if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(1) + 'B lượt xem video';
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M lượt xem video';
+  if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K lượt xem video';
+  return n + ' lượt xem video';
 }
 
 function cleanChartSong(rawTitle, rawArtist) {
@@ -1410,7 +1402,8 @@ function cleanChartSong(rawTitle, rawArtist) {
   return { title: title || rawTitle, artist: artist || rawArtist };
 }
 
-// 10.3. Official Trending & Top 100 Charts by Region (Daily 24h & Weekly)
+// 10.3. YouTube Music chart playlists by region. These playlist positions are
+// not Music Home stream counts and must not be presented as Top/Viral scores.
 apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpointName: 'trending' }), async (req, res) => {
   const countryCode = detectCountry(req);
   const hub = COUNTRY_HUBS[countryCode] || COUNTRY_HUBS.VN;
@@ -1432,6 +1425,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
 
     const ytSearch = await getSearchClient();
     let tracks = [];
+    let rankingBasis = 'youtube-music-playlist-order';
     const targetPlaylistId = timeframe === 'weekly' ? hub.weeklyPlaylistId : hub.dailyPlaylistId;
 
     // 1. Tải bảng xếp hạng chính thức từ YouTube Music Chart Playlist
@@ -1496,7 +1490,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
               thumbnail,
               rank,
               views: null,
-              playCount: getRealisticStreams(rank, timeframe)
+              youtubeViewsText: null
             };
           })
         );
@@ -1508,6 +1502,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
 
     // 2. Nếu playlist chart không có kết quả, fallback sang tìm kiếm từ khóa
     if (tracks.length === 0) {
+      rankingBasis = 'youtube-music-search-order';
       for (const query of hub.queries) {
         try {
           let searchResult = null;
@@ -1574,7 +1569,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
                   thumbnail,
                   rank,
                   views: null,
-                  playCount: getRealisticStreams(rank, timeframe)
+                  youtubeViewsText: null
                 };
               })
             );
@@ -1590,14 +1585,16 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
 
     // 3. Fallback sang danh sách mẫu có sẵn nếu không kết nối được
     if (tracks.length === 0) {
+      rankingBasis = 'fallback-list-order';
       tracks = FALLBACK_TRENDING_TRACKS.map((t, idx) => ({
         ...t,
         rank: idx + 1,
-        playCount: getRealisticStreams(idx + 1, timeframe)
+        views: null,
+        youtubeViewsText: null
       }));
     }
 
-    // 4. Lấy lượt nghe thực tế (Live Views) trực tiếp từ YouTube cho top 3 bài hát (timeout 800ms)
+    // YouTube exposes lifetime video views here, not Music Home or daily streams.
     try {
       const topTracks = tracks.slice(0, 3);
       const viewsPromise = Promise.allSettled(
@@ -1611,7 +1608,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
           if (resItem && resItem.status === 'fulfilled' && resItem.value?.basic_info?.view_count) {
             const rawViewCount = resItem.value.basic_info.view_count;
             topTracks[idx].views = rawViewCount;
-            topTracks[idx].playCount = formatViews(rawViewCount);
+            topTracks[idx].youtubeViewsText = formatYouTubeVideoViews(rawViewCount);
           }
         });
       }
@@ -1627,6 +1624,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
       flag: hub.flag,
       greeting: hub.greeting,
       genres: hub.genres,
+      rankingBasis,
       results: tracks,
       tracks: tracks
     };
@@ -1643,7 +1641,8 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
     const fallbackTracks = FALLBACK_TRENDING_TRACKS.map((t, idx) => ({
       ...t,
       rank: idx + 1,
-      playCount: getRealisticStreams(idx + 1, timeframe)
+      views: null,
+      youtubeViewsText: null
     }));
 
     const fallbackPayload = {
@@ -1654,6 +1653,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
       flag: hub.flag,
       greeting: hub.greeting,
       genres: hub.genres,
+      rankingBasis: 'fallback-list-order',
       results: fallbackTracks,
       tracks: fallbackTracks,
       cached: false,

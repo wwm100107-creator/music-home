@@ -2703,9 +2703,9 @@
       rankHtml = `<span class="chart-rank-badge ${rankClass}" title="Hạng #${escapeHtml(track.rank)}">${rankLabel}</span>`;
     }
 
-    const playCountText = track.playCount || (track.views ? `${(track.views / 1e6).toFixed(1)}M lượt nghe` : null);
-    const playCountHtml = playCountText
-      ? `<span class="track-card-views" title="Lượt nghe thực tế">${GhibliIcons.calciferFlame} ${escapeHtml(String(playCountText).replace(/^[🔥📈]\s*/, ''))}</span>`
+    const youtubeViewsText = track.youtubeViewsText || null;
+    const youtubeViewsHtml = youtubeViewsText
+      ? `<span class="track-card-views" title="Tổng lượt xem video trên YouTube; không phải lượt nghe trong ứng dụng">${GhibliIcons.calciferFlame} ${escapeHtml(String(youtubeViewsText).replace(/^[🔥📈]\s*/, ''))}</span>`
       : '';
 
     card.innerHTML = `
@@ -2723,7 +2723,7 @@
         <span class="track-card-artist" title="${artist}">${artist}</span>
         <div class="track-card-meta-row">
           <span class="track-card-duration">${duration}</span>
-          ${playCountHtml}
+          ${youtubeViewsHtml}
         </div>
       </div>
     `;
@@ -2740,7 +2740,7 @@
   }
 
   // ==========================================================================
-  // 7. GEO-IP & TRENDING ENGINE (DAILY 24H & WEEKLY CHARTS)
+  // 7. GEO-IP & YOUTUBE MUSIC TRENDING PLAYLISTS
   // ==========================================================================
   async function loadTrendingMusic(countryCode = null, timeframe = null) {
     try {
@@ -2759,7 +2759,7 @@
         dom.trendingTracksGrid.innerHTML = `
           <div class="ghibli-loading-placeholder">
             <div class="loading-leaf-spinner">${GhibliIcons.leafSprout}</div>
-            <p class="loading-text">Đang cập nhật bảng xếp hạng ${curTimeframe === 'weekly' ? 'tuần này (7 ngày)' : 'hôm nay (24h)'}...</p>
+            <p class="loading-text">Đang cập nhật bảng xếp hạng YouTube Music ${curTimeframe === 'weekly' ? 'tuần này' : 'hôm nay'}...</p>
           </div>
         `;
       }
@@ -2785,7 +2785,7 @@
         // Cập nhật Banner
         if (dom.heroFlag) dom.heroFlag.textContent = data.flag || '🇻🇳';
         if (dom.heroGreetingText) {
-          const tfLabel = curTimeframe === 'weekly' ? 'Bảng Xếp Hạng Tuần Này (7 Ngày)' : 'Bảng Xếp Hạng Hôm Nay (24h)';
+          const tfLabel = curTimeframe === 'weekly' ? 'YouTube Music • tuần này' : 'YouTube Music • hôm nay';
           dom.heroGreetingText.textContent = `${data.countryName} • ${tfLabel}`;
         }
         if (dom.trendingCounter) {
@@ -3915,12 +3915,12 @@
       });
     }
 
-    // Chart Timeframe Switch (Daily 24h vs Weekly)
+    // YouTube Music chart playlist timeframe switch
     if (dom.timeframeDailyBtn) {
       dom.timeframeDailyBtn.addEventListener('click', () => {
         if (state.currentTimeframe === 'daily') return;
         state.currentTimeframe = 'daily';
-        showToast('🔥 Bảng xếp hạng: Hôm Nay (24h)');
+        showToast('🔥 Bảng xếp hạng YouTube Music: Hôm Nay');
         loadTrendingMusic(state.selectedCountry, 'daily');
       });
     }
@@ -3929,7 +3929,7 @@
       dom.timeframeWeeklyBtn.addEventListener('click', () => {
         if (state.currentTimeframe === 'weekly') return;
         state.currentTimeframe = 'weekly';
-        showToast('📈 Bảng xếp hạng: Tuần Này (7 Ngày)');
+        showToast('📈 Bảng xếp hạng YouTube Music: Tuần Này');
         loadTrendingMusic(state.selectedCountry, 'weekly');
       });
     }
