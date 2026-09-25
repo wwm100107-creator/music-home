@@ -2961,6 +2961,143 @@ async function fetchGeniusLyrics(cleanTitle, cleanArtist) {
   }
 }
 
+const COMMUNITY_LYRICS_FILENAME = 'community-lyrics.json';
+let communityLyricsStore = null;
+
+function loadCommunityLyricsStore() {
+  if (IS_SERVERLESS) return { version: 1, songs: {} };
+  if (communityLyricsStore) return communityLyricsStore;
+
+  const saved = readLocalJson(COMMUNITY_LYRICS_FILENAME);
+  communityLyricsStore = saved && saved.version === 1 && saved.songs && typeof saved.songs === 'object'
+    ? saved
+    : { version: 1, songs: {} };
+  return communityLyricsStore;
+}
+
+function normalizeCommunityLyricsIdentity(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[đĐ]/g, 'd')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function getCommunityLyricsKey(title, artist) {
+  const identity = `${normalizeCommunityLyricsIdentity(title)}\n${normalizeCommunityLyricsIdentity(artist)}`;
+  return crypto.createHash('sha256').update(identity).digest('hex');
+}
+
+function findCommunityLyrics(title, artist, durationSec) {
+  const key = getCommunityLyricsKey(title, artist);
+  const variants = loadCommunityLyricsStore().songs[key];
+  if (!Array.isArray(variants) || variants.length === 0) return null;
+
+  const duration = Number(durationSec) || 0;
+  const matches = variants
+    .filter(record => record && Array.isArray(record.lines) &&
+      normalizeCommunityLyricsIdentity(record.title) === normalizeCommunityLyricsIdentity(title) &&
+      normalizeCommunityLyricsIdentity(record.artist) === normalizeCommunityLyricsIdentity(artist) &&
+      (!duration || Math.abs(Number(record.durationSec) - duration) <= 15))
+    .sort((a, b) => Math.abs((Number(a.durationSec) || 0) - duration) - Math.abs((Number(b.durationSec) || 0) - duration));
+
+  return matches[0] || null;
+}
+
+apiRouter.post('/lyrics/contribute', rateLimit({ maxRequests: 5, windowMs: 60000, endpointName: 'lyrics-contribute' }), (req, res) => {
+  if (IS_SERVERLESS) {
+    return res.status(503).json({
+      success: false,
+      error: 'Kho lời cộng đồng cần ổ đĩa lưu trữ bền vững; hãy đóng góp trên máy chủ Android gia đình.'
+    });
+  }
+
+  const rawTitle = typeof req.body?.title === 'string' ? req.body.title.trim() : '';
+  const rawArtist = typeof req.body?.artist === 'string' ? req.body.artist.trim() : '';
+  const durationSec = Number(req.body?.durationSec);
+  if (!rawTitle || rawTitle.length > 200 || !rawArtist || rawArtist.length > 200 ||
+      !Number.isFinite(durationSec) || durationSec < 30 || durationSec > 7200) {
+    return res.status(400).json({ success: false, error: 'Tên bài, nghệ sĩ hoặc thời lượng không hợp lệ.' });
+  }
+
+  const { title, artist } = extractSongAndArtist(rawTitle, rawArtist);
+  if (!title || !artist || !normalizeCommunityLyricsIdentity(title) || !normalizeCommunityLyricsIdentity(artist)) {
+    return res.status(400).json({ success: false, error: 'Không thể xác định tên bài hát và nghệ sĩ.' });
+  }
+
+  const inputLines = req.body?.lines;
+  if (!Array.isArray(inputLines) || inputLines.length < 2 || inputLines.length > 1200) {
+    return res.status(400).json({ success: false, error: 'Lời bài hát cần có từ 2 đến 1.200 dòng.' });
+  }
+
+  const lines = [];
+  let previousTime = -1;
+  let totalCharacters = 0;
+  for (const sourceLine of inputLines) {
+    const text = typeof sourceLine?.text === 'string' ? sourceLine.text.trim() : '';
+    const time = Number(sourceLine?.time);
+    if (!text || text.length > 700 || !Number.isFinite(time) || time < 0 || time > durationSec || time < previousTime) {
+      return res.status(400).json({ success: false, error: 'Mỗi dòng cần có lời và mốc thời gian tăng dần trong thời lượng bài hát.' });
+    }
+    totalCharacters += text.length;
+    if (totalCharacters > 75000) {
+      return res.status(400).json({ success: false, error: 'Tổng lời bài hát vượt giới hạn cho phép.' });
+    }
+    const roundedTime = Number(time.toFixed(3));
+    lines.push({ time: roundedTime, text });
+    previousTime = roundedTime;
+  }
+
+  const store = loadCommunityLyricsStore();
+  const nextStore = { ...store, songs: { ...store.songs } };
+  const songKey = getCommunityLyricsKey(title, artist);
+  const variants = Array.isArray(store.songs[songKey]) ? [...store.songs[songKey]] : [];
+  const matchingIndex = variants.findIndex(record => Math.abs((Number(record.durationSec) || 0) - durationSec) <= 15);
+  if (matchingIndex < 0 && !store.songs[songKey] && Object.keys(store.songs).length >= 20000) {
+    return res.status(507).json({ success: false, error: 'Kho lời cộng đồng đã đạt giới hạn lưu trữ.' });
+  }
+  if (matchingIndex < 0 && variants.length >= 8) {
+    return res.status(409).json({ success: false, error: 'Bài hát đã có quá nhiều phiên bản theo thời lượng.' });
+  }
+
+  const previousRecord = matchingIndex >= 0 ? variants[matchingIndex] : null;
+  const record = {
+    title,
+    artist,
+    durationSec: Number(durationSec.toFixed(3)),
+    lines,
+    revision: (Number(previousRecord?.revision) || 0) + 1,
+    updatedAt: new Date().toISOString()
+  };
+  if (matchingIndex >= 0) variants[matchingIndex] = record;
+  else variants.push(record);
+  nextStore.songs[songKey] = variants;
+
+  try {
+    writeLocalJson(COMMUNITY_LYRICS_FILENAME, nextStore);
+    communityLyricsStore = nextStore;
+  } catch (err) {
+    console.error('[Community Lyrics Save Error]:', err.message);
+    return res.status(500).json({ success: false, error: 'Chưa lưu được lời vào kho chung. Vui lòng thử lại.' });
+  }
+
+  return res.json({
+    success: true,
+    source: 'community',
+    synced: true,
+    syncMethod: 'community-line-sync',
+    trackName: record.title,
+    artistName: record.artist,
+    duration: record.durationSec,
+    lines: record.lines,
+    plain: record.lines.map(line => line.text).join('\n'),
+    revision: record.revision
+  });
+});
+
 apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpointName: 'lyrics' }), async (req, res) => {
   const rawTitle = req.query.title || req.query.track || '';
   const rawArtist = req.query.artist || '';
@@ -2984,6 +3121,23 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
   const cacheKey = videoId
     ? `lyrics:vid:${videoId}`
     : `lyrics:${normalizeForComparison(cleanTitle)}:${normalizeForComparison(cleanArtist)}:${durSec || 0}`;
+
+  const communityLyrics = findCommunityLyrics(cleanTitle, cleanArtist, durSec);
+  if (communityLyrics) {
+    return res.json({
+      success: true,
+      synced: true,
+      instrumental: false,
+      source: 'community',
+      trackName: communityLyrics.title,
+      artistName: communityLyrics.artist,
+      duration: communityLyrics.durationSec,
+      lines: communityLyrics.lines,
+      plain: communityLyrics.lines.map(line => line.text).join('\n'),
+      syncMethod: 'community-line-sync',
+      revision: communityLyrics.revision
+    });
+  }
 
   const cached = lyricsCache.get(cacheKey);
   if (cached) {

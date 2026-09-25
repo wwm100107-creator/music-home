@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&family=Comfortaa:wght@600;700;800;900&family=Fredoka:wght@500;600;700;800&family=Sniglet:wght@800&family=Quicksand:wght@600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=3.5">
+  <link rel="stylesheet" href="style.css?v=3.6">
 </head>
 <body class="ghibli-app-body">
 
@@ -272,11 +272,11 @@
             <h2 class="heading-title" id="trendingSectionTitle">Bảng Xếp Hạng Thịnh Hành</h2>
           </div>
           <div class="chart-timeframe-switch" id="chartTimeframeSwitch" role="group" aria-label="Thời gian bảng xếp hạng">
-            <button class="timeframe-pill-btn active" id="timeframeDailyBtn" data-timeframe="daily" title="Bảng xếp hạng ngày: lượt nghe cao nhất trong 24h qua">
-              <span class="pill-fire-icon"><svg class="ghibli-svg-icon ghibli-icon-calcifer-flame" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c1.8 2.8 4.5 5.5 4.5 9 0 4.5-3.5 8.5-8.5 8.5S3 16 3 12c0-3.5 2.5-6 4.5-8.5 0 2.5 1.5 3.5 3 3.5 1 0 1.8-.8 2.2-2.2-.3-.8-.5-1.5-.7-2.3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" fill="currentColor" fill-opacity="0.2"/><path d="M11 9.5c1 1.2 2 2 2 3.8 0 2-1.5 3.7-3.7 3.7S6 15.3 6 13.5c0-1.2 1-2 1.8-3 .5 1.2 1.5 1.5 2.2 1.5.8 0 1.5-.8 1-2.5z" fill="currentColor" fill-opacity="0.4"/><circle cx="8.5" cy="13.5" r="0.9" fill="currentColor"/><circle cx="12" cy="13.5" r="0.9" fill="currentColor"/></svg></span> Hôm Nay (24h)
+            <button class="timeframe-pill-btn active" id="timeframeDailyBtn" data-timeframe="daily" title="Thứ tự playlist bảng xếp hạng YouTube Music trong ngày">
+              <span class="pill-fire-icon"><svg class="ghibli-svg-icon ghibli-icon-calcifer-flame" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5c1.8 2.8 4.5 5.5 4.5 9 0 4.5-3.5 8.5-8.5 8.5S3 16 3 12c0-3.5 2.5-6 4.5-8.5 0 2.5 1.5 3.5 3 3.5 1 0 1.8-.8 2.2-2.2-.3-.8-.5-1.5-.7-2.3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" fill="currentColor" fill-opacity="0.2"/><path d="M11 9.5c1 1.2 2 2 2 3.8 0 2-1.5 3.7-3.7 3.7S6 15.3 6 13.5c0-1.2 1-2 1.8-3 .5 1.2 1.5 1.5 2.2 1.5.8 0 1.5-.8 1-2.5z" fill="currentColor" fill-opacity="0.4"/><circle cx="8.5" cy="13.5" r="0.9" fill="currentColor"/><circle cx="12" cy="13.5" r="0.9" fill="currentColor"/></svg></span> Hôm Nay
             </button>
-            <button class="timeframe-pill-btn" id="timeframeWeeklyBtn" data-timeframe="weekly" title="Bảng xếp hạng tuần: tổng lượt nghe cao nhất 7 ngày qua">
-              <span class="pill-chart-icon"><svg class="ghibli-svg-icon ghibli-icon-bamboo-chart" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="14" width="3.5" height="7" rx="1" stroke="currentColor" stroke-width="1.4" fill="currentColor" fill-opacity="0.2"/><line x1="4" y1="17.5" x2="7.5" y2="17.5" stroke="currentColor" stroke-width="1"/><rect x="10" y="9" width="3.5" height="12" rx="1" stroke="currentColor" stroke-width="1.4" fill="currentColor" fill-opacity="0.2"/><line x1="10" y1="13" x2="13.5" y2="13" stroke="currentColor" stroke-width="1"/><line x1="10" y1="17" x2="13.5" y2="17" stroke="currentColor" stroke-width="1"/><rect x="16" y="4" width="3.5" height="17" rx="1" stroke="currentColor" stroke-width="1.4" fill="currentColor" fill-opacity="0.2"/><line x1="16" y1="9.5" x2="19.5" y2="9.5" stroke="currentColor" stroke-width="1"/><line x1="16" y1="15" x2="19.5" y2="15" stroke="currentColor" stroke-width="1"/><path d="M4 12c3-2 6-5 15-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M16 4.5l3.5.5-.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Tuần Này (7 Ngày)
+            <button class="timeframe-pill-btn" id="timeframeWeeklyBtn" data-timeframe="weekly" title="Thứ tự playlist bảng xếp hạng YouTube Music tuần này">
+              <span class="pill-chart-icon"><svg class="ghibli-svg-icon ghibli-icon-bamboo-chart" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="14" width="3.5" height="7" rx="1" stroke="currentColor" stroke-width="1.4" fill="currentColor" fill-opacity="0.2"/><line x1="4" y1="17.5" x2="7.5" y2="17.5" stroke="currentColor" stroke-width="1"/><rect x="10" y="9" width="3.5" height="12" rx="1" stroke="currentColor" stroke-width="1.4" fill="currentColor" fill-opacity="0.2"/><line x1="10" y1="13" x2="13.5" y2="13" stroke="currentColor" stroke-width="1"/><line x1="10" y1="17" x2="13.5" y2="17" stroke="currentColor" stroke-width="1"/><rect x="16" y="4" width="3.5" height="17" rx="1" stroke="currentColor" stroke-width="1.4" fill="currentColor" fill-opacity="0.2"/><line x1="16" y1="9.5" x2="19.5" y2="9.5" stroke="currentColor" stroke-width="1"/><line x1="16" y1="15" x2="19.5" y2="15" stroke="currentColor" stroke-width="1"/><path d="M4 12c3-2 6-5 15-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M16 4.5l3.5.5-.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Tuần Này
             </button>
           </div>
           <span class="heading-badge-counter" id="trendingCounter">Top 20 bài</span>
@@ -930,6 +930,7 @@
         <span class="sheet-lyrics-badge"><svg class="ghibli-svg-icon ghibli-icon-vintage-mic" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="2.5" width="8" height="11" rx="4" stroke="currentColor" stroke-width="1.6" fill="currentColor" fill-opacity="0.14"/><path d="M8.5 6.5h7M8.5 9.5h7M12 2.5v11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/><path d="M5 10c0 4 3.2 7 7 7s7-3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12 17v4.5M8 21.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12 18.5c1.5-1 2.8-.5 2.5.8-.4 1-1.6.8-2.5-.8z" fill="var(--ghibli-leaf-green, #52b788)" stroke="currentColor" stroke-width="0.8" opacity="0.9"/></svg> LỜI BÀI HÁT</span>
         <div class="sheet-lyrics-header-actions">
           <button type="button" class="sheet-sync-quick-btn" id="sheetSyncQuickBtn" title="Cân chỉnh độ lệch lời"><svg class="ghibli-svg-icon ghibli-icon-pocket-watch" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 2.5h4M12 2.5v2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="2" r="1.5" stroke="currentColor" stroke-width="1.2"/><circle cx="12" cy="13.5" r="8" stroke="currentColor" stroke-width="1.6" fill="currentColor" fill-opacity="0.1"/><path d="M12 7.5v1M17.5 13.5h-1M12 19.5v-1M6.5 13.5h1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/><path d="M12 13.5l-2.5-3M12 13.5l3.5 1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="1" fill="currentColor"/></svg> <span id="sheetLyricsOffsetLabel">0.0s</span></button>
+          <button type="button" class="lyrics-contribute-trigger sheet-lyrics-contribute-btn" id="sheetLyricsContributeBtn" title="Thêm hoặc căn lời bài hát cho mọi người">＋ Lời</button>
           <button type="button" class="sheet-lyrics-fullscreen-trigger" id="sheetLyricsExpandBtn" title="Phóng to sân khấu lời nhạc">
             Mở rộng ↗
           </button>
@@ -958,6 +959,7 @@
         </div>
         <div class="stage-header-right">
           <span class="lyrics-sync-badge" id="lyricsSyncBadge"><svg class="ghibli-svg-icon ghibli-icon-sparkle-star" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5L12 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="currentColor" fill-opacity="0.25"/><circle cx="18" cy="5" r="1" fill="currentColor" opacity="0.7"/><circle cx="6" cy="19" r="1" fill="currentColor" opacity="0.7"/></svg> Đồng bộ thời gian thực</span>
+          <button type="button" class="lyrics-contribute-trigger" id="lyricsContributeBtn" title="Thêm hoặc căn lời bài hát cho mọi người">＋ Đóng góp lời</button>
           <button class="lyrics-close-btn" id="lyricsCloseBtn" aria-label="Thu nhỏ về trang chủ" title="Thu nhỏ về trang chủ [Esc / Y]">✕</button>
         </div>
       </div>
@@ -1084,6 +1086,36 @@
         <span class="lyrics-hint-text"><svg class="ghibli-svg-icon ghibli-icon-firefly-lantern" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 6C8.5 4.2 10.2 3.5 12 3.5s3.5.7 5 2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="2.2" r="1.2" stroke="currentColor" stroke-width="1.2"/><rect x="7" y="5.5" width="10" height="2" rx="1" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="1.2"/><path d="M7.5 7.5L6.5 16c-.3 2.5 1.5 4.5 4 4.5h3c2.5 0 4.3-2 4-4.5l-1-8.5H7.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" fill="currentColor" fill-opacity="0.1"/><path d="M10 7.5v12.5M14 7.5v12.5" stroke="currentColor" stroke-width="1" opacity="0.4"/><circle cx="12" cy="13.5" r="2.2" fill="#ffd166" opacity="0.95"/><path d="M12 10v-1M12 17v-1M8.5 13.5h-1M15.5 13.5h-1" stroke="#ffd166" stroke-width="1.2" stroke-linecap="round"/></svg> Nhấp câu hát để tua nhạc • Bấm <svg class="ghibli-svg-icon ghibli-icon-compass-anchor" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" fill="currentColor" fill-opacity="0.08"/><circle cx="12" cy="12" r="6.2" stroke="currentColor" stroke-width="1" stroke-dasharray="2 2.5" opacity="0.5"/><path d="M12 3.8L14 11h-4L12 3.8z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><path d="M12 20.2L10 13h4L12 20.2z" fill="currentColor" fill-opacity="0.3" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><path d="M4 12l4-1.5v3L4 12zM20 12l-4 1.5v-3L20 12z" fill="currentColor" fill-opacity="0.25"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg> để căn chuẩn • Phím [ / ] để chỉnh độ trễ • Esc / Y để đóng</span>
       </div>
     </div>
+  </div>
+
+  <div class="lyrics-contribution-modal hidden" id="lyricsContributionModal" role="dialog" aria-modal="true" aria-labelledby="lyricsContributionTitle">
+    <div class="lyrics-contribution-backdrop" id="lyricsContributionBackdrop"></div>
+    <section class="lyrics-contribution-window">
+      <header class="lyrics-contribution-header">
+        <div>
+          <p class="lyrics-contribution-eyebrow">KHO LỜI DÙNG CHUNG</p>
+          <h2 id="lyricsContributionTitle">Thêm lời và căn timeline</h2>
+          <p class="lyrics-contribution-track" id="lyricsContributionTrackLabel">Chưa chọn bài hát</p>
+        </div>
+        <button type="button" class="lyrics-contribution-close" id="lyricsContributionCloseBtn" aria-label="Đóng">✕</button>
+      </header>
+      <p class="lyrics-contribution-help">Mỗi dòng là một câu hát. Phát nhạc rồi bấm <strong>⏱ Lấy mốc</strong> ngay lúc câu đó bắt đầu. Khi lưu, lời và timeline sẽ được chia sẻ cho mọi người.</p>
+      <label class="lyrics-contribution-label" for="lyricsContributionPlain">Dán lời bài hát, mỗi câu một dòng</label>
+      <textarea id="lyricsContributionPlain" class="lyrics-contribution-textarea" rows="4" maxlength="75000" placeholder="Dán hoặc nhập lời bài hát ở đây..."></textarea>
+      <div class="lyrics-contribution-toolbar">
+        <button type="button" class="lyrics-contribution-secondary" id="lyricsContributionBuildBtn">Tách lời thành dòng</button>
+        <span id="lyricsContributionLineCount">0 dòng</span>
+      </div>
+      <div class="lyrics-contribution-list" id="lyricsContributionList" aria-label="Các câu hát và thời điểm"></div>
+      <div class="lyrics-contribution-footer">
+        <span id="lyricsContributionPlayhead">Vị trí phát: 00:00.00</span>
+        <div class="lyrics-contribution-footer-actions">
+          <button type="button" class="lyrics-contribution-secondary" id="lyricsContributionAddLineBtn">＋ Thêm dòng</button>
+          <button type="button" class="lyrics-contribution-cancel" id="lyricsContributionCancelBtn">Hủy</button>
+          <button type="button" class="lyrics-contribution-save" id="lyricsContributionSaveBtn">Lưu cho mọi người</button>
+        </div>
+      </div>
+    </section>
   </div>
 
   <!-- ===================================================================== -->
@@ -1328,13 +1360,13 @@
 
   <!-- Scripts: YouTube Engine & Ghibli App -->
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script src="app.js?v=4.8"></script>
+  <script src="app.js?v=4.9"></script>
 
   <!-- PWA Offline Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=4.8')
+        navigator.serviceWorker.register('./sw.js?v=4.9')
           .then((reg) => {
             console.log('🍃 [PWA] Service Worker registered:', reg.scope);
             reg.update().catch(() => {});

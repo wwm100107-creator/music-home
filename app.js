@@ -178,6 +178,7 @@
     communityLoaded: false,
     currentTimeframe: 'daily',
     lyrics: [],
+    lyricsSource: null,
     activeLyricIndex: -1,
     isLyricsOpen: false,
     lyricsLoading: false,
@@ -458,6 +459,20 @@
     lyricOffsetPlusHalfBtn: document.getElementById('lyricOffsetPlusHalfBtn'),
     sheetSyncQuickBtn: document.getElementById('sheetSyncQuickBtn'),
     sheetLyricsOffsetLabel: document.getElementById('sheetLyricsOffsetLabel'),
+    lyricsContributeBtn: document.getElementById('lyricsContributeBtn'),
+    sheetLyricsContributeBtn: document.getElementById('sheetLyricsContributeBtn'),
+    lyricsContributionModal: document.getElementById('lyricsContributionModal'),
+    lyricsContributionBackdrop: document.getElementById('lyricsContributionBackdrop'),
+    lyricsContributionTrackLabel: document.getElementById('lyricsContributionTrackLabel'),
+    lyricsContributionPlain: document.getElementById('lyricsContributionPlain'),
+    lyricsContributionBuildBtn: document.getElementById('lyricsContributionBuildBtn'),
+    lyricsContributionLineCount: document.getElementById('lyricsContributionLineCount'),
+    lyricsContributionList: document.getElementById('lyricsContributionList'),
+    lyricsContributionPlayhead: document.getElementById('lyricsContributionPlayhead'),
+    lyricsContributionAddLineBtn: document.getElementById('lyricsContributionAddLineBtn'),
+    lyricsContributionSaveBtn: document.getElementById('lyricsContributionSaveBtn'),
+    lyricsContributionCloseBtn: document.getElementById('lyricsContributionCloseBtn'),
+    lyricsContributionCancelBtn: document.getElementById('lyricsContributionCancelBtn'),
 
     // Split-Screen Stage Left Panel (3D Vinyl, Tone Arm, Up Next)
     stageLeftPanel: document.getElementById('stageLeftPanel'),
@@ -1490,6 +1505,7 @@
   // SPOTIFY-STYLE REAL-TIME SYNCED LYRICS ENGINE (LRCLIB & KARAOKE STAGE)
   // ==========================================================================
   let lyricsAbortController = null;
+  let lyricsContributionTrackId = null;
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -1856,6 +1872,233 @@
     });
   }
 
+  function formatLyricsContributionTime(seconds) {
+    const safeSeconds = Math.max(0, Number(seconds) || 0);
+    const minutes = Math.floor(safeSeconds / 60);
+    const remainingSeconds = (safeSeconds % 60).toFixed(2).padStart(5, '0');
+    return `${String(minutes).padStart(2, '0')}:${remainingSeconds}`;
+  }
+
+  function renderLyricsContributionRows(lines = []) {
+    if (!dom.lyricsContributionList) return;
+    dom.lyricsContributionList.replaceChildren();
+    const draft = Array.isArray(lines) ? lines : [];
+
+    if (!draft.length) {
+      const empty = document.createElement('div');
+      empty.className = 'lyrics-contribution-empty';
+      empty.textContent = 'Dán lời ở phía trên rồi chọn “Tách lời thành dòng”.';
+      dom.lyricsContributionList.appendChild(empty);
+    }
+
+    const fragment = document.createDocumentFragment();
+    draft.forEach((line, index) => {
+      const row = document.createElement('div');
+      row.className = 'lyrics-contribution-row';
+
+      const rowIndex = document.createElement('span');
+      rowIndex.className = 'lyrics-contribution-row-index';
+      rowIndex.textContent = String(index + 1);
+
+      const textInput = document.createElement('textarea');
+      textInput.className = 'lyrics-contribution-line-text';
+      textInput.rows = 2;
+      textInput.maxLength = 700;
+      textInput.value = String(line?.text || '');
+      textInput.setAttribute('aria-label', `Lời câu ${index + 1}`);
+      textInput.placeholder = `Câu hát ${index + 1}`;
+
+      const timeInput = document.createElement('input');
+      timeInput.className = 'lyrics-contribution-line-time';
+      timeInput.type = 'number';
+      timeInput.min = '0';
+      timeInput.step = '0.01';
+      timeInput.placeholder = 'Giây';
+      timeInput.setAttribute('aria-label', `Thời điểm câu ${index + 1} bắt đầu, tính bằng giây`);
+      if (line?.time !== null && line?.time !== undefined && line?.time !== '' && Number.isFinite(Number(line.time))) {
+        timeInput.value = Number(line.time).toFixed(2);
+      }
+
+      const markButton = document.createElement('button');
+      markButton.type = 'button';
+      markButton.className = 'lyrics-contribution-mark';
+      markButton.textContent = '⏱ Lấy mốc';
+      markButton.title = 'Lấy thời điểm hiện tại của bài hát';
+      markButton.addEventListener('click', () => {
+        timeInput.value = getCurrentAudioTime().toFixed(2);
+        timeInput.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'lyrics-contribution-remove';
+      removeButton.textContent = '✕';
+      removeButton.title = `Xóa câu ${index + 1}`;
+      removeButton.setAttribute('aria-label', `Xóa câu ${index + 1}`);
+      removeButton.addEventListener('click', () => {
+        const nextDraft = [...dom.lyricsContributionList.querySelectorAll('.lyrics-contribution-row')]
+          .filter(candidate => candidate !== row)
+          .map(candidate => ({
+            text: candidate.querySelector('.lyrics-contribution-line-text')?.value || '',
+            time: candidate.querySelector('.lyrics-contribution-line-time')?.value === ''
+              ? null
+              : Number(candidate.querySelector('.lyrics-contribution-line-time')?.value)
+          }));
+        renderLyricsContributionRows(nextDraft);
+      });
+
+      row.append(rowIndex, textInput, timeInput, markButton, removeButton);
+      fragment.appendChild(row);
+    });
+    dom.lyricsContributionList.appendChild(fragment);
+    if (dom.lyricsContributionLineCount) {
+      dom.lyricsContributionLineCount.textContent = `${draft.length} dòng`;
+    }
+  }
+
+  function openLyricsContributionEditor() {
+    const track = state.currentTrack;
+    if (!track || !track.title || !dom.lyricsContributionModal) {
+      showToast('Hãy phát một bài hát trước khi đóng góp lời nhé.');
+      return;
+    }
+
+    lyricsContributionTrackId = track.id;
+    const artist = track.artist || '';
+    if (dom.lyricsContributionTrackLabel) {
+      dom.lyricsContributionTrackLabel.textContent = `${track.title}${artist ? ` • ${artist}` : ''}`;
+    }
+
+    let initialLines = state.lyricsTrackId === track.id
+      ? state.lyrics.map(line => ({ text: line.text, time: Number(line.time) }))
+      : [];
+    if (!initialLines.length && typeof track.lyrics === 'string' && track.lyrics.trim()) {
+      const parsed = parseLRC(track.lyrics);
+      initialLines = parsed.length
+        ? parsed.map(line => ({ text: line.text, time: Number(line.time) }))
+        : track.lyrics.split(/\r?\n/).map(text => ({ text: text.trim(), time: null })).filter(line => line.text);
+    }
+
+    if (dom.lyricsContributionPlain) {
+      dom.lyricsContributionPlain.value = initialLines.map(line => line.text).join('\n');
+    }
+    renderLyricsContributionRows(initialLines);
+    dom.lyricsContributionModal.classList.remove('hidden');
+    document.body.classList.add('lyrics-contribution-open');
+    if (dom.lyricsContributionPlayhead) {
+      dom.lyricsContributionPlayhead.textContent = `Vị trí phát: ${formatLyricsContributionTime(getCurrentAudioTime())}`;
+    }
+    setTimeout(() => dom.lyricsContributionPlain?.focus(), 0);
+  }
+
+  function closeLyricsContributionEditor() {
+    if (!dom.lyricsContributionModal) return;
+    dom.lyricsContributionModal.classList.add('hidden');
+    document.body.classList.remove('lyrics-contribution-open');
+    lyricsContributionTrackId = null;
+  }
+
+  function buildLyricsContributionRows() {
+    const lines = String(dom.lyricsContributionPlain?.value || '')
+      .split(/\r?\n/)
+      .map(text => text.trim())
+      .filter(Boolean);
+    if (lines.length > 1200) {
+      showToast('Lời bài hát có quá nhiều dòng (tối đa 1.200).');
+      return;
+    }
+    renderLyricsContributionRows(lines.map(text => ({ text, time: null })));
+  }
+
+  async function saveLyricsContribution() {
+    const track = state.currentTrack;
+    if (!track || track.id !== lyricsContributionTrackId) {
+      showToast('Bài hát đã thay đổi. Hãy mở lại trình đóng góp lời.');
+      closeLyricsContributionEditor();
+      return;
+    }
+    const submittedTrackId = track.id;
+
+    const durationSec = Number(getLyricDurationSeconds()) || Number(track.durationSec) || parseDurationToSec(track.duration) || 0;
+    const rows = [...(dom.lyricsContributionList?.querySelectorAll('.lyrics-contribution-row') || [])];
+    const lines = rows.map(row => ({
+      text: row.querySelector('.lyrics-contribution-line-text')?.value.trim() || '',
+      time: row.querySelector('.lyrics-contribution-line-time')?.value === ''
+        ? null
+        : Number(row.querySelector('.lyrics-contribution-line-time')?.value)
+    }));
+
+    if (lines.length < 2) {
+      showToast('Hãy thêm ít nhất hai câu lời bài hát.');
+      return;
+    }
+    let previousTime = -1;
+    for (let index = 0; index < lines.length; index++) {
+      const line = lines[index];
+      if (!line.text || line.text.length > 700 || !Number.isFinite(line.time)) {
+        showToast(`Câu ${index + 1} cần có nội dung và mốc thời gian.`);
+        return;
+      }
+      if (line.time < 0 || line.time > durationSec || line.time < previousTime) {
+        showToast(`Kiểm tra timeline ở câu ${index + 1}; thời điểm phải tăng dần trong bài hát.`);
+        return;
+      }
+      previousTime = line.time;
+    }
+
+    if (!durationSec || !track.artist) {
+      showToast('Thiếu nghệ sĩ hoặc thời lượng bài hát nên chưa thể lưu lời chung.');
+      return;
+    }
+
+    const saveButton = dom.lyricsContributionSaveBtn;
+    if (saveButton) {
+      saveButton.disabled = true;
+      saveButton.textContent = 'Đang lưu…';
+    }
+    try {
+      const response = await fetch('/api/lyrics/contribute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: track.title,
+          artist: track.artist,
+          durationSec,
+          lines
+        })
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Chưa lưu được lời bài hát.');
+      }
+      if (state.currentTrack?.id !== submittedTrackId) {
+        if (lyricsContributionTrackId === submittedTrackId) closeLyricsContributionEditor();
+        showToast('Đã lưu lời bài hát vào kho chung cho mọi người.');
+        return;
+      }
+
+      state.lyrics = estimateTimedLyricsWords(result.lines);
+      state.lyricsSource = 'community';
+      state.lyricsTrackId = track.id;
+      state.lyricsLoading = false;
+      state.activeLyricIndex = -1;
+      if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.quillScroll} Lời cộng đồng • Đồng bộ theo câu`;
+      renderLyricsLines(state.lyrics);
+      if (dom.sheetLyricsActiveText) dom.sheetLyricsActiveText.textContent = state.lyrics[0]?.text || '';
+      if (dom.sheetLyricsNextText) dom.sheetLyricsNextText.textContent = state.lyrics[1]?.text || '';
+      syncLyricsWithTime(getCurrentAudioTime());
+      closeLyricsContributionEditor();
+      showToast('Đã lưu lời và timeline vào kho chung cho mọi người!');
+    } catch (err) {
+      showToast(err.message || 'Chưa lưu được lời bài hát. Vui lòng thử lại.');
+    } finally {
+      if (saveButton) {
+        saveButton.disabled = false;
+        saveButton.textContent = 'Lưu cho mọi người';
+      }
+    }
+  }
+
   function syncLyricsWithTime(currentTime) {
     if (!state.lyrics || state.lyrics.length === 0) return;
 
@@ -2013,6 +2256,7 @@
     lyricsAbortController = new AbortController();
 
     state.lyrics = [];
+    state.lyricsSource = null;
     state.activeLyricIndex = -1;
     state.lyricsTrackId = track.id;
     state.lyricsLoading = true;
@@ -2032,6 +2276,7 @@
     // ========================================================================
     if (track.lyrics && typeof track.lyrics === 'string' && track.lyrics.trim().length > 0) {
       state.lyricsLoading = false;
+      state.lyricsSource = 'track-attachment';
       const isLrc = /(?:\[|<)\d{1,3}:\d{2}(?:[.,]\d{1,3})?(?:\]|>)/.test(track.lyrics);
 
       if (isLrc) {
@@ -2121,12 +2366,14 @@
 
       const data = await response.json();
       state.lyricsLoading = false;
+      state.lyricsSource = data.source || null;
 
       // Đảm bảo vẫn đúng bài hát hiện tại
       if (state.currentTrack?.id !== track.id) return;
 
       if (data.instrumental) {
         state.lyrics = [];
+        state.lyricsSource = null;
         if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.leafSprout} Bản nhạc hòa tấu không lời`;
         if (dom.lyricsLinesContainer) {
           dom.lyricsLinesContainer.innerHTML = `
@@ -2147,7 +2394,9 @@
         state.lyrics = estimateTimedLyricsWords(data.lines);
         const hasEstimatedWords = state.lyrics.some(line => line.wordsEstimated);
         if (dom.lyricsSyncBadge) {
-          if (data.syncMethod === 'youtube-captions') {
+          if (data.source === 'community') {
+            dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.quillScroll} Lời cộng đồng • Đồng bộ theo câu`;
+          } else if (data.syncMethod === 'youtube-captions') {
             const confidence = Math.round((Number(data.syncConfidence) || 0) * 100);
             dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.sparkleStar} Tự căn theo phụ đề video${confidence ? ` • Khớp ${confidence}%` : ''}`;
           } else if (data.syncMethod === 'lyricsfile-word-sync') {
@@ -2192,6 +2441,7 @@
         syncLyricsWithTime(getCurrentAudioTime());
       } else {
         state.lyrics = [];
+        state.lyricsSource = null;
         const isAi = data.reason === 'ai_generated';
         const badgeText = isAi ? '🤖 Nhạc do AI tạo (Chưa có dữ liệu lời)' : '🍃 Chưa có dữ liệu lời bài hát';
         if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.innerHTML = badgeText;
@@ -2221,6 +2471,7 @@
       if (err.name === 'AbortError') return;
       console.warn('[Lyrics Fetch Error]:', err.message);
       state.lyricsLoading = false;
+      state.lyricsSource = null;
       if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '⚠️ Chưa thể nạp lời';
       if (dom.lyricsLinesContainer) {
         dom.lyricsLinesContainer.innerHTML = `
@@ -2238,6 +2489,9 @@
 
   // Đồng bộ ngọn lửa Calcifer và thanh tiến trình liên tục (250ms)
   setInterval(() => {
+    if (dom.lyricsContributionPlayhead && dom.lyricsContributionModal && !dom.lyricsContributionModal.classList.contains('hidden')) {
+      dom.lyricsContributionPlayhead.textContent = `Vị trí phát: ${formatLyricsContributionTime(getCurrentAudioTime())}`;
+    }
     if (state.isPlaying && !state.isScrubbing) {
       if (state.activeEngine === 'audio' || state.currentTrack?.previewUrl) {
         if (dom.audio) {
@@ -2703,9 +2957,9 @@
       rankHtml = `<span class="chart-rank-badge ${rankClass}" title="Hạng #${escapeHtml(track.rank)}">${rankLabel}</span>`;
     }
 
-    const playCountText = track.playCount || (track.views ? `${(track.views / 1e6).toFixed(1)}M lượt nghe` : null);
-    const playCountHtml = playCountText
-      ? `<span class="track-card-views" title="Lượt nghe thực tế">${GhibliIcons.calciferFlame} ${escapeHtml(String(playCountText).replace(/^[🔥📈]\s*/, ''))}</span>`
+    const youtubeViewsText = track.youtubeViewsText || null;
+    const youtubeViewsHtml = youtubeViewsText
+      ? `<span class="track-card-views" title="Tổng lượt xem video trên YouTube; không phải lượt nghe trong ứng dụng">${GhibliIcons.calciferFlame} ${escapeHtml(String(youtubeViewsText).replace(/^[🔥📈]\s*/, ''))}</span>`
       : '';
 
     card.innerHTML = `
@@ -2723,7 +2977,7 @@
         <span class="track-card-artist" title="${artist}">${artist}</span>
         <div class="track-card-meta-row">
           <span class="track-card-duration">${duration}</span>
-          ${playCountHtml}
+          ${youtubeViewsHtml}
         </div>
       </div>
     `;
@@ -2740,7 +2994,7 @@
   }
 
   // ==========================================================================
-  // 7. GEO-IP & TRENDING ENGINE (DAILY 24H & WEEKLY CHARTS)
+  // 7. GEO-IP & YOUTUBE MUSIC TRENDING PLAYLISTS
   // ==========================================================================
   async function loadTrendingMusic(countryCode = null, timeframe = null) {
     try {
@@ -2759,7 +3013,7 @@
         dom.trendingTracksGrid.innerHTML = `
           <div class="ghibli-loading-placeholder">
             <div class="loading-leaf-spinner">${GhibliIcons.leafSprout}</div>
-            <p class="loading-text">Đang cập nhật bảng xếp hạng ${curTimeframe === 'weekly' ? 'tuần này (7 ngày)' : 'hôm nay (24h)'}...</p>
+            <p class="loading-text">Đang cập nhật bảng xếp hạng YouTube Music ${curTimeframe === 'weekly' ? 'tuần này' : 'hôm nay'}...</p>
           </div>
         `;
       }
@@ -2785,7 +3039,7 @@
         // Cập nhật Banner
         if (dom.heroFlag) dom.heroFlag.textContent = data.flag || '🇻🇳';
         if (dom.heroGreetingText) {
-          const tfLabel = curTimeframe === 'weekly' ? 'Bảng Xếp Hạng Tuần Này (7 Ngày)' : 'Bảng Xếp Hạng Hôm Nay (24h)';
+          const tfLabel = curTimeframe === 'weekly' ? 'YouTube Music • tuần này' : 'YouTube Music • hôm nay';
           dom.heroGreetingText.textContent = `${data.countryName} • ${tfLabel}`;
         }
         if (dom.trendingCounter) {
@@ -3915,12 +4169,12 @@
       });
     }
 
-    // Chart Timeframe Switch (Daily 24h vs Weekly)
+    // YouTube Music chart playlist timeframe switch
     if (dom.timeframeDailyBtn) {
       dom.timeframeDailyBtn.addEventListener('click', () => {
         if (state.currentTimeframe === 'daily') return;
         state.currentTimeframe = 'daily';
-        showToast('🔥 Bảng xếp hạng: Hôm Nay (24h)');
+        showToast('🔥 Bảng xếp hạng YouTube Music: Hôm Nay');
         loadTrendingMusic(state.selectedCountry, 'daily');
       });
     }
@@ -3929,7 +4183,7 @@
       dom.timeframeWeeklyBtn.addEventListener('click', () => {
         if (state.currentTimeframe === 'weekly') return;
         state.currentTimeframe = 'weekly';
-        showToast('📈 Bảng xếp hạng: Tuần Này (7 Ngày)');
+        showToast('📈 Bảng xếp hạng YouTube Music: Tuần Này');
         loadTrendingMusic(state.selectedCountry, 'weekly');
       });
     }
@@ -4232,6 +4486,29 @@
         openLyricsStage();
       });
     }
+    const openContributionFromButton = (e) => {
+      e.stopPropagation();
+      openLyricsContributionEditor();
+    };
+    dom.lyricsContributeBtn?.addEventListener('click', openContributionFromButton);
+    dom.sheetLyricsContributeBtn?.addEventListener('click', openContributionFromButton);
+    dom.lyricsContributionCloseBtn?.addEventListener('click', closeLyricsContributionEditor);
+    dom.lyricsContributionCancelBtn?.addEventListener('click', closeLyricsContributionEditor);
+    dom.lyricsContributionBackdrop?.addEventListener('click', closeLyricsContributionEditor);
+    dom.lyricsContributionBuildBtn?.addEventListener('click', buildLyricsContributionRows);
+    dom.lyricsContributionSaveBtn?.addEventListener('click', saveLyricsContribution);
+    dom.lyricsContributionAddLineBtn?.addEventListener('click', () => {
+      const existingLines = [...(dom.lyricsContributionList?.querySelectorAll('.lyrics-contribution-row') || [])]
+        .map(row => ({
+          text: row.querySelector('.lyrics-contribution-line-text')?.value || '',
+          time: row.querySelector('.lyrics-contribution-line-time')?.value === ''
+            ? null
+            : Number(row.querySelector('.lyrics-contribution-line-time')?.value)
+        }));
+      existingLines.push({ text: '', time: null });
+      renderLyricsContributionRows(existingLines);
+      dom.lyricsContributionList?.lastElementChild?.querySelector('.lyrics-contribution-line-text')?.focus();
+    });
     if (dom.sheetLyricsCard) {
       dom.sheetLyricsCard.addEventListener('click', openLyricsStage);
     }
@@ -4367,6 +4644,10 @@
 
     // Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
+      if (dom.lyricsContributionModal && !dom.lyricsContributionModal.classList.contains('hidden')) {
+        if (e.key === 'Escape') closeLyricsContributionEditor();
+        return;
+      }
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
         return;
       }
