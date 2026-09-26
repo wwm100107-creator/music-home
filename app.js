@@ -467,6 +467,12 @@
     lyricsContributionPlain: document.getElementById('lyricsContributionPlain'),
     lyricsContributionBuildBtn: document.getElementById('lyricsContributionBuildBtn'),
     lyricsContributionWordModeBtn: document.getElementById('lyricsContributionWordModeBtn'),
+    lyricsContributionPlayPauseBtn: document.getElementById('lyricsContributionPlayPauseBtn'),
+    lyricsContributionSeekBackBtn: document.getElementById('lyricsContributionSeekBackBtn'),
+    lyricsContributionSeekForwardBtn: document.getElementById('lyricsContributionSeekForwardBtn'),
+    lyricsContributionTimeline: document.getElementById('lyricsContributionTimeline'),
+    lyricsContributionCurrentTime: document.getElementById('lyricsContributionCurrentTime'),
+    lyricsContributionDuration: document.getElementById('lyricsContributionDuration'),
     lyricsContributionLineCount: document.getElementById('lyricsContributionLineCount'),
     lyricsContributionList: document.getElementById('lyricsContributionList'),
     lyricsContributionPlayhead: document.getElementById('lyricsContributionPlayhead'),
@@ -1509,6 +1515,7 @@
   let lyricsAbortController = null;
   let lyricsContributionTrackId = null;
   let lyricsContributionWordMode = false;
+  let lyricsContributionIsScrubbing = false;
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -1681,6 +1688,47 @@
     }
 
     return Number(state.currentTrack?.durationSec) || parseDurationToSec(state.currentTrack?.duration) || 210;
+  }
+
+  function updateLyricsContributionTimeline() {
+    if (!dom.lyricsContributionModal || dom.lyricsContributionModal.classList.contains('hidden')) return;
+
+    const duration = Math.max(0, Number(getLyricDurationSeconds()) || 0);
+    const currentTime = Math.max(0, Math.min(getCurrentAudioTime(), duration || Infinity));
+    const shownTime = lyricsContributionIsScrubbing
+      ? Number(dom.lyricsContributionTimeline?.value) || 0
+      : currentTime;
+    const isPlaying = Boolean(state.isPlaying);
+
+    if (dom.lyricsContributionTimeline) {
+      dom.lyricsContributionTimeline.max = String(duration);
+      if (!lyricsContributionIsScrubbing) {
+        dom.lyricsContributionTimeline.value = String(currentTime);
+      }
+      dom.lyricsContributionTimeline.setAttribute(
+        'aria-valuetext',
+        `${formatLyricsContributionTime(shownTime)} / ${formatLyricsContributionTime(duration)}`
+      );
+    }
+    if (dom.lyricsContributionCurrentTime) {
+      dom.lyricsContributionCurrentTime.textContent = formatLyricsContributionTime(shownTime);
+    }
+    if (dom.lyricsContributionDuration) {
+      dom.lyricsContributionDuration.textContent = formatLyricsContributionTime(duration);
+    }
+    if (dom.lyricsContributionPlayPauseBtn) {
+      dom.lyricsContributionPlayPauseBtn.textContent = isPlaying ? 'Ⅱ Tạm dừng' : '▶ Phát';
+      dom.lyricsContributionPlayPauseBtn.setAttribute('aria-label', isPlaying ? 'Tạm dừng nhạc' : 'Phát nhạc');
+      dom.lyricsContributionPlayPauseBtn.setAttribute('aria-pressed', String(isPlaying));
+      dom.lyricsContributionPlayPauseBtn.classList.toggle('is-playing', isPlaying);
+    }
+  }
+
+  function seekLyricsContributionBy(deltaSeconds) {
+    const duration = Math.max(0, Number(getLyricDurationSeconds()) || 0);
+    const target = Math.max(0, Math.min(getCurrentAudioTime() + deltaSeconds, duration || Infinity));
+    seekToSeconds(target);
+    updateLyricsContributionTimeline();
   }
 
   // Lời tiếng Việt thường được ghi theo âm tiết cách nhau bởi dấu cách. Mỗi âm tiết
@@ -2140,6 +2188,7 @@
     if (dom.lyricsContributionPlayhead) {
       dom.lyricsContributionPlayhead.textContent = `Vị trí phát: ${formatLyricsContributionTime(getCurrentAudioTime())}`;
     }
+    updateLyricsContributionTimeline();
     setTimeout(() => dom.lyricsContributionPlain?.focus(), 0);
   }
 
@@ -2689,6 +2738,7 @@
   setInterval(() => {
     if (dom.lyricsContributionPlayhead && dom.lyricsContributionModal && !dom.lyricsContributionModal.classList.contains('hidden')) {
       dom.lyricsContributionPlayhead.textContent = `Vị trí phát: ${formatLyricsContributionTime(getCurrentAudioTime())}`;
+      updateLyricsContributionTimeline();
     }
     if (state.isPlaying && !state.isScrubbing) {
       if (state.activeEngine === 'audio' || state.currentTrack?.previewUrl) {
@@ -4693,6 +4743,38 @@
     dom.lyricsContributionCloseBtn?.addEventListener('click', closeLyricsContributionEditor);
     dom.lyricsContributionCancelBtn?.addEventListener('click', closeLyricsContributionEditor);
     dom.lyricsContributionBackdrop?.addEventListener('click', closeLyricsContributionEditor);
+    dom.lyricsContributionPlayPauseBtn?.addEventListener('click', () => {
+      togglePlayPause();
+      updateLyricsContributionTimeline();
+    });
+    dom.lyricsContributionSeekBackBtn?.addEventListener('click', () => seekLyricsContributionBy(-5));
+    dom.lyricsContributionSeekForwardBtn?.addEventListener('click', () => seekLyricsContributionBy(5));
+    dom.lyricsContributionTimeline?.addEventListener('pointerdown', () => {
+      lyricsContributionIsScrubbing = true;
+    });
+    dom.lyricsContributionTimeline?.addEventListener('pointerup', () => {
+      lyricsContributionIsScrubbing = false;
+    });
+    dom.lyricsContributionTimeline?.addEventListener('pointercancel', () => {
+      lyricsContributionIsScrubbing = false;
+    });
+    dom.lyricsContributionTimeline?.addEventListener('input', (event) => {
+      lyricsContributionIsScrubbing = true;
+      const duration = Math.max(0, Number(getLyricDurationSeconds()) || 0);
+      event.target.setAttribute(
+        'aria-valuetext',
+        `${formatLyricsContributionTime(event.target.value)} / ${formatLyricsContributionTime(duration)}`
+      );
+      if (dom.lyricsContributionCurrentTime) {
+        dom.lyricsContributionCurrentTime.textContent = formatLyricsContributionTime(event.target.value);
+      }
+    });
+    dom.lyricsContributionTimeline?.addEventListener('change', (event) => {
+      const target = Number(event.target.value);
+      if (Number.isFinite(target)) seekToSeconds(target);
+      lyricsContributionIsScrubbing = false;
+      updateLyricsContributionTimeline();
+    });
     dom.lyricsContributionBuildBtn?.addEventListener('click', buildLyricsContributionRows);
     dom.lyricsContributionWordModeBtn?.addEventListener('click', () => {
       const draft = getLyricsContributionDraft();

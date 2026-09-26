@@ -7385,6 +7385,79 @@ body.twilight-mode .bg-playback-chip.disabled {
   font-size: 0.76rem;
 }
 
+.lyrics-contribution-player {
+  flex: 0 0 auto;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(127, 201, 94, 0.24);
+  border-radius: 13px;
+  background: linear-gradient(115deg, rgba(82, 183, 136, 0.12), rgba(255, 209, 102, 0.055));
+}
+
+.lyrics-contribution-player-heading,
+.lyrics-contribution-player-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lyrics-contribution-player-heading {
+  color: #d8efcf;
+  font-size: 0.78rem;
+}
+
+.lyrics-contribution-player-time {
+  color: rgba(235, 244, 232, 0.72);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lyrics-contribution-timeline {
+  display: block;
+  width: 100%;
+  height: 24px;
+  margin: 5px 0 3px;
+  accent-color: #8ed081;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+
+.lyrics-contribution-player-controls {
+  justify-content: center;
+}
+
+.lyrics-contribution-seek,
+.lyrics-contribution-play-pause {
+  min-height: 34px;
+  border: 1px solid rgba(127, 201, 94, 0.26);
+  border-radius: 9px;
+  padding: 6px 12px;
+  color: #dff3d6;
+  background: rgba(45, 106, 79, 0.23);
+  font: 700 0.76rem 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+}
+
+.lyrics-contribution-play-pause {
+  min-width: 112px;
+  border-color: rgba(142, 208, 129, 0.55);
+  color: #102415;
+  background: #8ed081;
+}
+
+.lyrics-contribution-play-pause.is-playing {
+  color: #f3f8ed;
+  background: rgba(45, 106, 79, 0.52);
+}
+
+.lyrics-contribution-seek:focus-visible,
+.lyrics-contribution-play-pause:focus-visible,
+.lyrics-contribution-timeline:focus-visible {
+  outline: 2px solid #ffd166;
+  outline-offset: 2px;
+}
+
 .lyrics-contribution-list {
   flex: 1 1 auto;
   min-height: 80px;
@@ -7575,6 +7648,10 @@ body.twilight-mode .bg-playback-chip.disabled {
   .lyrics-contribution-modal { padding: 8px; }
   .lyrics-contribution-window { padding: 15px 12px; border-radius: 17px; }
   .lyrics-contribution-list { max-height: 34vh; }
+  .lyrics-contribution-player { margin-bottom: 8px; padding: 9px; }
+  .lyrics-contribution-player-heading { font-size: 0.72rem; }
+  .lyrics-contribution-seek,
+  .lyrics-contribution-play-pause { min-height: 38px; padding: 7px 10px; }
   .lyrics-contribution-row { grid-template-columns: 22px minmax(80px, 1fr) 74px 68px 28px; gap: 5px; }
   .lyrics-contribution-row textarea { padding: 7px 6px; font-size: 0.76rem; }
   .lyrics-contribution-row input { padding: 8px 5px; font-size: 0.72rem; }

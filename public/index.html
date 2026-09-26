@@ -1107,6 +1107,18 @@
         <button type="button" class="lyrics-contribution-word-mode" id="lyricsContributionWordModeBtn" aria-pressed="false">🎤 Chỉnh từng từ</button>
         <span id="lyricsContributionLineCount">0 dòng</span>
       </div>
+      <section class="lyrics-contribution-player" aria-label="Nghe và tua nhạc khi căn lời">
+        <div class="lyrics-contribution-player-heading">
+          <strong>Nghe và căn timeline</strong>
+          <span class="lyrics-contribution-player-time"><span id="lyricsContributionCurrentTime">00:00.00</span> / <span id="lyricsContributionDuration">00:00.00</span></span>
+        </div>
+        <input id="lyricsContributionTimeline" class="lyrics-contribution-timeline" type="range" min="0" max="210" value="0" step="0.05" aria-label="Tua đến vị trí trong bài hát" aria-valuetext="00:00.00 / 00:00.00">
+        <div class="lyrics-contribution-player-controls">
+          <button type="button" class="lyrics-contribution-seek" id="lyricsContributionSeekBackBtn" aria-label="Tua lùi 5 giây">−5 giây</button>
+          <button type="button" class="lyrics-contribution-play-pause" id="lyricsContributionPlayPauseBtn" aria-label="Phát nhạc" aria-pressed="false">▶ Phát</button>
+          <button type="button" class="lyrics-contribution-seek" id="lyricsContributionSeekForwardBtn" aria-label="Tua tới 5 giây">+5 giây</button>
+        </div>
+      </section>
       <div class="lyrics-contribution-list" id="lyricsContributionList" aria-label="Các câu hát và thời điểm"></div>
       <div class="lyrics-contribution-footer">
         <span id="lyricsContributionPlayhead">Vị trí phát: 00:00.00</span>
