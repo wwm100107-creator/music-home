@@ -466,6 +466,7 @@
     lyricsContributionTrackLabel: document.getElementById('lyricsContributionTrackLabel'),
     lyricsContributionPlain: document.getElementById('lyricsContributionPlain'),
     lyricsContributionBuildBtn: document.getElementById('lyricsContributionBuildBtn'),
+    lyricsContributionWordModeBtn: document.getElementById('lyricsContributionWordModeBtn'),
     lyricsContributionLineCount: document.getElementById('lyricsContributionLineCount'),
     lyricsContributionList: document.getElementById('lyricsContributionList'),
     lyricsContributionPlayhead: document.getElementById('lyricsContributionPlayhead'),
@@ -1507,6 +1508,7 @@
   // ==========================================================================
   let lyricsAbortController = null;
   let lyricsContributionTrackId = null;
+  let lyricsContributionWordMode = false;
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -1883,6 +1885,126 @@
     return `${String(minutes).padStart(2, '0')}:${remainingSeconds}`;
   }
 
+  function readLyricsContributionTime(value) {
+    if (value === null || value === undefined || String(value).trim() === '') return null;
+    const time = Number(value);
+    return Number.isFinite(time) ? time : null;
+  }
+
+  function getLyricsContributionDraft() {
+    return [...(dom.lyricsContributionList?.querySelectorAll('.lyrics-contribution-row') || [])]
+      .map(row => {
+        const wordsChanged = row.dataset.wordsChanged === 'true';
+        const wordCells = [...row.querySelectorAll('.lyrics-contribution-word-cell')];
+        const storedWords = Array.isArray(row._storedWords) ? row._storedWords.filter(word => word && typeof word.text === 'string') : [];
+        const words = wordsChanged && wordCells.length
+          ? wordCells.map(cell => ({
+            text: cell.dataset.wordText || '',
+            time: readLyricsContributionTime(cell.querySelector('.lyrics-contribution-word-time')?.value)
+          }))
+          : storedWords.map(word => ({
+            text: String(word.text || ''),
+            time: readLyricsContributionTime(word.time)
+          }));
+        const hasInvalidWordTime = row.dataset.wordTimeInvalid === 'true' ||
+          wordCells.some(cell => {
+            const input = cell.querySelector('.lyrics-contribution-word-time');
+            return input?.value.trim() !== '' && readLyricsContributionTime(input?.value) === null;
+          });
+        const wordStart = words.length && words.every(word => Number.isFinite(word.time))
+          ? words[0].time
+          : null;
+        return {
+          text: row.querySelector('.lyrics-contribution-line-text')?.value || '',
+          time: wordStart ?? readLyricsContributionTime(row.querySelector('.lyrics-contribution-line-time')?.value),
+          words,
+          wordsChanged,
+          hasInvalidWordTime
+        };
+      });
+  }
+
+  function renderLyricsContributionWordFields(row, lineIndex, words) {
+    const wordEditor = row.querySelector('.lyrics-contribution-word-editor');
+    if (!wordEditor) return;
+    wordEditor.replaceChildren();
+
+    const note = document.createElement('p');
+    note.className = 'lyrics-contribution-word-note';
+    note.textContent = 'Bấm ⏱ đúng lúc từng từ bắt đầu, hoặc nhập mốc giây bên dưới.';
+    wordEditor.appendChild(note);
+
+    const wordList = document.createElement('div');
+    wordList.className = 'lyrics-contribution-word-list';
+    if (!words.length) {
+      const empty = document.createElement('span');
+      empty.className = 'lyrics-contribution-word-empty';
+      empty.textContent = 'Nhập lời câu này để tạo các từ cần căn.';
+      wordList.appendChild(empty);
+    }
+
+    words.forEach((word, wordIndex) => {
+      const cell = document.createElement('div');
+      cell.className = 'lyrics-contribution-word-cell';
+      cell.dataset.wordText = String(word.text || '');
+
+      const label = document.createElement('span');
+      label.className = 'lyrics-contribution-word-label';
+      label.textContent = String(word.text || '').trim() || String(word.text || '');
+
+      const controls = document.createElement('div');
+      controls.className = 'lyrics-contribution-word-controls';
+
+      const timeInput = document.createElement('input');
+      timeInput.className = 'lyrics-contribution-word-time';
+      timeInput.type = 'number';
+      timeInput.min = '0';
+      timeInput.step = '0.01';
+      timeInput.inputMode = 'decimal';
+      timeInput.placeholder = 'giây';
+      timeInput.setAttribute('aria-label', `Câu ${lineIndex + 1}, từ ${wordIndex + 1}: thời điểm bắt đầu bằng giây`);
+      const time = readLyricsContributionTime(word.time);
+      if (time !== null) timeInput.value = time.toFixed(2);
+      timeInput.addEventListener('input', () => {
+        row.dataset.wordsChanged = 'true';
+        row.dataset.wordTimeInvalid = [...wordEditor.querySelectorAll('.lyrics-contribution-word-time')]
+          .some(input => input.value.trim() !== '' && readLyricsContributionTime(input.value) === null)
+          ? 'true'
+          : 'false';
+        if (wordIndex === 0 && timeInput.value !== '') {
+          const lineTimeInput = row.querySelector('.lyrics-contribution-line-time');
+          if (lineTimeInput) lineTimeInput.value = Number(timeInput.value).toFixed(2);
+        }
+      });
+
+      const markButton = document.createElement('button');
+      markButton.type = 'button';
+      markButton.className = 'lyrics-contribution-word-mark';
+      markButton.textContent = '⏱';
+      markButton.title = `Lấy mốc cho từ “${String(word.text || '').trim()}”`;
+      markButton.setAttribute('aria-label', `Lấy mốc câu ${lineIndex + 1}, từ ${wordIndex + 1}`);
+      markButton.addEventListener('click', () => {
+        timeInput.value = getCurrentAudioTime().toFixed(2);
+        timeInput.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+
+      controls.append(timeInput, markButton);
+      cell.append(label, controls);
+      wordList.appendChild(cell);
+    });
+    wordEditor.appendChild(wordList);
+  }
+
+  function setLyricsContributionWordMode(enabled) {
+    lyricsContributionWordMode = Boolean(enabled);
+    const button = dom.lyricsContributionWordModeBtn;
+    if (button) {
+      button.setAttribute('aria-pressed', String(lyricsContributionWordMode));
+      button.classList.toggle('is-active', lyricsContributionWordMode);
+      button.textContent = lyricsContributionWordMode ? '✓ Đang chỉnh từng từ' : '🎤 Chỉnh từng từ';
+    }
+  }
+
   function renderLyricsContributionRows(lines = []) {
     if (!dom.lyricsContributionList) return;
     dom.lyricsContributionList.replaceChildren();
@@ -1899,6 +2021,11 @@
     draft.forEach((line, index) => {
       const row = document.createElement('div');
       row.className = 'lyrics-contribution-row';
+      row.dataset.wordsChanged = line?.wordsChanged ? 'true' : 'false';
+      row.dataset.wordTimeInvalid = line?.hasInvalidWordTime ? 'true' : 'false';
+      row._storedWords = Array.isArray(line?.words)
+        ? line.words.filter(word => word && typeof word.text === 'string').map(word => ({ ...word }))
+        : [];
 
       const rowIndex = document.createElement('span');
       rowIndex.className = 'lyrics-contribution-row-index';
@@ -1933,6 +2060,27 @@
         timeInput.dispatchEvent(new Event('input', { bubbles: true }));
       });
 
+      const wordEditor = document.createElement('div');
+      wordEditor.className = 'lyrics-contribution-word-editor';
+      wordEditor.hidden = !lyricsContributionWordMode;
+      row.appendChild(wordEditor);
+      const lyricWords = splitLyricIntoWords(textInput.value);
+      const storedWords = row._storedWords;
+      const hasMatchingWordTimes = storedWords.length === lyricWords.length &&
+        storedWords.every((word, wordIndex) => String(word.text || '') === lyricWords[wordIndex]);
+      const wordDraft = lyricWords.map((word, wordIndex) => ({
+        text: word,
+        time: hasMatchingWordTimes ? readLyricsContributionTime(storedWords[wordIndex]?.time) : null
+      }));
+      if (lyricsContributionWordMode) renderLyricsContributionWordFields(row, index, wordDraft);
+
+      textInput.addEventListener('input', () => {
+        row._storedWords = splitLyricIntoWords(textInput.value).map(word => ({ text: word, time: null }));
+        row.dataset.wordsChanged = 'true';
+        row.dataset.wordTimeInvalid = 'false';
+        if (lyricsContributionWordMode) renderLyricsContributionWordFields(row, index, row._storedWords);
+      });
+
       const removeButton = document.createElement('button');
       removeButton.type = 'button';
       removeButton.className = 'lyrics-contribution-remove';
@@ -1940,18 +2088,11 @@
       removeButton.title = `Xóa câu ${index + 1}`;
       removeButton.setAttribute('aria-label', `Xóa câu ${index + 1}`);
       removeButton.addEventListener('click', () => {
-        const nextDraft = [...dom.lyricsContributionList.querySelectorAll('.lyrics-contribution-row')]
-          .filter(candidate => candidate !== row)
-          .map(candidate => ({
-            text: candidate.querySelector('.lyrics-contribution-line-text')?.value || '',
-            time: candidate.querySelector('.lyrics-contribution-line-time')?.value === ''
-              ? null
-              : Number(candidate.querySelector('.lyrics-contribution-line-time')?.value)
-          }));
+        const nextDraft = getLyricsContributionDraft().filter((_, rowIndex) => rowIndex !== index);
         renderLyricsContributionRows(nextDraft);
       });
 
-      row.append(rowIndex, textInput, timeInput, markButton, removeButton);
+      row.append(rowIndex, textInput, timeInput, markButton, removeButton, wordEditor);
       fragment.appendChild(row);
     });
     dom.lyricsContributionList.appendChild(fragment);
@@ -1974,15 +2115,22 @@
     }
 
     let initialLines = state.lyricsTrackId === track.id
-      ? state.lyrics.map(line => ({ text: line.text, time: Number(line.time) }))
+      ? state.lyrics.map(line => ({
+        text: line.text,
+        time: readLyricsContributionTime(line.time),
+        words: !line.wordsEstimated && Array.isArray(line.words)
+          ? line.words.filter(word => word && typeof word.text === 'string').map(word => ({ ...word }))
+          : []
+      }))
       : [];
     if (!initialLines.length && typeof track.lyrics === 'string' && track.lyrics.trim()) {
       const parsed = parseLRC(track.lyrics);
       initialLines = parsed.length
-        ? parsed.map(line => ({ text: line.text, time: Number(line.time) }))
-        : track.lyrics.split(/\r?\n/).map(text => ({ text: text.trim(), time: null })).filter(line => line.text);
+        ? parsed.map(line => ({ text: line.text, time: Number(line.time), words: line.words || [] }))
+        : track.lyrics.split(/\r?\n/).map(text => ({ text: text.trim(), time: null, words: [] })).filter(line => line.text);
     }
 
+    setLyricsContributionWordMode(false);
     if (dom.lyricsContributionPlain) {
       dom.lyricsContributionPlain.value = initialLines.map(line => line.text).join('\n');
     }
@@ -2011,7 +2159,7 @@
       showToast('Lời bài hát có quá nhiều dòng (tối đa 1.200).');
       return;
     }
-    renderLyricsContributionRows(lines.map(text => ({ text, time: null })));
+    renderLyricsContributionRows(lines.map(text => ({ text, time: null, words: [] })));
   }
 
   async function saveLyricsContribution() {
@@ -2025,12 +2173,33 @@
 
     const durationSec = Number(getLyricDurationSeconds()) || Number(track.durationSec) || parseDurationToSec(track.duration) || 0;
     const rows = [...(dom.lyricsContributionList?.querySelectorAll('.lyrics-contribution-row') || [])];
-    const lines = rows.map(row => ({
-      text: row.querySelector('.lyrics-contribution-line-text')?.value.trim() || '',
-      time: row.querySelector('.lyrics-contribution-line-time')?.value === ''
-        ? null
-        : Number(row.querySelector('.lyrics-contribution-line-time')?.value)
-    }));
+    const draft = getLyricsContributionDraft();
+    const lines = draft.map((line, index) => {
+      const rowWordInputs = [...(rows[index]?.querySelectorAll('.lyrics-contribution-word-time') || [])];
+      const hasInvalidWordTime = line.hasInvalidWordTime || rowWordInputs.some(input => input.value.trim() !== '' &&
+        readLyricsContributionTime(input.value) === null);
+      if (hasInvalidWordTime) {
+        showToast(`Mốc thời gian ở một từ của câu ${index + 1} không hợp lệ.`);
+        return null;
+      }
+
+      const hasAnyWordTime = line.words.some(word => word.time !== null && word.time !== undefined);
+      const hasCompleteWordTimes = line.words.length > 0 && line.words.every(word => Number.isFinite(word.time));
+      if (hasAnyWordTime && !hasCompleteWordTimes) {
+        showToast(`Câu ${index + 1}: hãy lấy mốc cho tất cả từ, hoặc xóa các mốc từ để chỉ căn theo dòng.`);
+        return null;
+      }
+
+      const timedWords = hasCompleteWordTimes
+        ? line.words.map(word => ({ text: String(word.text || ''), time: Number(word.time) }))
+        : [];
+      return {
+        text: String(line.text || '').trim(),
+        time: timedWords.length ? timedWords[0].time : line.time,
+        ...(timedWords.length ? { words: timedWords } : {})
+      };
+    });
+    if (lines.some(line => !line)) return;
 
     if (lines.length < 2) {
       showToast('Hãy thêm ít nhất hai câu lời bài hát.');
@@ -2046,6 +2215,22 @@
       if (line.time < 0 || line.time > durationSec || line.time < previousTime) {
         showToast(`Kiểm tra timeline ở câu ${index + 1}; thời điểm phải tăng dần trong bài hát.`);
         return;
+      }
+      if (line.words) {
+        let previousWordTime = -1;
+        for (let wordIndex = 0; wordIndex < line.words.length; wordIndex++) {
+          const word = line.words[wordIndex];
+          if (!word.text.trim() || !Number.isFinite(word.time) || word.time < previousWordTime ||
+              word.time < 0 || word.time > durationSec) {
+            showToast(`Kiểm tra mốc của từ ${wordIndex + 1}, câu ${index + 1}; các mốc phải tăng dần trong bài.`);
+            return;
+          }
+          previousWordTime = word.time;
+        }
+        if (line.words.map(word => word.text).join('').trim() !== line.text) {
+          showToast(`Nội dung từ trong câu ${index + 1} đã thay đổi; hãy căn lại các từ của câu này.`);
+          return;
+        }
       }
       previousTime = line.time;
     }
@@ -2086,7 +2271,12 @@
       state.lyricsTrackId = track.id;
       state.lyricsLoading = false;
       state.activeLyricIndex = -1;
-      if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.quillScroll} Lời cộng đồng • Đồng bộ theo câu`;
+      const hasCommunityWordTimings = result.lines.some(line => Array.isArray(line.words) && line.words.length > 0);
+      if (dom.lyricsSyncBadge) {
+        dom.lyricsSyncBadge.innerHTML = hasCommunityWordTimings
+          ? `${GhibliIcons.quillScroll} Lời cộng đồng • Đồng bộ từng từ`
+          : `${GhibliIcons.quillScroll} Lời cộng đồng • Đồng bộ theo câu`;
+      }
       renderLyricsLines(state.lyrics);
       if (dom.sheetLyricsActiveText) dom.sheetLyricsActiveText.textContent = state.lyrics[0]?.text || '';
       if (dom.sheetLyricsNextText) dom.sheetLyricsNextText.textContent = state.lyrics[1]?.text || '';
@@ -2399,7 +2589,11 @@
         const hasEstimatedWords = state.lyrics.some(line => line.wordsEstimated);
         if (dom.lyricsSyncBadge) {
           if (data.source === 'community') {
-            dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.quillScroll} Lời cộng đồng • Đồng bộ theo câu`;
+            const hasWordTimings = data.syncMethod === 'community-word-sync' ||
+              state.lyrics.some(line => Array.isArray(line.words) && line.words.length > 0);
+            dom.lyricsSyncBadge.innerHTML = hasWordTimings
+              ? `${GhibliIcons.quillScroll} Lời cộng đồng • Đồng bộ từng từ`
+              : `${GhibliIcons.quillScroll} Lời cộng đồng • Đồng bộ theo câu`;
           } else if (data.syncMethod === 'youtube-captions') {
             const confidence = Math.round((Number(data.syncConfidence) || 0) * 100);
             dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.sparkleStar} Tự căn theo phụ đề video${confidence ? ` • Khớp ${confidence}%` : ''}`;
@@ -4500,16 +4694,15 @@
     dom.lyricsContributionCancelBtn?.addEventListener('click', closeLyricsContributionEditor);
     dom.lyricsContributionBackdrop?.addEventListener('click', closeLyricsContributionEditor);
     dom.lyricsContributionBuildBtn?.addEventListener('click', buildLyricsContributionRows);
+    dom.lyricsContributionWordModeBtn?.addEventListener('click', () => {
+      const draft = getLyricsContributionDraft();
+      setLyricsContributionWordMode(!lyricsContributionWordMode);
+      renderLyricsContributionRows(draft);
+    });
     dom.lyricsContributionSaveBtn?.addEventListener('click', saveLyricsContribution);
     dom.lyricsContributionAddLineBtn?.addEventListener('click', () => {
-      const existingLines = [...(dom.lyricsContributionList?.querySelectorAll('.lyrics-contribution-row') || [])]
-        .map(row => ({
-          text: row.querySelector('.lyrics-contribution-line-text')?.value || '',
-          time: row.querySelector('.lyrics-contribution-line-time')?.value === ''
-            ? null
-            : Number(row.querySelector('.lyrics-contribution-line-time')?.value)
-        }));
-      existingLines.push({ text: '', time: null });
+      const existingLines = getLyricsContributionDraft();
+      existingLines.push({ text: '', time: null, words: [], wordsChanged: false });
       renderLyricsContributionRows(existingLines);
       dom.lyricsContributionList?.lastElementChild?.querySelector('.lyrics-contribution-line-text')?.focus();
     });

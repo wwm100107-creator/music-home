@@ -3036,9 +3036,39 @@ apiRouter.post('/lyrics/contribute', rateLimit({ maxRequests: 5, windowMs: 60000
   const lines = [];
   let previousTime = -1;
   let totalCharacters = 0;
+  let totalWords = 0;
   for (const sourceLine of inputLines) {
     const text = typeof sourceLine?.text === 'string' ? sourceLine.text.trim() : '';
-    const time = Number(sourceLine?.time);
+    const sourceWords = sourceLine?.words;
+    let words = [];
+    if (sourceWords !== undefined) {
+      if (!Array.isArray(sourceWords) || sourceWords.length === 0 || sourceWords.length > 500) {
+        return res.status(400).json({ success: false, error: 'Danh sách từ đồng bộ trong một dòng không hợp lệ.' });
+      }
+
+      let previousWordTime = -1;
+      for (const sourceWord of sourceWords) {
+        const wordText = typeof sourceWord?.text === 'string' ? sourceWord.text : '';
+        const hasTime = sourceWord?.time !== null && sourceWord?.time !== undefined && sourceWord?.time !== '';
+        const wordTime = hasTime ? Number(sourceWord.time) : NaN;
+        if (!wordText.trim() || wordText.length > 200 || !Number.isFinite(wordTime) ||
+            wordTime < 0 || wordTime > durationSec || wordTime < previousWordTime) {
+          return res.status(400).json({ success: false, error: 'Mỗi từ cần có lời và mốc thời gian tăng dần trong bài hát.' });
+        }
+        words.push({ time: Number(wordTime.toFixed(3)), text: wordText });
+        previousWordTime = wordTime;
+      }
+
+      if (words.map(word => word.text).join('').trim() !== text) {
+        return res.status(400).json({ success: false, error: 'Các từ đồng bộ phải khớp chính xác với lời của dòng.' });
+      }
+      totalWords += words.length;
+      if (totalWords > 20000) {
+        return res.status(400).json({ success: false, error: 'Bài hát có quá nhiều mốc từ đồng bộ.' });
+      }
+    }
+
+    const time = words.length ? words[0].time : Number(sourceLine?.time);
     if (!text || text.length > 700 || !Number.isFinite(time) || time < 0 || time > durationSec || time < previousTime) {
       return res.status(400).json({ success: false, error: 'Mỗi dòng cần có lời và mốc thời gian tăng dần trong thời lượng bài hát.' });
     }
@@ -3047,7 +3077,7 @@ apiRouter.post('/lyrics/contribute', rateLimit({ maxRequests: 5, windowMs: 60000
       return res.status(400).json({ success: false, error: 'Tổng lời bài hát vượt giới hạn cho phép.' });
     }
     const roundedTime = Number(time.toFixed(3));
-    lines.push({ time: roundedTime, text });
+    lines.push({ time: roundedTime, text, ...(words.length ? { words } : {}) });
     previousTime = roundedTime;
   }
 
@@ -3088,7 +3118,7 @@ apiRouter.post('/lyrics/contribute', rateLimit({ maxRequests: 5, windowMs: 60000
     success: true,
     source: 'community',
     synced: true,
-    syncMethod: 'community-line-sync',
+    syncMethod: lines.some(line => line.words?.length > 0) ? 'community-word-sync' : 'community-line-sync',
     trackName: record.title,
     artistName: record.artist,
     duration: record.durationSec,
@@ -3124,6 +3154,7 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
 
   const communityLyrics = findCommunityLyrics(cleanTitle, cleanArtist, durSec);
   if (communityLyrics) {
+    const hasWordTimings = communityLyrics.lines.some(line => Array.isArray(line.words) && line.words.length > 0);
     return res.json({
       success: true,
       synced: true,
@@ -3134,7 +3165,7 @@ apiRouter.get('/lyrics', rateLimit({ maxRequests: 120, windowMs: 60000, endpoint
       duration: communityLyrics.durationSec,
       lines: communityLyrics.lines,
       plain: communityLyrics.lines.map(line => line.text).join('\n'),
-      syncMethod: 'community-line-sync',
+      syncMethod: hasWordTimings ? 'community-word-sync' : 'community-line-sync',
       revision: communityLyrics.revision
     });
   }
