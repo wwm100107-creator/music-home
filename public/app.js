@@ -1039,12 +1039,13 @@
   }
 
   function initMobileFullscreenSheet() {
-    // Open sheet when bottom player capsule is tapped on mobile
+    // Reopen the same lyrics stage shown after selecting a track, rather than a second player UI.
     if (dom.bottomPlayer) {
       dom.bottomPlayer.addEventListener('click', (e) => {
         if (window.innerWidth > 768) return;
         if (e.target.closest('button, input, a, .leaf-heart-btn, .wood-disc-play-btn, .nature-ctrl-btn')) return;
-        openMobileFullscreenSheet();
+        if (!state.currentTrack) return;
+        openLyricsStage();
       });
     }
 
@@ -1519,6 +1520,9 @@
 
   function openLyricsStage() {
     if (!dom.ghibliLyricsStage) return;
+    if (dom.mobileFullscreenSheet && !dom.mobileFullscreenSheet.classList.contains('hidden')) {
+      closeMobileFullscreenSheet();
+    }
     state.isLyricsOpen = true;
     dom.ghibliLyricsStage.classList.remove('hidden');
     if (dom.lyricsToggleBtn) dom.lyricsToggleBtn.classList.add('active');
