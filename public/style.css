@@ -9748,3 +9748,59 @@ body.eco-mode-active .nature-overlay {
 body.eco-mode-active .magic-cursor-canvas {
   display: none !important;
 }
+
+/* Giữ các nút đóng góp lời luôn nằm gọn trong header trên màn hình điện thoại. */
+.lyrics-sync-compact,
+.lyrics-contribute-compact {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .lyrics-stage-header {
+    gap: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .stage-header-left {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .stage-ghibli-badge {
+    font-size: 0.66rem;
+    letter-spacing: 0.2px;
+  }
+
+  .stage-header-right {
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+
+  .lyrics-sync-badge {
+    padding: 4px 6px;
+    font-size: 0.66rem;
+    white-space: nowrap;
+  }
+
+  .lyrics-sync-full,
+  .lyrics-contribute-full {
+    display: none;
+  }
+
+  .lyrics-sync-compact,
+  .lyrics-contribute-compact {
+    display: inline;
+  }
+
+  .lyrics-contribute-trigger {
+    padding: 6px 8px;
+    font-size: 0.68rem;
+  }
+
+  .lyrics-close-btn {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+  }
+}

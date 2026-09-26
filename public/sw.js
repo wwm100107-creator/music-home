@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const CACHE_NAME = 'antigravity-ghibli-v4.9-community-lyrics';
+const CACHE_NAME = 'antigravity-ghibli-v5.0-community-lyrics';
 
 // Danh sách các tài nguyên tĩnh cốt lõi cần lưu trữ offline
 const STATIC_ASSETS = [
@@ -37,7 +37,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('🍃 [Service Worker] Pre-caching Ghibli UI Shell v4.9...');
+      console.log('🍃 [Service Worker] Pre-caching Ghibli UI Shell v5.0...');
       return cache.addAll(STATIC_ASSETS);
     }).then(() => self.skipWaiting())
   );
@@ -59,7 +59,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. FETCH: Network-First cho mã nguồn (app.js, index.html) để luôn nhận bản vá mới nhất,
+// 3. FETCH: Network-First cho mã nguồn (app.js, index.html, style.css) để luôn nhận bản vá mới nhất,
 // Cache-First cho tài nguyên hình ảnh/font tĩnh, bỏ qua streaming audio
 self.addEventListener('fetch', (event) => {
   const request = event.request;
@@ -78,8 +78,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Đối với app.js và index.html: Network First để luôn nhận code mới nhất tức thì khi có mạng!
-  const isCodeAsset = url.pathname.endsWith('app.js') || url.pathname.endsWith('index.html') || url.pathname === '/' || url.pathname.endsWith('/');
+  // Đối với app.js, index.html và style.css: Network First để luôn nhận giao diện mới nhất khi có mạng!
+  const isCodeAsset = url.pathname.endsWith('app.js') || url.pathname.endsWith('index.html') || url.pathname.endsWith('style.css') || url.pathname === '/' || url.pathname.endsWith('/');
   if (isCodeAsset) {
     event.respondWith(
       fetch(request)
