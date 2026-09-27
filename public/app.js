@@ -196,7 +196,8 @@
         return { listens: [], skips: [], discovery: [] };
       }
     })(),
-    personalRecommendationTracks: [],
+    recentListeningRelatedTracks: [],
+    tasteDiscoveryTracks: [],
     searchResults: [],
     favorites: [],
     regionalAlbums: [],
@@ -4169,26 +4170,36 @@
       if (!existing || score > existing.score) candidateScores.set(id, { track, score, source });
     };
 
-    profile.listenedTracks.slice().sort((a, b) => b._lastListenedAt - a._lastListenedAt).forEach((track, index) => {
-      add(track, 88 - index * 3, 'qualified-listen');
+    const now = Date.now();
+    const recentListens = profile.listenedTracks
+      .filter(track => !track._lastListenedAt || (now - track._lastListenedAt) / 86400000 <= 30)
+      .sort((a, b) => b._lastListenedAt - a._lastListenedAt);
+    recentListens.forEach((track, index) => {
+      const ageDays = track._lastListenedAt ? Math.max(0, (now - track._lastListenedAt) / 86400000) : 30;
+      add(track, 100 - Math.min(35, ageDays * 1.5) - index * 2, 'recent-listen');
     });
-    (state.personalRecommendationTracks || []).forEach((track, index) => {
-      const keys = getRecommendationArtistKeys(track);
-      const affinity = Math.max(0, ...keys.map(key => profile.recentArtistScores.get(key) || 0));
-      add(track, 43 + Math.min(20, affinity * 6) - index * 0.05, 'taste-related');
+    (state.recentListeningRelatedTracks || []).forEach((track, index) => {
+      const artistAffinity = Math.max(0, ...getRecommendationArtistKeys(track).map(key => profile.recentArtistScores.get(key) || 0));
+      add(track, 77 + Math.min(18, artistAffinity * 4) - index * 0.08, 'recently-related');
     });
-    (state.favorites || []).forEach((track, index) => add(track, 38 - index * 0.4, 'favorite'));
 
-    const chartTracks = [...(state.trendingTracks || []), ...(state.globalTrendingTracks || [])];
-    chartTracks.forEach((track, index) => {
-      const rank = Math.max(1, Number(track.rank) || index + 1);
-      const artistAffinity = Math.max(0, ...getRecommendationArtistKeys(track).map(key => profile.recentArtistScores.get(key) || profile.longTermArtistScores.get(key) || 0));
-      add(track, 8 + Math.min(24, artistAffinity * 7) + 8 / Math.sqrt(rank), 'regional-chart-support');
-    });
+    // Favorites are a start source only for listeners without qualified play history.
+    if (!profile.listenedTracks.length) {
+      (state.favorites || []).forEach((track, index) => add(track, 70 - index * 0.4, 'favorite-start'));
+    }
+
+    // Charts seed this section only for a genuinely cold-start profile.
+    const hasTasteSignals = profile.listenedTracks.length > 0 || profile.favoriteArtists.size > 0;
+    if (!hasTasteSignals) {
+      [...(state.trendingTracks || []), ...(state.globalTrendingTracks || [])].forEach((track, index) => {
+        const rank = Math.max(1, Number(track.rank) || index + 1);
+        add(track, 52 / Math.sqrt(rank), 'cold-start-chart');
+      });
+    }
 
     const ranked = [...candidateScores.values()].map(candidate => ({
       ...candidate,
-      score: candidate.score - Math.max(0, ...getRecommendationArtistKeys(candidate.track).map(key => profile.recentSkippedIds.get(String(candidate.track.id)) || 0)) * 12
+      score: candidate.score - (profile.recentSkippedIds.get(String(candidate.track.id)) || 0) * 18
     })).sort((a, b) => b.score - a.score);
     return diversifyRankedCandidates(ranked, 5, 2);
   }
@@ -4205,7 +4216,7 @@
     const favoriteGenreAffinity = Math.max(0, ...genres.map(genre => profile.favoriteGenreScores.get(genre) || 0));
     const playedAt = profile.lastPlayedAt.get(id) || 0;
     const ageDays = playedAt ? Math.max(0, (Date.now() - playedAt) / 86400000) : 365;
-    const chartTrack = [...(state.trendingTracks || []), ...(state.globalTrendingTracks || [])]
+    const chartTrack = source === 'cold-start-chart' && [...(state.trendingTracks || []), ...(state.globalTrendingTracks || [])]
       .find(item => String(item.id) === id);
     const chartRank = Math.max(1, Number(chartTrack?.rank) || 50);
     const repeatedPlays = profile.trackPlayCounts.get(id) || 0;
@@ -4220,9 +4231,9 @@
     score += Math.min(22, recentGenreAffinity * 8);
     score += Math.min(12, longTermGenreAffinity * 3.5);
     score += Math.min(8, favoriteGenreAffinity * 2.5);
-    score += Math.min(8, 8 / Math.sqrt(chartRank));          // Regional/global relevance is supporting only
-    if (source === 'taste-search') score += 7;
-    if (source === 'taste-search' && track._recommendationSeed &&
+    if (source === 'cold-start-chart') score += Math.min(8, 8 / Math.sqrt(chartRank));
+    if (source === 'taste-discovery') score += 7;
+    if (source === 'taste-discovery' && track._recommendationSeed &&
         !artists.includes(normalizeDiscoverArtist(track._recommendationSeed))) score += 5;
     score += Math.min(7, discoveryIntent * 4);               // Explicit radio exploration, weak intent
     if (playedAt && ageDays <= 10) score -= 28 * (1 - ageDays / 14); // Avoid immediate repetition
@@ -4233,61 +4244,109 @@
     return score;
   }
 
-  let personalizedSearchKey = '';
-  let personalizedSearchAt = 0;
-  let personalizedSearchPromise = null;
+  const recommendationSearchCache = {
+    recent: { key: '', at: 0, promise: null },
+    taste: { key: '', at: 0, promise: null }
+  };
 
-  async function refreshPersonalizedCandidates() {
-    const profile = getRecommendationTasteProfile();
-    const seedEntries = [
-      ...profile.recentArtists.slice(0, 2),
-      ...profile.favoriteArtistNames.slice(0, 2).map(name => [name, 1]),
-      ...profile.frequentArtists.slice(0, 2),
-      ...[...profile.discoveryArtistScores.entries()].sort((a, b) => b[1] - a[1]).slice(0, 1)
-    ];
+  function getRecentArtistSearchSeeds(profile, limit = 1) {
     const seeds = [];
     const seen = new Set();
-    seedEntries.forEach(([name]) => {
-      const key = normalizeDiscoverArtist(name);
-      if (key && !seen.has(key)) {
-        seen.add(key);
-        seeds.push(String(name));
-      }
+    const recentTracks = profile.listenedTracks.filter(track => {
+      return !track._lastListenedAt || (Date.now() - track._lastListenedAt) / 86400000 <= 30;
     });
-    const selectedSeeds = seeds.slice(0, 3);
-    if (!selectedSeeds.length) {
-      state.personalRecommendationTracks = [];
+    recentTracks.slice().sort((a, b) => b._lastListenedAt - a._lastListenedAt).forEach(track => {
+      getDiscoverArtistNames(track).forEach(name => {
+        const key = normalizeDiscoverArtist(name);
+        if (key && !seen.has(key) && seeds.length < limit) {
+          seen.add(key);
+          seeds.push(name);
+        }
+      });
+    });
+    return seeds;
+  }
+
+  function getStableTasteSearchSeeds(profile, limit = 2) {
+    const recentKeys = new Set(getRecentArtistSearchSeeds(profile, 1).map(normalizeDiscoverArtist));
+    const seedEntries = [];
+    profile.favoriteArtistNames.forEach(name => seedEntries.push({ name, score: 100, source: 'favorite' }));
+
+    const replayArtists = new Map();
+    profile.listenedTracks.forEach(track => {
+      if ((profile.trackPlayCounts.get(String(track.id)) || 0) < 2) return;
+      getDiscoverArtistNames(track).forEach(name => {
+        const key = normalizeDiscoverArtist(name);
+        if (!key) return;
+        const score = (profile.trackPlayCounts.get(String(track.id)) || 0) + (profile.longTermArtistScores.get(key) || 0);
+        const existing = replayArtists.get(key);
+        if (!existing || score > existing.score) replayArtists.set(key, { name, score, source: 'replay' });
+      });
+    });
+    seedEntries.push(...replayArtists.values());
+    [...profile.discoveryArtistScores.entries()].forEach(([name, score]) => seedEntries.push({ name, score: score * 0.6, source: 'discovery' }));
+    profile.longTermArtistScores.forEach((score, name) => seedEntries.push({ name, score: score * 0.35, source: 'long-term' }));
+
+    const unique = new Map();
+    seedEntries.forEach(entry => {
+      const key = normalizeDiscoverArtist(entry.name);
+      if (!key) return;
+      const current = unique.get(key);
+      if (!current || entry.score > current.score) unique.set(key, entry);
+    });
+    const ranked = [...unique.values()].sort((a, b) => b.score - a.score);
+    const distinctFromRecent = ranked.filter(entry => !recentKeys.has(normalizeDiscoverArtist(entry.name)));
+    return (distinctFromRecent.length ? distinctFromRecent : ranked).slice(0, limit);
+  }
+
+  async function fetchRecommendationSource(seeds, source, cache, setTracks, rerender) {
+    if (!seeds.length) {
+      cache.key = '';
+      cache.at = 0;
+      setTracks([]);
+      rerender();
       return;
     }
 
-    const requestKey = `${state.selectedCountry}|${selectedSeeds.map(normalizeDiscoverArtist).join('|')}`;
-    if (personalizedSearchKey === requestKey && Date.now() - personalizedSearchAt < 20 * 60 * 1000) return;
-    if (personalizedSearchPromise) return personalizedSearchPromise.then(() => refreshPersonalizedCandidates());
+    const requestKey = `${state.selectedCountry}|${seeds.map(normalizeDiscoverArtist).join('|')}`;
+    if (cache.key === requestKey && Date.now() - cache.at < 20 * 60 * 1000) return;
+    if (cache.promise) return cache.promise.then(() => fetchRecommendationSource(seeds, source, cache, setTracks, rerender));
 
-    personalizedSearchKey = requestKey;
-    personalizedSearchAt = Date.now();
-    personalizedSearchPromise = Promise.all(selectedSeeds.map(async seed => {
+    cache.key = requestKey;
+    cache.at = Date.now();
+    cache.promise = Promise.all(seeds.map(async seed => {
       try {
-        const query = `${seed} similar songs`;
-        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+        const response = await fetch(`/api/search?q=${encodeURIComponent(`${seed} similar songs`)}`);
         if (!response.ok) return [];
         const data = await response.json();
         return (Array.isArray(data.results) ? data.results : []).map(track => ({
           ...track,
-          _recommendationSource: 'taste-search',
+          _recommendationSource: source,
           _recommendationSeed: seed
         }));
       } catch (_) {
         return [];
       }
     })).then(groups => {
-      state.personalRecommendationTracks = uniqueTracksById(groups.flat()).slice(0, 75);
-      renderDiscoverRecentList();
-      renderDiscoverForYouRow();
+      if (cache.key !== requestKey) return;
+      setTracks(uniqueTracksById(groups.flat()).slice(0, 75));
+      rerender();
     }).finally(() => {
-      personalizedSearchPromise = null;
+      cache.promise = null;
     });
-    return personalizedSearchPromise;
+    return cache.promise;
+  }
+
+  async function refreshPersonalizedCandidates() {
+    const profile = getRecommendationTasteProfile();
+    const recentSeeds = getRecentArtistSearchSeeds(profile);
+    const stableTasteSeeds = getStableTasteSearchSeeds(profile);
+    await Promise.all([
+      fetchRecommendationSource(recentSeeds, 'recently-related', recommendationSearchCache.recent,
+        tracks => { state.recentListeningRelatedTracks = tracks; }, renderDiscoverRecentList),
+      fetchRecommendationSource(stableTasteSeeds.map(seed => seed.name), 'taste-discovery', recommendationSearchCache.taste,
+        tracks => { state.tasteDiscoveryTracks = tracks; }, renderDiscoverForYouRow)
+    ]);
   }
 
   function renderDiscoverRadioRow() {
@@ -4485,23 +4544,27 @@
     const profile = getRecommendationTasteProfile();
     const exposure = getHomeArtistExposure(true);
     const candidateMap = new Map();
+    const startListeningIds = new Set(getStartListeningCandidates().slice(0, 5).map(track => String(track.id)));
     const addCandidate = (track, source) => {
       if (!track?.id) return;
       const id = String(track.id);
-      if (profile.likedSongIds.has(id)) return;
+      if (profile.likedSongIds.has(id) || startListeningIds.has(id)) return;
       const existing = candidateMap.get(id);
-      if (!existing || source === 'taste-search') candidateMap.set(id, { track, source });
+      if (!existing || source === 'taste-discovery') candidateMap.set(id, { track, source });
     };
 
-    // Personalized search results and actual listener history are the primary pool.
-    (state.personalRecommendationTracks || []).forEach(track => addCandidate(track, 'taste-search'));
+    // This pool is seeded from saves, replays, long-term taste and explicit artist exploration.
+    (state.tasteDiscoveryTracks || []).forEach(track => addCandidate(track, 'taste-discovery'));
     profile.listenedTracks.forEach(track => {
       const ageDays = Math.max(0, (Date.now() - Number(track._lastListenedAt || 0)) / 86400000);
       if (ageDays > 10 || (profile.trackPlayCounts.get(String(track.id)) || 0) >= 3) addCandidate(track, 'listening-history');
     });
 
-    // Regional and global charts only support the personalized pool or fill a cold-start profile.
-    [...(state.trendingTracks || []), ...(state.globalTrendingTracks || [])].forEach(track => addCandidate(track, 'chart-support'));
+    // Charts are a cold-start provider only; they never pad an established personal profile.
+    const hasTasteSignals = profile.favoriteArtists.size > 0 || profile.listenedTracks.length > 0 || profile.discoveryArtistScores.size > 0;
+    if (!hasTasteSignals) {
+      [...(state.trendingTracks || []), ...(state.globalTrendingTracks || [])].forEach(track => addCandidate(track, 'cold-start-chart'));
+    }
     const candidates = [...candidateMap.values()].map(({ track, source }) => ({
       track,
       score: scorePersonalRecommendation(track, source, profile, exposure),
@@ -4524,10 +4587,10 @@
       dom.discoverForYouRow.appendChild(card);
     });
     if (dom.discoverForYouCaption) {
-      const hasTasteSignals = profile.favoriteArtists.size || profile.listenedTracks.length;
+      const hasTasteSignals = profile.favoriteArtists.size || profile.listenedTracks.length || profile.discoveryArtistScores.size;
       const basis = hasTasteSignals
-        ? 'Gợi ý từ lượt nghe đủ thời lượng, bài yêu thích và nghệ sĩ liên quan; xu hướng khu vực chỉ bổ trợ.'
-        : `Đang khám phá nhạc từ ${state.selectedCountryName || 'khu vực của bạn'}; nghe đủ một phần bài hát hoặc lưu yêu thích để cá nhân hóa.`;
+        ? 'Dựa trên bài đã lưu, lượt nghe lặp lại và gu nghe lâu dài của bạn.'
+        : `Đang khám phá nhạc từ ${state.selectedCountryName || 'khu vực của bạn'}; lưu bài yêu thích hoặc nghe nhạc để cá nhân hóa.`;
       dom.discoverForYouCaption.textContent = basis;
     }
   }
