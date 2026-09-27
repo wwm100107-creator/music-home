@@ -1550,9 +1550,24 @@ apiRouter.get('/radio-related', rateLimit({ maxRequests: 20, windowMs: 60000, en
       headers: { 'User-Agent': 'MusicHome/1.0 (https://github.com/wwm100107-creator/music-home)' },
       signal: AbortSignal.timeout(8000)
     });
-    if (!response.ok) throw Object.assign(new Error(`Last.fm responded with ${response.status}`), { status: response.status });
+    const responseText = await response.text();
+    let data = null;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      // Keep provider diagnostics useful without logging an HTML error page or request URL.
+    }
 
-    const data = await response.json();
+    if (!response.ok) {
+      const errorCode = Number.isFinite(Number(data?.error)) ? ` (error ${data.error})` : '';
+      const errorMessage = String(data?.message || '')
+        .split(apiKey).join('[redacted]')
+        .replace(/[\r\n\t]+/g, ' ')
+        .slice(0, 240);
+      const detail = errorMessage ? `: ${errorMessage}` : ' (no JSON error details)';
+      throw Object.assign(new Error(`Last.fm responded with ${response.status}${errorCode}${detail}`), { status: response.status });
+    }
+    if (!data) throw new Error('Last.fm returned a non-JSON response');
     if (data?.error) throw Object.assign(new Error(String(data.message || 'Last.fm request failed')), { status: 502 });
     const rawArtists = data?.similarartists?.artist;
     const similarArtists = Array.isArray(rawArtists) ? rawArtists : (rawArtists ? [rawArtists] : []);
