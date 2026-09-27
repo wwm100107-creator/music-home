@@ -4169,7 +4169,6 @@
       if (!existing || score > existing.score) candidateScores.set(id, { track, score, source });
     };
 
-    (state.recentTracks || []).forEach((track, index) => add(track, 82 - index * 4, 'recent-play'));
     profile.listenedTracks.slice().sort((a, b) => b._lastListenedAt - a._lastListenedAt).forEach((track, index) => {
       add(track, 88 - index * 3, 'qualified-listen');
     });
@@ -4331,7 +4330,7 @@
     dom.discoverRecentList.innerHTML = '';
     if (dom.discoverRecentCaption) {
       const hasQualifiedListening = (state.recommendationHistory?.listens || []).length > 0;
-      dom.discoverRecentCaption.textContent = hasQualifiedListening || state.recentTracks.length
+      dom.discoverRecentCaption.textContent = hasQualifiedListening
         ? 'Tiếp tục từ những bài bạn vừa nghe trên thiết bị này'
         : (state.favorites.length ? 'Bắt đầu từ các bài bạn đã lưu yêu thích' : 'Bắt đầu với những bài đang đứng đầu bảng khu vực');
     }
@@ -4567,7 +4566,9 @@
 
   function rememberRecentlyPlayed(track) {
     const recentTrack = serializeRecommendationTrack(track);
-    state.recentTracks = [recentTrack, ...state.recentTracks.filter(item => String(item.id) !== recentTrack.id)].slice(0, 12);
+    const qualifiedTrackIds = new Set(state.recommendationHistory.listens.map(event => String(event.track?.id || '')));
+    state.recentTracks = [recentTrack, ...state.recentTracks.filter(item =>
+      String(item.id) !== recentTrack.id && qualifiedTrackIds.has(String(item.id)))].slice(0, 12);
     try { localStorage.setItem('ghibli_recent_tracks', JSON.stringify(state.recentTracks)); } catch (_) {}
     renderDiscoverRecentList();
     renderDiscoverForYouRow();
