@@ -45,6 +45,15 @@ Trình phát nhạc trên trình duyệt lấy cảm hứng từ khung cảnh th
 4. **Chia sẻ nhạc**: Mở mục **"Drop Your Music"** để tải bài hát và ảnh bìa lên danh sách cộng đồng.
 5. **Chọn bài lặp Hạt Dẻ**: Bấm phím `L` hoặc nút Loop cho đến khi hiện biểu tượng hạt dẻ `🌰`, sau đó tích vào các bài hát bạn muốn lặp.
 
+### Nguồn cho mục “Radio phổ biến”
+- Nghệ sĩ chính được lấy từ bảng xếp hạng theo khu vực; cụm nghệ sĩ liên quan lấy từ Last.fm `artist.getSimilar`; lượt nghe và bài yêu thích trên thiết bị giúp cá nhân hóa thứ tự.
+- Để bật dữ liệu nghệ sĩ tương tự, tạo API key tại [Last.fm API](https://www.last.fm/api/account/create), rồi điền vào `.env` ở thư mục gốc:
+  ```env
+  LASTFM_API_KEY=your_lastfm_api_key
+  ```
+- Trên máy chủ Termux, tạo/sửa `~/music-home/.env` một lần. Tệp `.env` đã được Git bỏ qua nên auto-sync không ghi đè và key không bị đẩy lên GitHub. Khởi động lại `server.js` sau khi thêm key.
+- Khi chưa có key, mục này vẫn dùng bảng xếp hạng và gu nghe cục bộ; các nghệ sĩ liên quan từ Last.fm sẽ chưa xuất hiện. Mỗi thẻ có liên kết nguồn “Powered by AudioScrobbler”.
+
 ---
 
 ## ⌨ Phím tắt điều khiển

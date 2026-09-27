@@ -75,6 +75,16 @@ html, body {
   --font-ghibli-meta: 'Plus Jakarta Sans', 'Quicksand', -apple-system, sans-serif;
   --font-ghibli-numeric: 'Plus Jakarta Sans', monospace;
 
+  /* Home typography roles: keep feature and section titles in the brand face. */
+  --home-title-font: var(--font-ghibli-brand);
+  --home-feature-title-size: 1.7rem;
+  --home-section-title-size: clamp(1.25rem, 1.7vw, 1.42rem);
+  --home-section-copy-size: 0.9rem;
+  --home-feature-title-color: #304c3a;
+  --home-section-title-color: #304c3a;
+  --home-section-copy-color: #52665a;
+  --home-title-shadow: 0 1px 2px rgba(255, 253, 237, 0.78);
+
   /* Theme variables (Day Mode) */
   --theme-text-main: #2b1810;
   --theme-text-muted: #6f4e37;
@@ -170,6 +180,11 @@ body.twilight-mode {
   --theme-card-hover-bg: rgba(26, 48, 33, 0.95);
   --theme-accent: #52b788;
   --theme-accent-bright: #74c69d;
+
+  --home-feature-title-color: #f1e8c8;
+  --home-section-title-color: #e5ead2;
+  --home-section-copy-color: #d1dbc9;
+  --home-title-shadow: 0 1px 3px rgba(7, 20, 11, 0.88);
   
   background-color: #0b170e !important;
   color: var(--theme-text-main) !important;
@@ -3140,6 +3155,7 @@ body.twilight-mode .hero-main-title {
 
 .heading-left {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 8px;
 }
@@ -3149,13 +3165,17 @@ body.twilight-mode .hero-main-title {
 }
 
 .heading-title {
-  font-family: var(--font-ghibli-brand);
-  font-size: 1.7rem;
-  font-weight: normal;
-  color: #2b1810;
+  max-width: 100%;
+  min-width: 0;
+  font-family: var(--home-title-font);
+  font-size: var(--home-feature-title-size);
+  font-weight: 400;
+  line-height: 1.18;
+  color: var(--home-feature-title-color);
   -webkit-text-stroke: 0 !important;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+  text-shadow: var(--home-title-shadow);
   letter-spacing: 0.02em;
+  opacity: 1;
 }
 
 .heading-badge-counter {
@@ -3176,6 +3196,10 @@ body.twilight-mode .hero-main-title {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.chart-heading-row .heading-left {
+  flex: 1 1 290px;
 }
 
 .chart-timeframe-switch {
@@ -7675,25 +7699,37 @@ body.twilight-mode .bg-playback-chip.disabled {
   align-items: end;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 13px;
+  margin-bottom: 15px;
+}
+
+.discover-section-heading > div {
+  max-width: 100%;
+  min-width: 0;
 }
 
 .discover-section-heading h2 {
   margin: 0;
-  color: inherit;
-  font-size: clamp(1.12rem, 2.1vw, 1.55rem);
-  font-weight: 800;
-  letter-spacing: -0.025em;
+  max-width: 100%;
+  font-family: var(--home-title-font);
+  color: var(--home-section-title-color);
+  font-size: var(--home-section-title-size);
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  text-shadow: var(--home-title-shadow);
+  text-wrap: balance;
+  opacity: 1;
 }
 
 .discover-section-heading p {
-  margin: 5px 0 0;
-  color: rgba(55, 67, 52, 0.68);
-  font-size: 0.86rem;
-}
-
-body.twilight-mode .discover-section-heading p {
-  color: rgba(235, 244, 232, 0.64);
+  max-width: 65ch;
+  margin: 6px 0 0;
+  color: var(--home-section-copy-color);
+  font-family: var(--font-ghibli-body);
+  font-size: var(--home-section-copy-size);
+  font-weight: 500;
+  line-height: 1.45;
+  opacity: 1;
 }
 
 .discover-horizontal-row {
@@ -7737,10 +7773,31 @@ body.twilight-mode .discover-section-heading p {
   background: transparent;
 }
 
-.discover-radio-card {
+.discover-radio-card-shell {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
   width: clamp(196px, 24vw, 258px);
+  gap: 3px;
+}
+
+.discover-radio-card {
+  width: 100%;
   gap: 8px;
 }
+
+.discover-radio-attribution {
+  align-self: flex-start;
+  padding: 2px 4px;
+  color: rgba(50, 60, 49, 0.62);
+  font-size: 0.58rem;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.discover-radio-attribution:hover,
+.discover-radio-attribution:focus-visible { color: #3f8f58; text-decoration: underline; }
+body.twilight-mode .discover-radio-attribution { color: rgba(235, 244, 232, 0.55); }
 
 .discover-radio-art {
   position: relative;
@@ -7783,6 +7840,17 @@ body.twilight-mode .discover-section-heading p {
   border-radius: 50%;
   object-fit: cover;
   box-shadow: 0 5px 13px rgba(29, 48, 35, 0.18);
+}
+
+.discover-radio-monogram {
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 34% 26%, #f5e8b4, #8db997 76%);
+  color: #183522;
+  font-size: clamp(1rem, 2.5vw, 1.55rem);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .discover-radio-face-1 { left: 0; transform: scale(0.76); }
@@ -7912,12 +7980,16 @@ body.twilight-mode .discover-track-card > span { color: rgba(235, 244, 232, 0.62
 .discover-chart-details > summary:focus-visible { outline: 3px solid #d5a64b; outline-offset: 3px; }
 
 @media (max-width: 700px) {
+  :root {
+    --home-feature-title-size: 1.48rem;
+    --home-section-title-size: 1.2rem;
+    --home-section-copy-size: 0.84rem;
+  }
+
   .discover-section { margin: 27px 0 31px; }
-  .discover-section-heading { margin-bottom: 10px; }
-  .discover-section-heading h2 { font-size: 1.22rem; }
-  .discover-section-heading p { font-size: 0.76rem; }
+  .discover-section-heading { margin-bottom: 12px; }
   .discover-horizontal-row { gap: 12px; padding-bottom: 10px; scroll-snap-type: x mandatory; }
-  .discover-radio-card { width: min(67vw, 252px); }
+  .discover-radio-card-shell { width: min(67vw, 252px); }
   .discover-chart-card { width: min(44vw, 194px); }
   .discover-album-card,
   .discover-track-card { width: min(44vw, 190px); }

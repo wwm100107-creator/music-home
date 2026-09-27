@@ -175,6 +175,9 @@
     activeGenre: 'all',
     trendingTracks: [],
     globalTrendingTracks: [],
+    radioArtistDiscoveryTracks: [],
+    lastFmRadioConfigured: null,
+    lastFmRadioUnavailable: false,
     selectedCountryName: 'Vietnam',
     recentTracks: (() => {
       try {
@@ -296,6 +299,7 @@
     trendingTracksDetails: document.getElementById('trendingTracksDetails'),
     trendingTracksGrid: document.getElementById('trendingTracksGrid'),
     discoverRadioRow: document.getElementById('discoverRadioRow'),
+    discoverRadioCaption: document.getElementById('discoverRadioCaption'),
     discoverRecentCaption: document.getElementById('discoverRecentCaption'),
     discoverRecentList: document.getElementById('discoverRecentList'),
     discoverChartRow: document.getElementById('discoverChartRow'),
@@ -4349,38 +4353,588 @@
     ]);
   }
 
+  const RADIO_RECOMMENDATION_WEIGHTS = Object.freeze({
+    trendScore: 0.30,
+    recentPopularity: 0.20,
+    listenerAffinity: 0.15,
+    artistSimilarity: 0.10,
+    genreRelevance: 0.08,
+    freshness: 0.07,
+    regionalRelevance: 0.05,
+    discoveryValue: 0.05
+  });
+  const RADIO_SIMILARITY_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+  const radioArtistDiscoveryCache = new Map();
+  let lastRadioDiagnosticsSnapshot = '';
+
+  function splitRadioArtistCredits(value) {
+    return String(value?.name || value?.text || value || '')
+      .split(/\s*(?:,|&|\+|\bx\b|\bfeat\.?\b|\bft\.?\b|\bwith\b)\s*/i)
+      .map(name => name.trim().replace(/^[\s\d.,:;|()[\]{}]+|[\s.,:;|()[\]{}]+$/g, ''))
+      .filter(name => name && !/^(feat\.?|ft\.?)$/i.test(name));
+  }
+
+  function isUsableRadioArtist(name, track) {
+    const key = normalizeDiscoverArtist(name);
+    const words = key.split(/\s+/).filter(Boolean);
+    if (!key || key.length < 2 || key.length > 52 || words.length > 7) return false;
+    if (/\b(?:official|vevo|topic|channel|visualizer|performance|lyrics|karaoke|music video)\b/.test(key)) return false;
+    const titleKey = normalizeDiscoverArtist(track?.title);
+    return key !== titleKey && !['unknown artist', 'various artists', 'artist'].includes(key);
+  }
+
+  function getRadioArtistNames(track) {
+    const credits = Array.isArray(track?.artists) && track.artists.length ? track.artists : [track?.artist];
+    const seen = new Set();
+    return credits.flatMap(splitRadioArtistCredits).filter(name => {
+      const key = normalizeDiscoverArtist(name);
+      if (!isUsableRadioArtist(name, track) || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function getRadioTrackGenres(track) {
+    return getRecommendationTrackGenres(track);
+  }
+
+  function refreshRadioArtistDiscoveryTracks() {
+    const country = state.selectedCountry || 'VN';
+    const profile = getRecommendationTasteProfile();
+    const addSeed = (items, artist) => {
+      const name = String(artist || '').trim();
+      const key = normalizeDiscoverArtist(name);
+      if (!name || !key || items.some(seed => seed.key === key)) return;
+      items.push({ artist: name, key });
+    };
+    const regionalSeeds = [];
+    const globalSeeds = [];
+    const personalSeeds = [];
+    (state.trendingTracks || []).slice(0, 30).forEach(track => addSeed(regionalSeeds, getRadioArtistNames(track)[0]));
+    (state.globalTrendingTracks || []).slice(0, 20).forEach(track => addSeed(globalSeeds, getRadioArtistNames(track)[0]));
+    (profile.favoriteArtistNames || []).forEach(artist => addSeed(personalSeeds, artist));
+    profile.listenedTracks.slice().sort((a, b) => (b._lastListenedAt || 0) - (a._lastListenedAt || 0))
+      .forEach(track => addSeed(personalSeeds, getRadioArtistNames(track)[0]));
+
+    // Charts keep this shelf regional; saved and recently played artists add
+    // a small personal signal without letting listening history dominate it.
+    const selectedSeeds = [];
+    [...regionalSeeds.slice(0, 5), ...personalSeeds.slice(0, 2), ...globalSeeds.slice(0, 8), ...regionalSeeds.slice(5, 8)]
+      .forEach(seed => addSeed(selectedSeeds, seed.artist));
+    selectedSeeds.splice(8);
+    if (!selectedSeeds.length) return;
+
+    const cacheKey = `${country}|${selectedSeeds.map(seed => seed.key).join('|')}`;
+    const cached = radioArtistDiscoveryCache.get(cacheKey);
+    if (cached?.promise) return cached.promise;
+    if (cached && Date.now() - cached.loadedAt < RADIO_SIMILARITY_CACHE_TTL_MS) {
+      state.radioArtistDiscoveryTracks = cached.tracks;
+      state.lastFmRadioConfigured = cached.configured;
+      state.lastFmRadioUnavailable = cached.unavailable;
+      return;
+    }
+
+    const entry = { loadedAt: 0, tracks: [], configured: null, unavailable: false, promise: null };
+    radioArtistDiscoveryCache.set(cacheKey, entry);
+    while (radioArtistDiscoveryCache.size > 6) {
+      radioArtistDiscoveryCache.delete(radioArtistDiscoveryCache.keys().next().value);
+    }
+
+    entry.promise = Promise.allSettled(selectedSeeds.map(async seed => {
+      const params = new URLSearchParams({ artist: seed.artist });
+      const response = await fetch(`/api/radio-related?${params.toString()}`);
+      const data = await response.json().catch(() => ({}));
+      if (typeof data.configured === 'boolean') entry.configured = data.configured;
+      if (!response.ok || data.success === false) {
+        entry.unavailable = true;
+        return [];
+      }
+      return (Array.isArray(data.results) ? data.results : []).map((similarArtist, index) => {
+        const name = String(similarArtist?.name || '').trim();
+        const key = normalizeDiscoverArtist(name);
+        const similarity = Number(similarArtist?.match);
+        if (!name || !key || key === seed.key || !Number.isFinite(similarity) || similarity <= 0) return null;
+        const safeProfileUrl = /^https:\/\/www\.last\.fm\/music\//i.test(similarArtist.url || '')
+          ? similarArtist.url
+          : `https://www.last.fm/music/${encodeURIComponent(name)}`;
+        return {
+          id: `lastfm-artist:${seed.key}:${similarArtist.mbid || key}`,
+          title: `Radio • ${name}`,
+          artist: name,
+          artists: [name],
+          thumbnail: String(similarArtist.image || ''),
+          rank: Number(similarArtist.rank) || index + 1,
+          _radioRelatedSeed: seed.artist,
+          _radioSimilarity: Math.min(1, similarity),
+          _radioProfileUrl: safeProfileUrl
+        };
+      }).filter(Boolean);
+    })).then(results => {
+      entry.tracks = uniqueTracksById(results.flatMap(result => result.status === 'fulfilled' ? result.value : []));
+      entry.loadedAt = Date.now();
+      if (state.selectedCountry === country) {
+        state.radioArtistDiscoveryTracks = entry.tracks;
+        state.lastFmRadioConfigured = entry.configured;
+        state.lastFmRadioUnavailable = entry.unavailable;
+        renderDiscoverRadioRow();
+      }
+    }).catch(error => {
+      console.warn('[Radio Phổ Biến] Related-artist discovery source unavailable:', error?.message || error);
+    }).finally(() => {
+      entry.promise = null;
+    });
+    return entry.promise;
+  }
+
+  function radioGenreSimilarity(left, right) {
+    const leftGenres = new Set(left.genres || []);
+    const rightGenres = new Set(right.genres || []);
+    if (!leftGenres.size || !rightGenres.size) return 0;
+    const intersection = [...leftGenres].filter(genre => rightGenres.has(genre)).length;
+    return intersection / new Set([...leftGenres, ...rightGenres]).size;
+  }
+
+  function hashRadioTieBreak(value) {
+    let hash = 2166136261;
+    for (let index = 0; index < value.length; index++) {
+      hash ^= value.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+  }
+
+  function buildRadioRecommendationCandidates() {
+    const profile = getRecommendationTasteProfile();
+    const exposure = getHomeArtistExposure(false);
+    const candidates = new Map();
+    const relationships = new Map();
+    const sourceCounts = {};
+    const currentYear = new Date().getFullYear();
+    const rawTrackIdsBySource = new Map();
+
+    const addRelationship = (leftName, rightName, score) => {
+      const left = normalizeDiscoverArtist(leftName);
+      const right = normalizeDiscoverArtist(rightName);
+      if (!left || !right || left === right) return;
+      const leftMap = relationships.get(left) || new Map();
+      const rightMap = relationships.get(right) || new Map();
+      leftMap.set(right, Math.max(leftMap.get(right) || 0, score));
+      rightMap.set(left, Math.max(rightMap.get(left) || 0, score));
+      relationships.set(left, leftMap);
+      relationships.set(right, rightMap);
+    };
+
+    const addTrack = (track, source, index, sourceMeta = {}) => {
+      if (!track) return;
+      const names = getRadioArtistNames(track);
+      if (!names.length) return;
+      const rank = Math.max(1, Number(track.rank) || index + 1);
+      const rankSignal = 1 / Math.pow(rank, 0.58);
+      const genres = getRadioTrackGenres(track);
+      const year = Number.parseInt(track.year || track.releaseYear || track.album?.year, 10) || 0;
+      const releaseFreshness = year ? Math.exp(-Math.max(0, currentYear - year) / 5) : 0;
+      const trackId = String(track.id || `${source}:${track.title || names[0]}`);
+      sourceCounts[source] = (sourceCounts[source] || 0) + 1;
+      const sourceIds = rawTrackIdsBySource.get(source) || new Set();
+      sourceIds.add(trackId);
+      rawTrackIdsBySource.set(source, sourceIds);
+
+      names.forEach((name, artistIndex) => {
+        const key = normalizeDiscoverArtist(name);
+        if (!key || key.length < 2 || ['unknown artist', 'various artists', 'artist'].includes(key)) return;
+        const candidate = candidates.get(key) || {
+          key,
+          name: String(name).trim(),
+          tracks: [],
+          trackIds: new Set(),
+          sourceScores: {},
+          genreScores: new Map(),
+          regionalRanks: [],
+          globalRanks: [],
+          albumYears: [],
+          relationshipMap: null,
+          genres: [],
+          scoreParts: null,
+          relevanceScore: 0,
+          chartTrackCount: 0
+        };
+        if (source === 'relatedDiscovery' && track._radioProfileUrl) {
+          candidate.lastFmUrl = String(track._radioProfileUrl);
+        }
+        const artistCreditPenalty = 1 / (artistIndex + 1);
+        const sourceMatch = source === 'relatedDiscovery'
+          ? Math.max(0.15, Math.min(1, Number(track._radioSimilarity) || 0))
+          : 1;
+        candidate.sourceScores[source] = Math.max(candidate.sourceScores[source] || 0, rankSignal * sourceMatch * artistCreditPenalty);
+        if (source === 'regional') candidate.regionalRanks.push(rank);
+        if (source === 'global') candidate.globalRanks.push(rank);
+        if (source === 'album' && year) candidate.albumYears.push(year);
+        if (source === 'regional' || source === 'global') candidate.chartTrackCount += 1;
+        if (year) candidate.albumYears.push(year);
+        genres.forEach(genre => candidate.genreScores.set(genre, (candidate.genreScores.get(genre) || 0) + rankSignal));
+        if (!candidate.trackIds.has(trackId)) {
+          candidate.trackIds.add(trackId);
+          candidate.tracks.push({ track, source, rank, rankSignal, sourceMeta });
+        }
+        candidates.set(key, candidate);
+      });
+
+      if (names.length > 1) {
+        names.forEach((name, nameIndex) => names.slice(nameIndex + 1).forEach(otherName => addRelationship(name, otherName, 0.9)));
+      }
+      if (source === 'relatedDiscovery' && track._radioRelatedSeed) {
+        const similarity = Number(track._radioSimilarity);
+        const relationshipScore = Number.isFinite(similarity) && similarity > 0
+          ? Math.min(0.95, Math.max(0.08, similarity))
+          : 0.32;
+        names.forEach(name => addRelationship(track._radioRelatedSeed, name, relationshipScore));
+      }
+    };
+
+    const regionalTracks = state.trendingTracks || [];
+    const globalTracks = state.globalTrendingTracks || [];
+    const relatedArtistTracks = state.radioArtistDiscoveryTracks || [];
+    const recentListenTracks = profile.listenedTracks.filter(track => {
+      const ageDays = track._lastListenedAt ? Math.max(0, (Date.now() - track._lastListenedAt) / 86400000) : 365;
+      return ageDays <= 90;
+    }).sort((a, b) => b._lastListenedAt - a._lastListenedAt);
+    const sourceGroups = [
+      { name: 'regional', tracks: regionalTracks },
+      { name: 'global', tracks: globalTracks },
+      { name: 'relatedDiscovery', tracks: relatedArtistTracks },
+      { name: 'listener', tracks: recentListenTracks },
+      { name: 'favorite', tracks: state.favorites || [] }
+    ];
+
+    sourceGroups.forEach(({ name, tracks }) => tracks.forEach((track, index) => addTrack(track, name, index)));
+
+    // Co-artist credits and close chart placements form relationship edges; sequential listens add an opt-in, local co-listening signal.
+    [
+      { tracks: regionalTracks, strength: 0.24 },
+      { tracks: globalTracks, strength: 0.17 }
+    ].forEach(({ tracks, strength }) => {
+      for (let index = 0; index < tracks.length; index++) {
+        const current = tracks[index];
+        const currentArtists = getRadioArtistNames(current);
+        const currentGenres = getRadioTrackGenres(current);
+        for (let nextIndex = index + 1; nextIndex < Math.min(tracks.length, index + 4); nextIndex++) {
+          const next = tracks[nextIndex];
+          const nextArtists = getRadioArtistNames(next);
+          const genreOverlap = getRadioTrackGenres(next).some(genre => currentGenres.includes(genre));
+          const rankDistance = nextIndex - index;
+          // Chart adjacency alone is not a reliable artist relationship.
+          // Use it only when both tracks share an identified genre.
+          if (!genreOverlap) continue;
+          const edgeScore = strength * (genreOverlap ? 1 : 0.55) / rankDistance;
+          currentArtists.forEach(name => nextArtists.forEach(otherName => addRelationship(name, otherName, edgeScore)));
+        }
+      }
+    });
+
+    const listeningSequence = recentListenTracks.slice().sort((a, b) => a._lastListenedAt - b._lastListenedAt);
+    for (let index = 1; index < listeningSequence.length; index++) {
+      const previous = listeningSequence[index - 1];
+      const current = listeningSequence[index];
+      const gapHours = Math.max(0, (current._lastListenedAt - previous._lastListenedAt) / 3600000);
+      if (gapHours > 2) continue;
+      const coListenWeight = 0.55 * Math.exp(-gapHours / 0.65);
+      getRadioArtistNames(previous).forEach(name => getRadioArtistNames(current).forEach(otherName => addRelationship(name, otherName, coListenWeight)));
+    }
+
+    const maximumRecentArtistScore = Math.max(0, ...profile.recentArtistScores.values());
+    const maximumLongTermArtistScore = Math.max(0, ...profile.longTermArtistScores.values());
+    const maximumGenreScore = Math.max(0, ...profile.recentGenreScores.values(), ...profile.favoriteGenreScores.values());
+    const favoriteGenreKeys = new Set(profile.favoriteGenreScores.keys());
+    const userAnchorKeys = new Set([
+      ...profile.favoriteArtists,
+      ...profile.recentArtistScores.keys(),
+      ...profile.longTermArtistScores.keys()
+    ]);
+    const trendingAnchorKeys = new Set([...regionalTracks.slice(0, 12), ...globalTracks.slice(0, 8)].flatMap(getRadioArtistNames).map(normalizeDiscoverArtist));
+    const similarityAnchors = userAnchorKeys.size ? userAnchorKeys : trendingAnchorKeys;
+
+    const ranked = [...candidates.values()].map(candidate => {
+      candidate.relationshipMap = relationships.get(candidate.key) || new Map();
+      candidate.genres = [...candidate.genreScores.entries()].sort((a, b) => b[1] - a[1]).map(([genre]) => genre);
+      const regionalRank = Math.min(...candidate.regionalRanks, Infinity);
+      const globalRank = Math.min(...candidate.globalRanks, Infinity);
+      const regionalSignal = Number.isFinite(regionalRank) ? 1 / Math.pow(regionalRank, 0.58) : 0;
+      const globalSignal = Number.isFinite(globalRank) ? 1 / Math.pow(globalRank, 0.58) : 0;
+      const relatedSignal = candidate.sourceScores.relatedDiscovery || 0;
+      const latestAlbumYear = Math.max(0, ...candidate.albumYears);
+      const freshness = latestAlbumYear
+        ? Math.exp(-Math.max(0, currentYear - latestAlbumYear) / 5)
+        : (regionalSignal || globalSignal ? 0.72 : (relatedSignal ? 0.66 : 0.42));
+      const recentPopularity = Math.min(1, Math.max(
+        regionalSignal * 0.58 + globalSignal * 0.18,
+        relatedSignal * 0.7,
+        candidate.sourceScores.listener ? Math.exp(-Math.max(0, (Date.now() - (candidate.tracks.find(item => item.source === 'listener')?.track._lastListenedAt || 0)) / 86400000) / 30) * 0.45 : 0
+      ));
+      const recentArtist = profile.recentArtistScores.get(candidate.key) || 0;
+      const longTermArtist = profile.longTermArtistScores.get(candidate.key) || 0;
+      const artistSkipRisk = Math.max(0, ...candidate.tracks.map(item => profile.recentSkippedIds.get(String(item.track?.id || '')) || 0));
+      const listenerAffinity = Math.max(0, Math.min(1,
+        (maximumRecentArtistScore ? recentArtist / maximumRecentArtistScore * 0.65 : 0) +
+        (maximumLongTermArtistScore ? longTermArtist / maximumLongTermArtistScore * 0.2 : 0) +
+        (profile.favoriteArtists.has(candidate.key) ? 0.3 : 0)
+      ) - artistSkipRisk * 0.12);
+      const artistSimilarity = Math.max(0, ...[...similarityAnchors].map(anchor => {
+        if (anchor === candidate.key) return 0;
+        return candidate.relationshipMap.get(anchor) || 0;
+      }));
+      const genreRelevance = candidate.genres.length
+        ? Math.max(0.35, ...candidate.genres.map(genre => maximumGenreScore
+          ? Math.min(1, ((profile.recentGenreScores.get(genre) || 0) + (profile.favoriteGenreScores.get(genre) || 0) * 1.4) / maximumGenreScore)
+          : (favoriteGenreKeys.has(genre) ? 1 : 0.35)))
+        : 0.35;
+      const regionalRelevance = regionalSignal ? 1 : (globalSignal ? 0.32 : (relatedSignal ? 0.68 : 0.28));
+      const exposureCount = exposure.get(candidate.key) || 0;
+      const discoveryValue = Math.max(0, Math.min(1,
+        0.45 * (1 - Math.min(1, exposureCount / 4)) +
+        0.35 * freshness +
+        0.2 * (candidate.chartTrackCount <= 1 ? 1 : 1 / Math.sqrt(candidate.chartTrackCount))
+      ));
+      const trendScore = Math.min(1, Math.max(regionalSignal, globalSignal * 0.82, relatedSignal * 0.68));
+      const scoreParts = {
+        trendScore,
+        recentPopularity,
+        listenerAffinity,
+        artistSimilarity: Math.min(1, artistSimilarity),
+        genreRelevance,
+        freshness,
+        regionalRelevance,
+        discoveryValue
+      };
+      candidate.scoreParts = scoreParts;
+      candidate.relevanceScore = Object.entries(RADIO_RECOMMENDATION_WEIGHTS)
+        .reduce((score, [key, weight]) => score + scoreParts[key] * weight, 0);
+      candidate.isExploration = !regionalSignal && (globalSignal > 0 || relatedSignal > 0);
+      return candidate;
+    }).filter(candidate => candidate.name && candidate.relevanceScore > 0);
+
+    // Keep a stable order within each six-hour snapshot, then let the shelf
+    // explore a new deterministic tie-break when it is refreshed later.
+    const refreshWindow = Math.floor(Date.now() / (6 * 60 * 60 * 1000));
+    const snapshot = [
+      state.selectedCountry,
+      state.currentTimeframe,
+      new Date().toISOString().slice(0, 10),
+      refreshWindow,
+      ...sourceGroups.flatMap(({ name, tracks }) => tracks.map(track => `${name}:${track.id || track.title || ''}`)),
+      ...state.recommendationHistory.listens.slice(-24).map(event => `${event.track?.id || ''}:${event.playedAt || ''}`),
+      ...state.favorites.map(track => track.id || track.title || '')
+    ].join('|');
+    const tieSeed = hashRadioTieBreak(snapshot);
+    ranked.sort((a, b) => b.relevanceScore - a.relevanceScore ||
+      hashRadioTieBreak(`${tieSeed}:${a.key}`) - hashRadioTieBreak(`${tieSeed}:${b.key}`));
+
+    return {
+      ranked,
+      relationships,
+      profile,
+      sourceCounts: Object.fromEntries(sourceGroups.map(({ name, tracks }) => [name, rawTrackIdsBySource.get(name)?.size || 0])),
+      rawCandidateTracks: Object.values(sourceCounts).reduce((sum, count) => sum + count, 0),
+      snapshot: `${snapshot}|${ranked.map(item => item.key).join(',')}`
+    };
+  }
+
+  function radioArtistSimilarity(left, right, relationships) {
+    const explicitRelationship = relationships.get(left.key)?.get(right.key) || 0;
+    return Math.max(explicitRelationship, radioGenreSimilarity(left, right) * 0.72);
+  }
+
+  function selectDiverseRadioArtists(ranked, relationships, snapshot) {
+    const limit = Math.min(12, ranked.length);
+    if (!ranked.length) return [];
+    const selected = [];
+    const selectedKeys = new Set();
+    const genreCounts = new Map();
+    const pushBest = (pool, explore = false) => {
+      const choices = pool.filter(candidate => !selectedKeys.has(candidate.key));
+      if (!choices.length) return false;
+      const scored = choices.map(candidate => {
+        const similarityScore = Math.max(0, ...selected.map(item => radioArtistSimilarity(candidate, item.candidate, relationships)));
+        const dominantGenreCount = candidate.genres.length ? Math.max(0, ...candidate.genres.map(genre => genreCounts.get(genre) || 0)) : 0;
+        const genrePenalty = Math.min(0.12, dominantGenreCount * 0.025);
+        const explorationLift = explore ? candidate.scoreParts.discoveryValue * 0.06 : 0;
+        const finalScore = candidate.relevanceScore * 0.72 + (1 - similarityScore) * 0.28 - genrePenalty + explorationLift;
+        return { candidate, similarityScore, finalScore };
+      }).sort((a, b) => b.finalScore - a.finalScore ||
+        hashRadioTieBreak(`${snapshot}:${a.candidate.key}`) - hashRadioTieBreak(`${snapshot}:${b.candidate.key}`));
+      const choice = scored[0];
+      selected.push(choice);
+      selectedKeys.add(choice.candidate.key);
+      choice.candidate.genres.forEach(genre => genreCounts.set(genre, (genreCounts.get(genre) || 0) + 1));
+      return true;
+    };
+
+    const cardCount = Math.min(limit, ranked.length);
+    const coreCount = cardCount >= 8 ? Math.ceil(cardCount * 0.85) : cardCount;
+    const corePool = ranked.filter(candidate => !candidate.isExploration &&
+      (candidate.scoreParts.trendScore > 0 || candidate.scoreParts.recentPopularity > 0.48));
+    while (selected.length < coreCount && pushBest(corePool.length ? corePool : ranked)) {}
+
+    const explorationPool = ranked.filter(candidate => candidate.isExploration || candidate.scoreParts.discoveryValue >= 0.62);
+    while (selected.length < cardCount && pushBest(explorationPool.length ? explorationPool : ranked, true)) {}
+    while (selected.length < cardCount && pushBest(ranked)) {}
+    return selected;
+  }
+
+  function getRadioSupportingArtists(primary, ranked, relationships, supportUseCounts, recentSupportKeys) {
+    const related = ranked.filter(candidate => candidate.key !== primary.key)
+      .map(candidate => ({
+        candidate,
+        similarity: radioArtistSimilarity(primary, candidate, relationships)
+      }))
+      .filter(item => item.similarity >= 0.035 && (supportUseCounts.get(item.candidate.key) || 0) < 1)
+      .sort((a, b) => {
+        const repeatPenaltyA = recentSupportKeys.includes(a.candidate.key) ? 0.24 : 0;
+        const repeatPenaltyB = recentSupportKeys.includes(b.candidate.key) ? 0.24 : 0;
+        return (b.similarity * 0.78 + b.candidate.relevanceScore * 0.22 - repeatPenaltyB) -
+          (a.similarity * 0.78 + a.candidate.relevanceScore * 0.22 - repeatPenaltyA);
+      });
+    const companions = related.filter(item => !recentSupportKeys.includes(item.candidate.key)).slice(0, 2);
+    companions.forEach(item => supportUseCounts.set(item.candidate.key, (supportUseCounts.get(item.candidate.key) || 0) + 1));
+    return companions;
+  }
+
+  function getRadioCandidateThumbnail(candidate) {
+    const artistKey = candidate?.key || normalizeDiscoverArtist(candidate?.name);
+    const artistProfile = (candidate?.tracks || []).find(item => {
+      if (item.source !== 'relatedDiscovery' || !item.track?.thumbnail) return false;
+      const imageUrl = String(item.track.thumbnail);
+      if (!/^https:\/\//i.test(imageUrl) || /2a96cbd8b46e442fc41c2b86b821562f/i.test(imageUrl)) return false;
+      return getRadioArtistNames(item.track).some(name => normalizeDiscoverArtist(name) === artistKey);
+    });
+    return artistProfile ? upgradeThumbnailUrl(artistProfile.track.thumbnail) : '';
+  }
+
+  function getRadioArtistInitials(candidate) {
+    const words = String(candidate?.name || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\b(feat|ft|with)\b.*$/i, '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!words.length) return '♪';
+    if (words.length > 1) return `${Array.from(words[0])[0]}${Array.from(words[1])[0]}`.toLocaleUpperCase();
+    return Array.from(words[0]).slice(0, 2).join('').toLocaleUpperCase();
+  }
+
+  function logRadioRecommendationDiagnostics(pipeline, selected, cardData) {
+    if (pipeline.snapshot === lastRadioDiagnosticsSnapshot) return;
+    lastRadioDiagnosticsSnapshot = pipeline.snapshot;
+    const uniquePrimaryArtists = new Set(cardData.map(card => card.primary.key)).size;
+    const duplicateCards = new Set();
+    let duplicateCardCount = 0;
+    const genreDistribution = {};
+    cardData.forEach(card => {
+      const clusterKey = `${card.primary.key}|${card.supports.map(item => item.candidate.key).sort().join(',')}`;
+      if (duplicateCards.has(clusterKey)) duplicateCardCount++;
+      duplicateCards.add(clusterKey);
+      const genre = card.primary.genres[0] || 'chưa phân loại';
+      genreDistribution[genre] = (genreDistribution[genre] || 0) + 1;
+    });
+    const finalCards = selected.map((selection, index) => {
+      const card = cardData[index];
+      return {
+        primaryArtist: selection.candidate.name,
+        genre: selection.candidate.genres[0] || 'chưa phân loại',
+        trendScore: Number(selection.candidate.scoreParts.trendScore.toFixed(3)),
+        similarityScore: Number(selection.similarityScore.toFixed(3)),
+        finalScore: Number(selection.finalScore.toFixed(3)),
+        supportingArtists: card.supports.map(item => item.candidate.name)
+      };
+    });
+    console.info('[Radio Phổ Biến] CANDIDATES → RANKED → DIVERSITY → FINAL', JSON.stringify({
+      sources: pipeline.sourceCounts,
+      rawCandidateTracks: pipeline.rawCandidateTracks,
+      uniqueArtistCandidates: pipeline.ranked.length,
+      rankedCandidates: pipeline.ranked.slice(0, 15).map(candidate => ({
+        artist: candidate.name,
+        score: Number(candidate.relevanceScore.toFixed(3)),
+        ...Object.fromEntries(Object.entries(candidate.scoreParts).map(([key, value]) => [key, Number(value.toFixed(3))]))
+      })),
+      finalCards,
+      metrics: {
+        uniquePrimaryArtists,
+        artistRepeatRate: cardData.length ? Number((1 - uniquePrimaryArtists / cardData.length).toFixed(3)) : 0,
+        genreDistribution,
+        duplicateCardRate: cardData.length ? Number((duplicateCardCount / cardData.length).toFixed(3)) : 0
+      }
+    }));
+  }
+
   function renderDiscoverRadioRow() {
     if (!dom.discoverRadioRow) return;
-    const regionalArtists = getDiscoverRegionalArtistRankings();
-    const artists = regionalArtists.slice(0, 7);
+    if (dom.discoverRadioCaption) {
+      dom.discoverRadioCaption.textContent = state.lastFmRadioConfigured === false
+        ? 'Bảng xếp hạng khu vực và gu nghe của bạn · thêm LASTFM_API_KEY để mở rộng nghệ sĩ liên quan.'
+        : (state.lastFmRadioUnavailable
+          ? 'Last.fm đang tạm lỗi; hiện dùng bảng xếp hạng khu vực và gu nghe của bạn.'
+          : (state.lastFmRadioConfigured === true
+          ? 'Bảng xếp hạng khu vực kết hợp nghệ sĩ tương tự và gu nghe của bạn.'
+          : 'Đang kết hợp bảng xếp hạng khu vực, nghệ sĩ liên quan và gu nghe của bạn.'));
+    }
+    const pipeline = buildRadioRecommendationCandidates();
+    const selected = selectDiverseRadioArtists(pipeline.ranked, pipeline.relationships, pipeline.snapshot);
+    const supportUseCounts = new Map();
+    const recentSupportKeys = [];
+    const cardData = selected.map(selection => {
+      const primary = selection.candidate;
+      const supports = getRadioSupportingArtists(primary, pipeline.ranked, pipeline.relationships,
+        supportUseCounts, recentSupportKeys);
+      supports.forEach(item => {
+        recentSupportKeys.push(item.candidate.key);
+        if (recentSupportKeys.length > 4) recentSupportKeys.shift();
+      });
+      return { primary, supports };
+    });
+    const clusteredCardData = cardData.filter(card => card.supports.length > 0);
+    const finalCardData = clusteredCardData.length >= 8 ? clusteredCardData : cardData;
+    const finalSelected = selected.filter((_, index) => finalCardData.includes(cardData[index]));
+
     dom.discoverRadioRow.innerHTML = '';
-    artists.forEach((artist, index) => {
-      const neighboringTracks = artist.tracks.slice(0, 3);
-      const collageTracks = neighboringTracks.length >= 3
-        ? neighboringTracks
-        : [...neighboringTracks, ...state.trendingTracks.filter(track => !neighboringTracks.some(item => item.id === track.id))].slice(0, 3);
-      const images = collageTracks.slice(0, 3).map(track => upgradeThumbnailUrl(track.thumbnail) || 'wood_2.jpg');
-      const companions = regionalArtists
-        .filter(candidate => normalizeDiscoverArtist(candidate.name) !== normalizeDiscoverArtist(artist.name))
-        .slice(0, 3)
-        .map(candidate => candidate.name);
+    finalCardData.forEach(({ primary, supports }, index) => {
+      const faces = [supports[0]?.candidate, primary, supports[1]?.candidate].filter(Boolean);
+      const companions = supports.map(item => item.candidate.name);
       const card = document.createElement('button');
       card.type = 'button';
       card.className = `discover-radio-card discover-radio-tone-${index % 5}`;
-      card.setAttribute('aria-label', `Phát radio phổ biến của ${artist.name}`);
+      card.setAttribute('aria-label', `Phát radio phổ biến của ${primary.name}`);
       card.innerHTML = `
         <span class="discover-radio-art" aria-hidden="true">
           <span class="discover-radio-mark">RADIO</span>
           <span class="discover-radio-collage">
-            ${images.map((src, imageIndex) => `<img class="discover-radio-face discover-radio-face-${imageIndex + 1}" src="${escapeHtml(src)}" alt="" loading="lazy">`).join('')}
+            ${faces.map((artist, imageIndex) => {
+              const imageUrl = getRadioCandidateThumbnail(artist);
+              const faceClass = `discover-radio-face discover-radio-face-${imageIndex + 1}`;
+              return imageUrl
+                ? `<img class="${faceClass}" src="${escapeHtml(imageUrl)}" alt="" loading="lazy">`
+                : `<span class="${faceClass} discover-radio-monogram">${escapeHtml(getRadioArtistInitials(artist))}</span>`;
+            }).join('')}
           </span>
-          <strong>${escapeHtml(artist.name)}</strong>
+          <strong>${escapeHtml(primary.name)}</strong>
         </span>
-        <span class="discover-card-copy">Cùng xu hướng: ${escapeHtml(companions.join(', ') || 'nhạc mới trong khu vực')}</span>
+        <span class="discover-card-copy">Cùng xu hướng: ${escapeHtml(companions.join(', ') || primary.genres.slice(0, 2).join(', ') || 'nhạc mới trong khu vực')}</span>
       `;
-      card.addEventListener('click', () => startDiscoverRadio(artist.name));
-      dom.discoverRadioRow.appendChild(card);
+      card.addEventListener('click', () => startDiscoverRadio(primary.name));
+      const cardShell = document.createElement('div');
+      cardShell.className = 'discover-radio-card-shell';
+      cardShell.appendChild(card);
+      if (state.lastFmRadioConfigured === true) {
+        const sourceLink = document.createElement('a');
+        sourceLink.className = 'discover-radio-attribution';
+        sourceLink.href = primary.lastFmUrl || `https://www.last.fm/music/${encodeURIComponent(primary.name)}`;
+        sourceLink.target = '_blank';
+        sourceLink.rel = 'noopener noreferrer';
+        sourceLink.textContent = 'Powered by AudioScrobbler';
+        cardShell.appendChild(sourceLink);
+      }
+      dom.discoverRadioRow.appendChild(cardShell);
     });
+    logRadioRecommendationDiagnostics(pipeline, finalSelected, finalCardData);
   }
 
   function renderDiscoverRecentList() {
@@ -4597,6 +5151,7 @@
 
   function refreshDiscoverSections() {
     renderDiscoverRadioRow();
+    refreshRadioArtistDiscoveryTracks();
     renderDiscoverRecentList();
     renderDiscoverChartCards();
     renderDiscoverAlbumRow();
@@ -4751,7 +5306,7 @@
       const normalizedArtist = normalizeDiscoverArtist(artistName);
       const matchingTracks = results.filter(track => getDiscoverArtistNames(track)
         .some(name => normalizeDiscoverArtist(name) === normalizedArtist));
-      const radioTracks = (matchingTracks.length ? matchingTracks : results)
+      const radioTracks = matchingTracks
         .filter((track, index, tracks) => track?.id && tracks.findIndex(candidate => candidate.id === track.id) === index)
         .slice(0, 25);
       if (!radioTracks.length) {
