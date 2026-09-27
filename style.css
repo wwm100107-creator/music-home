@@ -7144,6 +7144,13 @@ body.twilight-mode .bg-playback-chip.disabled {
   user-select: none;
 }
 
+.sync-action-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  color: currentColor;
+}
+
 .sync-btn:hover {
   background: rgba(255, 255, 255, 0.16);
   border-color: rgba(255, 255, 255, 0.3);
@@ -7622,6 +7629,11 @@ body.twilight-mode .bg-playback-chip.disabled {
   cursor: pointer;
   transition: all 0.2s ease;
   flex-shrink: 0;
+}
+
+.up-next-action-icon {
+  width: 19px;
+  height: 19px;
 }
 
 .up-next-play-btn:hover {
