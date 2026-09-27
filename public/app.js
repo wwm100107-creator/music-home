@@ -3342,7 +3342,7 @@
   }
 
   // ==========================================================================
-  // 3. WAVY VINE PROGRESS BAR & CHÚ LỬA CALCIFER (CUSTOM SVG)
+  // 3. WAVY VINE PROGRESS BAR & ANIMATED fire.gif PROGRESS MASCOT
   // ==========================================================================
   function updateProgressUI(percent) {
     const clamped = Math.max(0, Math.min(100, percent));

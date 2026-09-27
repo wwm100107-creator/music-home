@@ -29,6 +29,7 @@ const STATIC_ASSETS = [
   './wood_2.jpg',
   './wood_2.png',
   './bg.jpg',
+  './fire.gif',
   './1FTV-Austie-Bost-Happy-Holly.otf'
 ];
 

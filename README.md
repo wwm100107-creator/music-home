@@ -25,7 +25,7 @@ Trình phát nhạc trên trình duyệt lấy cảm hứng từ khung cảnh th
 
 ### 3. 🔥 Thanh Phát Nhạc Dây Leo & Chú Lửa Calcifer
 - Thanh tiến trình lượn sóng SVG xanh ngọc dịu mát như nhánh dây leo trong rừng già.
-- Cục chạy Calcifer là SVG vẽ riêng, đổi hiệu ứng theo trạng thái phát và tạm dừng.
+- Cục chạy dùng nhân vật GIF gốc `fire.gif` kèm animation phập phồng khi phát nhạc.
 
 ### 4. ☁️ Tài khoản và đồng bộ
 - **Ghibli Handwritten Letter Modal**: Modal đăng nhập / đăng ký thiết kế như một lá thư tay bằng giấy da rơi chao nghiêng.

@@ -5,7 +5,7 @@
  * - background.mp4: Fullscreen dynamic video background
  * - taskbar.png: Left glassmorphic sidebar with precise icons & typography
  * - wood.jpg / wood.png: Active "Playlists" wooden plank with Kodama spirit
- * - Calcifer flame thumb is drawn as inline SVG along the wavy vine progress bar
+ * - Animated fire.gif mascot thumb rides along the wavy vine progress bar
  * ============================================================================
  * 
  * HỆ THỐNG SKILLS ĐƯỢC ÁP DỤNG TRONG CSS:
@@ -2021,10 +2021,10 @@ body.twilight-mode .vine-progress-fill {
 }
 
 .calcifer-flame {
-  width: 32px;
+  width: auto;
   height: 60px;
   max-width: 50px;
-  overflow: visible;
+  object-fit: contain;
   filter: drop-shadow(0 0 10px rgba(255, 120, 20, 0.85)) drop-shadow(0 0 4px rgba(255, 200, 0, 0.6));
   transform-origin: bottom center;
   pointer-events: none;
@@ -5647,7 +5647,6 @@ body.twilight-mode .drop-lyrics-file-badge {
   }
 
   .calcifer-flame {
-    width: 18px !important;
     height: 34px !important;
     max-width: 28px !important;
   }
