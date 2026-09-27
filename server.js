@@ -1402,6 +1402,19 @@ function cleanChartSong(rawTitle, rawArtist) {
   return { title: title || rawTitle, artist: artist || rawArtist };
 }
 
+function extractTrackGenre(item) {
+  const candidates = [
+    item?.primaryGenreName,
+    item?.genre?.name,
+    item?.genre?.text,
+    item?.genre,
+    item?.category?.name,
+    item?.category?.text
+  ];
+  const genre = candidates.find(value => typeof value === 'string' && value.trim());
+  return genre ? genre.trim() : '';
+}
+
 // 10.3. YouTube Music chart playlists by region. These playlist positions are
 // not Music Home stream counts and must not be presented as Top/Viral scores.
 apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpointName: 'trending' }), async (req, res) => {
@@ -1485,6 +1498,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
               artist: cand.cleaned.artist,
               artists: cand.cleaned.artist ? [cand.cleaned.artist] : [],
               album: '',
+              genre: extractTrackGenre(cand.item),
               duration: finalDuration,
               durationSec: finalDurationSec,
               thumbnail,
@@ -1564,6 +1578,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
                   artist: cand.cleaned.artist,
                   artists: cand.cleaned.artist ? [cand.cleaned.artist] : [],
                   album: cand.item.album?.name || '',
+                  genre: extractTrackGenre(cand.item),
                   duration: finalDuration,
                   durationSec: finalDurationSec,
                   thumbnail,
@@ -1730,6 +1745,7 @@ apiRouter.get('/search', rateLimit({ maxRequests: 50, windowMs: 60000, endpointN
           artist,
           artists: artist ? [artist] : [],
           album,
+          genre: extractTrackGenre(item),
           duration,
           durationSec,
           thumbnail
@@ -1758,6 +1774,7 @@ apiRouter.get('/search', rateLimit({ maxRequests: 50, windowMs: 60000, endpointN
             artist: item.artistName || '',
             artists: item.artistName ? [item.artistName] : [],
             album: item.collectionName || '',
+            genre: item.primaryGenreName || '',
             duration: `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`,
             durationSec,
             thumbnail: item.artworkUrl100?.replace('100x100bb', '300x300bb') || 'wood_2.jpg',

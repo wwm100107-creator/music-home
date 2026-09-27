@@ -184,6 +184,19 @@
         return [];
       }
     })(),
+    recommendationHistory: (() => {
+      try {
+        const saved = JSON.parse(localStorage.getItem('ghibli_recommendation_history') || '{}');
+        return {
+          listens: Array.isArray(saved.listens) ? saved.listens.filter(event => event?.track?.id && Number(event.listenedSeconds) > 0).slice(-200) : [],
+          skips: Array.isArray(saved.skips) ? saved.skips.filter(event => event?.track?.id).slice(-100) : [],
+          discovery: Array.isArray(saved.discovery) ? saved.discovery.filter(event => event?.artist).slice(-80) : []
+        };
+      } catch (_) {
+        return { listens: [], skips: [], discovery: [] };
+      }
+    })(),
+    personalRecommendationTracks: [],
     searchResults: [],
     favorites: [],
     regionalAlbums: [],
@@ -1513,9 +1526,11 @@
               }
             } else if (event.data === 0) {
               if (state.activeEngine === 'youtube') {
+                finishRecommendationPlayback(true);
                 if (state.loopMode === 'one') {
                   const window = getTrackAudioTrimWindow(state.currentTrack, ytPlayer.getDuration());
                   ytPlayer.seekTo(window.isTrimmed ? window.start : 0, true);
+                  beginRecommendationPlaybackSession(state.currentTrack);
                   ytPlayer.playVideo();
                 } else {
                   playNextTrack();
@@ -3234,6 +3249,7 @@
 
   // Đồng bộ ngọn lửa Calcifer và thanh tiến trình liên tục (250ms)
   setInterval(() => {
+    updateRecommendationListeningProgress();
     if (dom.lyricsContributionPlayhead && dom.lyricsContributionModal && !dom.lyricsContributionModal.classList.contains('hidden')) {
       dom.lyricsContributionPlayhead.textContent = `Vị trí phát: ${formatLyricsContributionTime(getCurrentAudioTime())}`;
       updateLyricsContributionTimeline();
@@ -3289,8 +3305,8 @@
   function playTrack(track, addOrFindInQueue = true) {
     if (!track || !track.id) return;
 
+    beginRecommendationPlaybackSession(track);
     state.currentTrack = track;
-    rememberRecentlyPlayed(track);
     audioTrimLastSeekAt = 0;
     audioTrimLastSeekTrackId = null;
     audioTrimHandledEndTrackId = null;
@@ -3901,124 +3917,384 @@
     return [...new Set(names.map(name => String(name || '').trim()).filter(Boolean))];
   }
 
-  const VIETNAMESE_NEW_WAVE_ARTISTS = [
-    { name: 'HIEUTHUHAI', aliases: ['Hiếu Thứ Hai'], style: 'Rap · Pop' },
-    { name: 'tlinh', aliases: ['Tlinh'], style: 'R&B · Pop' },
-    { name: 'MCK', aliases: ['RPT MCK'], style: 'Rap · R&B' },
-    { name: 'Low G', aliases: ['Low G'], style: 'Rap · Hip-hop' },
-    { name: 'Pháo', aliases: ['Phao'], style: 'Rap · Pop' },
-    { name: 'Obito', aliases: ['Obito'], style: 'Rap · Hip-hop' },
-    { name: 'Wxrdie', aliases: ['Wxr Die'], style: 'Rap · Trap' },
-    { name: 'Wren Evans', aliases: ['Wren'], style: 'Pop · Alternative' },
-    { name: 'Amee', aliases: ['AMee'], style: 'Pop · R&B' },
-    { name: 'Orange', aliases: ['Orange'], style: 'Pop · R&B' },
-    { name: 'Jack - J97', aliases: ['Jack J97', 'Jack'], style: 'Pop · Rap' },
-    { name: 'Quân A.P', aliases: ['Quan AP', 'Quân AP'], style: 'Pop · Ballad' },
-    { name: 'Quang Hùng MasterD', aliases: ['Quang Hung MasterD', 'Quang Hùng'], style: 'Pop · R&B' },
-    { name: 'MONO', aliases: ['Mono'], style: 'Pop · Dance' },
-    { name: 'Grey D', aliases: ['Grey'], style: 'Pop · R&B' },
-    { name: 'Dương Domic', aliases: ['Duong Domic'], style: 'Pop · Alternative' },
-    { name: 'Liu Grace', aliases: ['Liu Grace'], style: 'Rap · R&B' },
-    { name: 'VSTRA', aliases: ['Vstra'], style: 'Indie · Pop' },
-    { name: 'Dangrangto', aliases: ['Dang Rang To'], style: 'Rap · Hip-hop' },
-    { name: 'HURRYKNG', aliases: ['Hurry Kng'], style: 'Rap · Pop' },
-    { name: 'RHYDER', aliases: ['Rhyder'], style: 'Pop · R&B' },
-    { name: 'OgeNus', aliases: ['Ogenus'], style: 'Rap · Hip-hop' },
-    { name: 'Captain Boy', aliases: ['CaptainBoy'], style: 'Pop · Rap' },
-    { name: '52Hz', aliases: ['52 Hz'], style: 'Indie · Pop' },
-    { name: 'buitruonglinh', aliases: ['Bùi Trường Linh'], style: 'Pop · Ballad' },
-    { name: 'Juky San', aliases: ['JukySan'], style: 'Pop · Ballad' },
-    { name: 'T.R.I', aliases: ['TRI'], style: 'Pop · R&B' },
-    { name: 'Madihu', aliases: ['Madihu'], style: 'Indie · Pop' },
-    { name: 'Tăng Duy Tân', aliases: ['Tang Duy Tan'], style: 'Pop · Dance' },
-    { name: 'Phúc Du', aliases: ['Phuc Du'], style: 'Rap · Hip-hop' },
-    { name: 'Seachains', aliases: ['Sea Chains'], style: 'Rap · Hip-hop' },
-    { name: '7dnight', aliases: ['7Dnight'], style: 'Rap · Alternative' }
-  ];
+  function getRecommendationTrackGenres(track) {
+    const rawGenres = [track?.genre, ...(Array.isArray(track?.genres) ? track.genres : [])];
+    return [...new Set(rawGenres.map(genre => normalizeDiscoverArtist(typeof genre === 'string' ? genre : genre?.name || genre?.label))
+      .filter(Boolean))];
+  }
 
-  function artistMatchesSeed(track, seed) {
-    const aliases = [seed.name, ...(seed.aliases || [])].map(normalizeDiscoverArtist).filter(Boolean);
-    return getDiscoverArtistNames(track).some(name => {
-      const candidate = normalizeDiscoverArtist(name);
-      return aliases.some(alias => candidate === alias || candidate.includes(alias));
+  function getRecommendationArtistKeys(track) {
+    const keys = getDiscoverArtistNames(track).map(normalizeDiscoverArtist).filter(Boolean);
+    return keys.length ? [...new Set(keys)] : [`track:${String(track?.id || '')}`];
+  }
+
+  function uniqueTracksById(tracks) {
+    const seen = new Set();
+    return (tracks || []).filter(track => {
+      const id = String(track?.id || '');
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
     });
   }
 
-  function getDiscoverArtistRankings() {
-    const ranking = new Map();
-    const add = (name, track, weight) => {
-      const normalizedName = normalizeDiscoverArtist(name);
-      if (!normalizedName) return;
-      const current = ranking.get(normalizedName) || { name, score: 0, tracks: [] };
-      current.score += weight;
-      if (track && !current.tracks.some(item => item.id === track.id)) current.tracks.push(track);
-      ranking.set(normalizedName, current);
+  function getDiscoverRegionalArtistRankings() {
+    const artists = new Map();
+    const chartTracks = state.trendingTracks || [];
+    const genreMomentum = new Map();
+    chartTracks.forEach((track, index) => {
+      const rank = Math.max(1, Number(track.rank) || index + 1);
+      const momentum = 50 / Math.pow(rank, 0.72);
+      getRecommendationTrackGenres(track).forEach(genre => genreMomentum.set(genre, (genreMomentum.get(genre) || 0) + momentum));
+    });
+    const add = (name, track, score) => {
+      const key = normalizeDiscoverArtist(name);
+      if (!key) return;
+      const entry = artists.get(key) || { name: String(name).trim(), score: 0, tracks: [], chartCount: 0 };
+      const alreadyHasTrack = track && entry.tracks.some(item => String(item.id) === String(track.id));
+      if (!alreadyHasTrack) {
+        entry.score += score / (1 + entry.chartCount * 0.58);
+        entry.chartCount += track ? 1 : 0;
+        if (track) entry.tracks.push(track);
+      }
+      artists.set(key, entry);
     };
 
-    state.trendingTracks.forEach((track, index) => {
-      const rank = Number(track.rank) || index + 1;
-      const chartWeight = Math.max(1, 51 - rank);
-      getDiscoverArtistNames(track).forEach(name => add(name, track, chartWeight));
+    chartTracks.forEach((track, index) => {
+      const rank = Math.max(1, Number(track.rank) || index + 1);
+      const regionalWeight = 50 / Math.pow(rank, 0.72);
+      const genreLift = Math.max(0, ...getRecommendationTrackGenres(track)
+        .map(genre => Math.min(8, Math.sqrt(genreMomentum.get(genre) || 0) * 0.22)));
+      getDiscoverArtistNames(track).forEach((name, artistIndex) => add(name, track, (regionalWeight + genreLift) / (artistIndex + 1)));
     });
+
+    return [...artists.values()].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+  }
+
+  function getDiscoverArtistRankings() {
+    const artists = new Map();
+    const profile = getRecommendationTasteProfile();
+    const ensureArtist = name => {
+      const key = normalizeDiscoverArtist(name);
+      if (!key) return null;
+      if (!artists.has(key)) artists.set(key, { name: String(name).trim(), score: 0, tracks: [], chartTracks: 0, recentAlbumYear: 0 });
+      return artists.get(key);
+    };
+
+    (state.trendingTracks || []).forEach((track, index) => {
+      const rank = Math.max(1, Number(track.rank) || index + 1);
+      const momentum = 38 / Math.pow(rank, 0.76);
+      getDiscoverArtistNames(track).forEach((name, artistIndex) => {
+        const entry = ensureArtist(name);
+        if (!entry) return;
+        if (!entry.tracks.some(item => String(item.id) === String(track.id))) {
+          entry.score += momentum / ((artistIndex + 1) * (1 + entry.chartTracks * 0.7));
+          entry.chartTracks += 1;
+          entry.tracks.push(track);
+        }
+      });
+    });
+
+    (state.homeAlbums || []).forEach((album, index) => {
+      const entry = ensureArtist(album.artist);
+      if (!entry) return;
+      const year = Number.parseInt(album.year, 10) || 0;
+      const freshness = year ? Math.max(0, Math.min(18, (year - 2018) * 1.35 + 4)) : 0;
+      entry.score += (12 - index * 0.45) + freshness;
+      entry.recentAlbumYear = Math.max(entry.recentAlbumYear, year);
+      if (album.id && !entry.tracks.some(track => String(track.id) === String(album.id))) {
+        entry.tracks.push({
+          id: album.id,
+          title: album.title,
+          artist: album.artist,
+          thumbnail: album.thumbnail,
+          year: album.year
+        });
+      }
+    });
+
+    return [...artists.values()]
+      .filter(artist => artist.name && artist.score > 0)
+      .map(artist => {
+        const key = normalizeDiscoverArtist(artist.name);
+        const listenerEngagement = Math.min(6,
+          (profile.recentArtistScores.get(key) || 0) * 1.2 +
+          (profile.longTermArtistScores.get(key) || 0) * 0.3 +
+          (profile.favoriteArtists.has(key) ? 1.2 : 0));
+        return { ...artist, score: artist.score + listenerEngagement, isNewWave: state.selectedCountry === 'VN' };
+      })
+      .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+      .slice(0, 40);
+  }
+
+  function getHomeArtistExposure(includeArtistDiscovery = false) {
+    const exposure = new Map();
+    const add = (trackOrName, amount = 1) => {
+      const names = typeof trackOrName === 'string'
+        ? [trackOrName]
+        : getDiscoverArtistNames(trackOrName);
+      names.map(normalizeDiscoverArtist).filter(Boolean).forEach(name => {
+        exposure.set(name, (exposure.get(name) || 0) + amount);
+      });
+    };
+
+    getDiscoverRegionalArtistRankings().slice(0, 7).forEach(artist => add(artist.name));
+    getStartListeningCandidates().slice(0, 5).forEach(track => add(track));
+    (state.homeAlbums || []).slice(0, 8).forEach(album => add(album.artist));
+    if (includeArtistDiscovery) getDiscoverArtistRankings().slice(0, 8).forEach(artist => add(artist.name));
+    return exposure;
+  }
+
+  function diversifyRankedCandidates(candidates, limit, maxPerArtist = (limit <= 10 ? 2 : 3)) {
+    const pool = [...(candidates || [])];
+    const selected = [];
+    const counts = new Map();
+
+    while (pool.length && selected.length < limit) {
+      const previousKeys = selected.length ? new Set(getRecommendationArtistKeys(selected[selected.length - 1].track)) : new Set();
+      const eligible = pool.filter(candidate => {
+        const keys = getRecommendationArtistKeys(candidate.track);
+        return keys.every(key => (counts.get(key) || 0) < maxPerArtist) && !keys.some(key => previousKeys.has(key));
+      });
+      const underCap = pool.filter(candidate => getRecommendationArtistKeys(candidate.track)
+        .every(key => (counts.get(key) || 0) < maxPerArtist));
+      const choices = eligible.length ? eligible : (underCap.length ? underCap : pool);
+      choices.sort((a, b) => {
+        const countA = Math.max(...getRecommendationArtistKeys(a.track).map(key => counts.get(key) || 0));
+        const countB = Math.max(...getRecommendationArtistKeys(b.track).map(key => counts.get(key) || 0));
+        const previousA = getRecommendationArtistKeys(a.track).some(key => previousKeys.has(key)) ? 1 : 0;
+        const previousB = getRecommendationArtistKeys(b.track).some(key => previousKeys.has(key)) ? 1 : 0;
+        return (b.score - countB * 24 - previousB * 1000) - (a.score - countA * 24 - previousA * 1000);
+      });
+      const next = choices[0];
+      selected.push(next);
+      getRecommendationArtistKeys(next.track).forEach(key => counts.set(key, (counts.get(key) || 0) + 1));
+      pool.splice(pool.indexOf(next), 1);
+    }
+
+    return selected.map(candidate => candidate.track);
+  }
+
+  function getRecommendationTasteProfile() {
+    const history = state.recommendationHistory || { listens: [], skips: [], discovery: [] };
+    const recentArtistScores = new Map();
+    const longTermArtistScores = new Map();
+    const artistPlayCounts = new Map();
+    const recentGenreScores = new Map();
+    const longTermGenreScores = new Map();
+    const trackPlayCounts = new Map();
+    const lastPlayedAt = new Map();
+    const listenedTracks = [];
+
+    (history.listens || []).forEach(event => {
+      const track = event.track;
+      const playedAt = Number(event.playedAt) || 0;
+      const ageDays = playedAt ? Math.max(0, (Date.now() - playedAt) / 86400000) : 365;
+      const replayWeight = 1 + Math.min(0.75, Math.max(0, Number(event.completed) ? 0.35 : 0) + Math.max(0, Number(event.listenedSeconds) / Math.max(30, Number(event.durationSec) || 180) - 0.5));
+      const recentWeight = Math.exp(-ageDays / 21) * replayWeight;
+      const longTermWeight = Math.exp(-ageDays / 180) * replayWeight;
+      getDiscoverArtistNames(track).forEach(name => {
+        const key = normalizeDiscoverArtist(name);
+        if (!key) return;
+        recentArtistScores.set(key, (recentArtistScores.get(key) || 0) + recentWeight);
+        longTermArtistScores.set(key, (longTermArtistScores.get(key) || 0) + longTermWeight);
+        artistPlayCounts.set(key, (artistPlayCounts.get(key) || 0) + 1);
+      });
+      getRecommendationTrackGenres(track).forEach(genre => {
+        recentGenreScores.set(genre, (recentGenreScores.get(genre) || 0) + recentWeight);
+        longTermGenreScores.set(genre, (longTermGenreScores.get(genre) || 0) + longTermWeight);
+      });
+      const trackId = String(track?.id || '');
+      if (trackId) {
+        trackPlayCounts.set(trackId, (trackPlayCounts.get(trackId) || 0) + 1);
+        lastPlayedAt.set(trackId, Math.max(lastPlayedAt.get(trackId) || 0, playedAt));
+        listenedTracks.push({ ...track, _lastListenedAt: playedAt, _listenedSeconds: Number(event.listenedSeconds) || 0 });
+      }
+    });
+
+    const favoriteArtists = new Set();
+    const likedSongIds = new Set();
+    const favoriteGenreScores = new Map();
     (state.favorites || []).forEach(track => {
-      getDiscoverArtistNames(track).forEach(name => add(name, track, 18));
-    });
-    (state.recentTracks || []).forEach((track, index) => {
-      getDiscoverArtistNames(track).forEach(name => add(name, track, Math.max(5, 12 - index)));
+      if (track?.id) likedSongIds.add(String(track.id));
+      getDiscoverArtistNames(track).forEach(name => favoriteArtists.add(normalizeDiscoverArtist(name)));
+      getRecommendationTrackGenres(track).forEach(genre => favoriteGenreScores.set(genre, (favoriteGenreScores.get(genre) || 0) + 1));
     });
 
-    if (state.selectedCountry === 'VN') {
-      const playlistRankedTracks = state.trendingTracks || [];
-      const favoriteTracks = state.favorites || [];
-      const recentTracks = state.recentTracks || [];
-      const albumTracks = (state.homeAlbums || []).map(album => ({
-        id: album.id,
-        title: album.title,
-        artist: album.artist,
-        thumbnail: album.thumbnail
-      }));
+    const recentSkippedIds = new Map();
+    (history.skips || []).forEach(event => {
+      const id = String(event.track?.id || '');
+      const ageDays = Math.max(0, (Date.now() - (Number(event.skippedAt) || 0)) / 86400000);
+      if (id && ageDays <= 30) recentSkippedIds.set(id, Math.min(1.5, (recentSkippedIds.get(id) || 0) + Math.exp(-ageDays / 18)));
+    });
 
-      return VIETNAMESE_NEW_WAVE_ARTISTS.map((seed, index) => {
-        const chartTracks = playlistRankedTracks.filter(track => artistMatchesSeed(track, seed));
-        const favoriteMatches = favoriteTracks.filter(track => artistMatchesSeed(track, seed));
-        const recentMatches = recentTracks.filter(track => artistMatchesSeed(track, seed));
-        const albumMatch = albumTracks.find(track => artistMatchesSeed(track, seed));
-        const tracks = [...chartTracks, ...favoriteMatches, ...recentMatches, ...(albumMatch ? [albumMatch] : [])]
-          .filter((track, trackIndex, all) => track && all.findIndex(candidate => candidate.id === track.id) === trackIndex);
-        const chartScore = chartTracks.reduce((sum, track, trackIndex) => {
-          const rank = Number(track.rank) || playlistRankedTracks.indexOf(track) + 1;
-          return sum + Math.max(1, 51 - rank) / (trackIndex + 1);
-        }, 0);
-        const recencyScore = recentMatches.reduce((sum, track) => {
-          const recentIndex = recentTracks.findIndex(candidate => candidate.id === track.id);
-          return sum + Math.max(4, 14 - Math.max(0, recentIndex));
-        }, 0);
-        return {
-          name: seed.name,
-          score: 12 + chartScore + (favoriteMatches.length * 22) + recencyScore + Math.max(0, 5 - index * 0.12),
-          tracks,
-          style: seed.style,
-          aliases: seed.aliases,
-          isNewWave: true
-        };
-      }).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+    const discoveryArtistScores = new Map();
+    (history.discovery || []).forEach(event => {
+      const key = normalizeDiscoverArtist(event.artist);
+      const ageDays = Math.max(0, (Date.now() - (Number(event.at) || 0)) / 86400000);
+      if (key && ageDays <= 60) discoveryArtistScores.set(key, (discoveryArtistScores.get(key) || 0) + Math.exp(-ageDays / 24));
+    });
+
+    const sortScores = map => [...map.entries()].sort((a, b) => b[1] - a[1]);
+    return {
+      recentArtistScores,
+      longTermArtistScores,
+      artistPlayCounts,
+      recentGenreScores,
+      longTermGenreScores,
+      favoriteGenreScores,
+      favoriteArtists,
+      likedSongIds,
+      recentSkippedIds,
+      trackPlayCounts,
+      lastPlayedAt,
+      listenedTracks,
+      recentArtists: sortScores(recentArtistScores),
+      frequentArtists: sortScores(artistPlayCounts).filter(([, count]) => count > 1),
+      favoriteArtistNames: [...new Map((state.favorites || []).flatMap(getDiscoverArtistNames)
+        .map(name => [normalizeDiscoverArtist(name), name])).values()],
+      frequentGenres: sortScores(longTermGenreScores),
+      recentGenres: sortScores(recentGenreScores),
+      discoveryArtistScores
+    };
+  }
+
+  function getStartListeningCandidates() {
+    const profile = getRecommendationTasteProfile();
+    const candidateScores = new Map();
+    const add = (track, score, source) => {
+      if (!track?.id) return;
+      const id = String(track.id);
+      const existing = candidateScores.get(id);
+      if (!existing || score > existing.score) candidateScores.set(id, { track, score, source });
+    };
+
+    (state.recentTracks || []).forEach((track, index) => add(track, 82 - index * 4, 'recent-play'));
+    profile.listenedTracks.slice().sort((a, b) => b._lastListenedAt - a._lastListenedAt).forEach((track, index) => {
+      add(track, 88 - index * 3, 'qualified-listen');
+    });
+    (state.personalRecommendationTracks || []).forEach((track, index) => {
+      const keys = getRecommendationArtistKeys(track);
+      const affinity = Math.max(0, ...keys.map(key => profile.recentArtistScores.get(key) || 0));
+      add(track, 43 + Math.min(20, affinity * 6) - index * 0.05, 'taste-related');
+    });
+    (state.favorites || []).forEach((track, index) => add(track, 38 - index * 0.4, 'favorite'));
+
+    const chartTracks = [...(state.trendingTracks || []), ...(state.globalTrendingTracks || [])];
+    chartTracks.forEach((track, index) => {
+      const rank = Math.max(1, Number(track.rank) || index + 1);
+      const artistAffinity = Math.max(0, ...getRecommendationArtistKeys(track).map(key => profile.recentArtistScores.get(key) || profile.longTermArtistScores.get(key) || 0));
+      add(track, 8 + Math.min(24, artistAffinity * 7) + 8 / Math.sqrt(rank), 'regional-chart-support');
+    });
+
+    const ranked = [...candidateScores.values()].map(candidate => ({
+      ...candidate,
+      score: candidate.score - Math.max(0, ...getRecommendationArtistKeys(candidate.track).map(key => profile.recentSkippedIds.get(String(candidate.track.id)) || 0)) * 12
+    })).sort((a, b) => b.score - a.score);
+    return diversifyRankedCandidates(ranked, 5, 2);
+  }
+
+  function scorePersonalRecommendation(track, source, profile, exposure) {
+    const id = String(track.id);
+    const artists = getRecommendationArtistKeys(track);
+    const genres = getRecommendationTrackGenres(track);
+    const recentTaste = Math.max(0, ...artists.map(key => profile.recentArtistScores.get(key) || 0));
+    const longTermTaste = Math.max(0, ...artists.map(key => profile.longTermArtistScores.get(key) || 0));
+    const discoveryIntent = Math.max(0, ...artists.map(key => profile.discoveryArtistScores.get(key) || 0));
+    const recentGenreAffinity = Math.max(0, ...genres.map(genre => profile.recentGenreScores.get(genre) || 0));
+    const longTermGenreAffinity = Math.max(0, ...genres.map(genre => profile.longTermGenreScores.get(genre) || 0));
+    const favoriteGenreAffinity = Math.max(0, ...genres.map(genre => profile.favoriteGenreScores.get(genre) || 0));
+    const playedAt = profile.lastPlayedAt.get(id) || 0;
+    const ageDays = playedAt ? Math.max(0, (Date.now() - playedAt) / 86400000) : 365;
+    const chartTrack = [...(state.trendingTracks || []), ...(state.globalTrendingTracks || [])]
+      .find(item => String(item.id) === id);
+    const chartRank = Math.max(1, Number(chartTrack?.rank) || 50);
+    const repeatedPlays = profile.trackPlayCounts.get(id) || 0;
+    const exposureCount = Math.max(0, ...artists.map(key => exposure.get(key) || 0));
+    const skipRisk = profile.recentSkippedIds.get(id) || 0;
+
+    let score = 0;
+    score += Math.min(56, recentTaste * 28);                 // Current taste
+    score += Math.min(20, longTermTaste * 3.2);              // Long-term taste
+    score += Math.min(14, Math.max(0, repeatedPlays - 1) * 5); // Replays
+    if (artists.some(key => profile.favoriteArtists.has(key))) score += 34;
+    score += Math.min(22, recentGenreAffinity * 8);
+    score += Math.min(12, longTermGenreAffinity * 3.5);
+    score += Math.min(8, favoriteGenreAffinity * 2.5);
+    score += Math.min(8, 8 / Math.sqrt(chartRank));          // Regional/global relevance is supporting only
+    if (source === 'taste-search') score += 7;
+    if (source === 'taste-search' && track._recommendationSeed &&
+        !artists.includes(normalizeDiscoverArtist(track._recommendationSeed))) score += 5;
+    score += Math.min(7, discoveryIntent * 4);               // Explicit radio exploration, weak intent
+    if (playedAt && ageDays <= 10) score -= 28 * (1 - ageDays / 14); // Avoid immediate repetition
+    else if (repeatedPlays >= 3) score += 7;
+    score -= skipRisk * 42;
+    score -= exposureCount * 4.5;
+    if (state.currentTrack?.id && String(state.currentTrack.id) === id) score -= 40;
+    return score;
+  }
+
+  let personalizedSearchKey = '';
+  let personalizedSearchAt = 0;
+  let personalizedSearchPromise = null;
+
+  async function refreshPersonalizedCandidates() {
+    const profile = getRecommendationTasteProfile();
+    const seedEntries = [
+      ...profile.recentArtists.slice(0, 2),
+      ...profile.favoriteArtistNames.slice(0, 2).map(name => [name, 1]),
+      ...profile.frequentArtists.slice(0, 2),
+      ...[...profile.discoveryArtistScores.entries()].sort((a, b) => b[1] - a[1]).slice(0, 1)
+    ];
+    const seeds = [];
+    const seen = new Set();
+    seedEntries.forEach(([name]) => {
+      const key = normalizeDiscoverArtist(name);
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        seeds.push(String(name));
+      }
+    });
+    const selectedSeeds = seeds.slice(0, 3);
+    if (!selectedSeeds.length) {
+      state.personalRecommendationTracks = [];
+      return;
     }
 
-    if (!ranking.size) {
-      (state.homeAlbums || []).forEach(album => add(album.artist, {
-        id: album.id,
-        title: album.title,
-        artist: album.artist,
-        thumbnail: album.thumbnail
-      }, 1));
-    }
+    const requestKey = `${state.selectedCountry}|${selectedSeeds.map(normalizeDiscoverArtist).join('|')}`;
+    if (personalizedSearchKey === requestKey && Date.now() - personalizedSearchAt < 20 * 60 * 1000) return;
+    if (personalizedSearchPromise) return personalizedSearchPromise.then(() => refreshPersonalizedCandidates());
 
-    return [...ranking.values()].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)).slice(0, 24);
+    personalizedSearchKey = requestKey;
+    personalizedSearchAt = Date.now();
+    personalizedSearchPromise = Promise.all(selectedSeeds.map(async seed => {
+      try {
+        const query = `${seed} similar songs`;
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return (Array.isArray(data.results) ? data.results : []).map(track => ({
+          ...track,
+          _recommendationSource: 'taste-search',
+          _recommendationSeed: seed
+        }));
+      } catch (_) {
+        return [];
+      }
+    })).then(groups => {
+      state.personalRecommendationTracks = uniqueTracksById(groups.flat()).slice(0, 75);
+      renderDiscoverRecentList();
+      renderDiscoverForYouRow();
+    }).finally(() => {
+      personalizedSearchPromise = null;
+    });
+    return personalizedSearchPromise;
   }
 
   function renderDiscoverRadioRow() {
     if (!dom.discoverRadioRow) return;
-    const artists = getDiscoverArtistRankings().slice(0, 7);
+    const regionalArtists = getDiscoverRegionalArtistRankings();
+    const artists = regionalArtists.slice(0, 7);
     dom.discoverRadioRow.innerHTML = '';
     artists.forEach((artist, index) => {
       const neighboringTracks = artist.tracks.slice(0, 3);
@@ -4026,7 +4302,7 @@
         ? neighboringTracks
         : [...neighboringTracks, ...state.trendingTracks.filter(track => !neighboringTracks.some(item => item.id === track.id))].slice(0, 3);
       const images = collageTracks.slice(0, 3).map(track => upgradeThumbnailUrl(track.thumbnail) || 'wood_2.jpg');
-      const companions = getDiscoverArtistRankings()
+      const companions = regionalArtists
         .filter(candidate => normalizeDiscoverArtist(candidate.name) !== normalizeDiscoverArtist(artist.name))
         .slice(0, 3)
         .map(candidate => candidate.name);
@@ -4051,13 +4327,11 @@
 
   function renderDiscoverRecentList() {
     if (!dom.discoverRecentList) return;
-    const recentTracks = state.recentTracks.length
-      ? state.recentTracks
-      : (state.favorites.length ? state.favorites : state.trendingTracks);
-    const tracks = recentTracks.slice(0, 5);
+    const tracks = getStartListeningCandidates();
     dom.discoverRecentList.innerHTML = '';
     if (dom.discoverRecentCaption) {
-      dom.discoverRecentCaption.textContent = state.recentTracks.length
+      const hasQualifiedListening = (state.recommendationHistory?.listens || []).length > 0;
+      dom.discoverRecentCaption.textContent = hasQualifiedListening || state.recentTracks.length
         ? 'Tiếp tục từ những bài bạn vừa nghe trên thiết bị này'
         : (state.favorites.length ? 'Bắt đầu từ các bài bạn đã lưu yêu thích' : 'Bắt đầu với những bài đang đứng đầu bảng khu vực');
     }
@@ -4127,7 +4401,21 @@
   function renderDiscoverAlbumRow() {
     if (!dom.discoverAlbumRow) return;
     dom.discoverAlbumRow.innerHTML = '';
-    (state.homeAlbums || []).slice(0, 10).forEach(album => {
+    const exposure = getHomeArtistExposure(false);
+    const rankedAlbums = (state.homeAlbums || []).map((album, index) => {
+      const artistKey = normalizeDiscoverArtist(album.artist);
+      const year = Number.parseInt(album.year, 10) || 0;
+      const freshness = year ? Math.max(0, Math.min(12, (year - 2020) * 1.5 + 2)) : 0;
+      return { album, score: (20 - index) + freshness - (exposure.get(artistKey) || 0) * 7 };
+    }).sort((a, b) => b.score - a.score || (Number.parseInt(b.album.year, 10) || 0) - (Number.parseInt(a.album.year, 10) || 0));
+    const seenAlbumArtists = new Set();
+    const albums = rankedAlbums.filter(({ album }) => {
+      const artistKey = normalizeDiscoverArtist(album.artist) || `album:${album.id}`;
+      if (seenAlbumArtists.has(artistKey)) return false;
+      seenAlbumArtists.add(artistKey);
+      return true;
+    }).slice(0, 10).map(entry => entry.album);
+    albums.forEach(album => {
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'discover-album-card';
@@ -4151,15 +4439,20 @@
     if (!dom.discoverArtistRow) return;
     dom.discoverArtistRow.innerHTML = '';
     const isVietnamWave = state.selectedCountry === 'VN';
+    const exposure = getHomeArtistExposure(false);
+    const artists = getDiscoverArtistRankings().map(artist => ({
+      ...artist,
+      adjustedScore: artist.score - (exposure.get(normalizeDiscoverArtist(artist.name)) || 0) * 9
+    })).sort((a, b) => b.adjustedScore - a.adjustedScore || a.name.localeCompare(b.name)).slice(0, 24);
     if (dom.discoverArtistsTitle) {
       dom.discoverArtistsTitle.textContent = isVietnamWave ? 'Gương mặt V-Pop thế hệ mới' : 'Nghệ sĩ phổ biến';
     }
     if (dom.discoverArtistsCaption) {
       dom.discoverArtistsCaption.textContent = isVietnamWave
-        ? 'Làn sóng nghệ sĩ trẻ nổi bật từ 2018 · ưu tiên theo bảng khu vực và gu nghe của bạn'
-        : 'Nghệ sĩ được xếp theo thứ hạng bảng nhạc tại khu vực của bạn';
+        ? 'Gương mặt nổi bật qua bảng khu vực, đĩa gần đây và lượt nghe thực tế'
+        : 'Nghệ sĩ nổi bật theo bảng khu vực, đĩa gần đây và lượt nghe thực tế';
     }
-    getDiscoverArtistRankings().slice(0, isVietnamWave ? VIETNAMESE_NEW_WAVE_ARTISTS.length : 24).forEach((artist, index) => {
+    artists.forEach((artist, index) => {
       const portrait = artist.tracks.find(track => track.thumbnail)?.thumbnail;
       const initials = artist.name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase();
       const card = document.createElement('button');
@@ -4172,7 +4465,7 @@
           <span class="discover-artist-rank">${String(index + 1).padStart(2, '0')}</span>
           <svg class="discover-artist-sprout" viewBox="0 0 32 32" focusable="false"><path d="M15.8 25.8c.2-6.1 2.8-11.4 8.7-15.2-.4 6.5-3.7 11.6-8.7 15.2Z"/><path d="M15.8 25.8C14 20 10.5 16.7 5 15.3c.4 5.4 4.4 9.4 10.8 10.5ZM15.8 26V9.5"/></svg>
         </span>
-        <span class="discover-artist-copy"><strong>${escapeHtml(artist.name)}</strong><span>${escapeHtml(artist.isNewWave ? artist.style : 'Đang thịnh hành')}</span></span>
+        <span class="discover-artist-copy"><strong>${escapeHtml(artist.name)}</strong><span>${escapeHtml(artist.recentAlbumYear ? `Đĩa phát hành ${artist.recentAlbumYear}` : 'Đang thịnh hành')}</span></span>
       `;
       if (portrait) {
         const portraitImage = card.querySelector('.discover-artist-avatar > img');
@@ -4190,21 +4483,35 @@
 
   function renderDiscoverForYouRow() {
     if (!dom.discoverForYouRow) return;
-    const favoriteArtists = new Set((state.favorites || []).flatMap(getDiscoverArtistNames).map(normalizeDiscoverArtist));
-    const recentArtists = new Set((state.recentTracks || []).flatMap(getDiscoverArtistNames).map(normalizeDiscoverArtist));
-    const recentlyPlayedIds = new Set((state.recentTracks || []).map(track => String(track.id)));
-    const recommendations = state.trendingTracks.map((track, index) => {
-      const artists = getDiscoverArtistNames(track).map(normalizeDiscoverArtist);
-      let score = 50 - (Number(track.rank) || index + 1);
-      if (artists.some(artist => favoriteArtists.has(artist))) score += 42;
-      if (artists.some(artist => recentArtists.has(artist))) score += 24;
-      if (recentlyPlayedIds.has(String(track.id))) score -= 38;
-      if (track.id === state.currentTrack?.id) score -= 16;
-      return { track, score };
-    }).sort((a, b) => b.score - a.score || (Number(a.track.rank) || 99) - (Number(b.track.rank) || 99));
+    const profile = getRecommendationTasteProfile();
+    const exposure = getHomeArtistExposure(true);
+    const candidateMap = new Map();
+    const addCandidate = (track, source) => {
+      if (!track?.id) return;
+      const id = String(track.id);
+      if (profile.likedSongIds.has(id)) return;
+      const existing = candidateMap.get(id);
+      if (!existing || source === 'taste-search') candidateMap.set(id, { track, source });
+    };
+
+    // Personalized search results and actual listener history are the primary pool.
+    (state.personalRecommendationTracks || []).forEach(track => addCandidate(track, 'taste-search'));
+    profile.listenedTracks.forEach(track => {
+      const ageDays = Math.max(0, (Date.now() - Number(track._lastListenedAt || 0)) / 86400000);
+      if (ageDays > 10 || (profile.trackPlayCounts.get(String(track.id)) || 0) >= 3) addCandidate(track, 'listening-history');
+    });
+
+    // Regional and global charts only support the personalized pool or fill a cold-start profile.
+    [...(state.trendingTracks || []), ...(state.globalTrendingTracks || [])].forEach(track => addCandidate(track, 'chart-support'));
+    const candidates = [...candidateMap.values()].map(({ track, source }) => ({
+      track,
+      score: scorePersonalRecommendation(track, source, profile, exposure),
+      source
+    })).sort((a, b) => b.score - a.score);
+    const recommendations = diversifyRankedCandidates(candidates, 8, 2);
 
     dom.discoverForYouRow.innerHTML = '';
-    recommendations.slice(0, 8).forEach(({ track }) => {
+    recommendations.forEach(track => {
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'discover-track-card';
@@ -4218,9 +4525,10 @@
       dom.discoverForYouRow.appendChild(card);
     });
     if (dom.discoverForYouCaption) {
-      const basis = favoriteArtists.size || recentArtists.size
-        ? 'Yêu thích và lượt nghe gần đây đang được ưu tiên trong bảng xếp hạng.'
-        : `Các bài thứ hạng cao tại ${state.selectedCountryName || 'khu vực của bạn'}. Lưu yêu thích để cá nhân hóa thêm.`;
+      const hasTasteSignals = profile.favoriteArtists.size || profile.listenedTracks.length;
+      const basis = hasTasteSignals
+        ? 'Gợi ý từ lượt nghe đủ thời lượng, bài yêu thích và nghệ sĩ liên quan; xu hướng khu vực chỉ bổ trợ.'
+        : `Đang khám phá nhạc từ ${state.selectedCountryName || 'khu vực của bạn'}; nghe đủ một phần bài hát hoặc lưu yêu thích để cá nhân hóa.`;
       dom.discoverForYouCaption.textContent = basis;
     }
   }
@@ -4232,29 +4540,146 @@
     renderDiscoverAlbumRow();
     renderDiscoverArtistRow();
     renderDiscoverForYouRow();
+    refreshPersonalizedCandidates();
+  }
+
+  function serializeRecommendationTrack(track) {
+    return {
+      id: String(track?.id || ''),
+      title: String(track?.title || 'Bài hát'),
+      artist: String(track?.artist || ''),
+      artists: Array.isArray(track?.artists) ? track.artists.slice(0, 8) : [],
+      album: String(track?.album || ''),
+      duration: String(track?.duration || ''),
+      durationSec: Number(track?.durationSec) || 0,
+      genre: String(track?.genre || ''),
+      genres: Array.isArray(track?.genres) ? track.genres.slice(0, 8) : [],
+      thumbnail: String(track?.thumbnail || '')
+    };
+  }
+
+  function saveRecommendationHistory() {
+    state.recommendationHistory.listens = (state.recommendationHistory.listens || []).slice(-200);
+    state.recommendationHistory.skips = (state.recommendationHistory.skips || []).slice(-100);
+    state.recommendationHistory.discovery = (state.recommendationHistory.discovery || []).slice(-80);
+    try { localStorage.setItem('ghibli_recommendation_history', JSON.stringify(state.recommendationHistory)); } catch (_) {}
   }
 
   function rememberRecentlyPlayed(track) {
-    const recentTrack = {
-      id: String(track.id),
-      title: String(track.title || 'Bài hát'),
-      artist: String(track.artist || ''),
-      artists: Array.isArray(track.artists) ? track.artists.slice(0, 8) : [],
-      album: String(track.album || ''),
-      duration: String(track.duration || ''),
-      durationSec: Number(track.durationSec) || 0,
-      thumbnail: String(track.thumbnail || '')
-    };
+    const recentTrack = serializeRecommendationTrack(track);
     state.recentTracks = [recentTrack, ...state.recentTracks.filter(item => String(item.id) !== recentTrack.id)].slice(0, 12);
     try { localStorage.setItem('ghibli_recent_tracks', JSON.stringify(state.recentTracks)); } catch (_) {}
-    renderDiscoverRadioRow();
     renderDiscoverRecentList();
-    renderDiscoverArtistRow();
+    renderDiscoverForYouRow();
+  }
+
+  let recommendationPlaybackSession = null;
+
+  function persistQualifiedListen(session, completed = false) {
+    if (!session?.track?.id) return;
+    const eventId = session.eventId;
+    const existingIndex = state.recommendationHistory.listens.findIndex(event => event.eventId === eventId);
+    const event = {
+      eventId,
+      track: serializeRecommendationTrack(session.track),
+      listenedSeconds: Math.round(session.listenedSeconds * 10) / 10,
+      durationSec: Number(session.track.durationSec) || 0,
+      playedAt: session.qualifiedAt || Date.now(),
+      completed: !!completed
+    };
+    if (existingIndex >= 0) state.recommendationHistory.listens[existingIndex] = event;
+    else state.recommendationHistory.listens.push(event);
+    state.recommendationHistory.skips = state.recommendationHistory.skips.filter(skip => String(skip.track?.id) !== String(session.track.id));
+    saveRecommendationHistory();
+    if (!session.qualified) {
+      session.qualified = true;
+      rememberRecentlyPlayed(session.track);
+      refreshPersonalizedCandidates();
+    }
+    renderDiscoverForYouRow();
+  }
+
+  function finishRecommendationPlayback(completed = false) {
+    const session = recommendationPlaybackSession;
+    if (!session || session.finalized) return;
+    session.finalized = true;
+    if (completed && !session.qualified) session.qualifiedAt = Date.now();
+    const duration = Number(session.track.durationSec) || 0;
+    const qualificationThreshold = duration > 0 ? Math.max(5, Math.min(30, duration * 0.5)) : 30;
+    if (session.listenedSeconds >= qualificationThreshold) {
+      persistQualifiedListen(session, completed);
+    }
+    if (!completed && session.listenedSeconds >= 5) {
+      state.recommendationHistory.skips.push({
+        track: serializeRecommendationTrack(session.track),
+        skippedAt: Date.now(),
+        listenedSeconds: Math.round(session.listenedSeconds * 10) / 10
+      });
+      saveRecommendationHistory();
+      renderDiscoverForYouRow();
+    }
+    recommendationPlaybackSession = null;
+  }
+
+  function beginRecommendationPlaybackSession(track) {
+    finishRecommendationPlayback(false);
+    recommendationPlaybackSession = {
+      eventId: `listen-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      track: serializeRecommendationTrack(track),
+      listenedSeconds: 0,
+      lastPosition: null,
+      lastSampleAt: 0,
+      qualified: false,
+      qualifiedAt: 0,
+      finalized: false
+    };
+  }
+
+  function updateRecommendationListeningProgress() {
+    const session = recommendationPlaybackSession;
+    if (!session || session.finalized || !state.isPlaying || !state.currentTrack || String(state.currentTrack.id) !== session.track.id) {
+      if (session) {
+        session.lastPosition = null;
+        session.lastSampleAt = 0;
+      }
+      return;
+    }
+
+    const position = Number(getCurrentAudioTime());
+    if (!Number.isFinite(position) || position < 0) return;
+    const now = Date.now();
+    if (session.lastPosition !== null && session.lastSampleAt) {
+      const delta = position - session.lastPosition;
+      const wallSeconds = Math.max(0, Math.min(4, (now - session.lastSampleAt) / 1000));
+      if (delta > 0 && delta <= Math.max(1.5, wallSeconds * 2.75) && delta <= 4) {
+        session.listenedSeconds += Math.min(delta, Math.max(0.5, wallSeconds * 1.7));
+      }
+    }
+    session.lastPosition = position;
+    session.lastSampleAt = now;
+
+    const duration = Number(session.track.durationSec) || 0;
+    const threshold = duration > 0 ? Math.max(5, Math.min(30, duration * 0.5)) : 30;
+    if (!session.qualified && session.listenedSeconds >= threshold) {
+      session.qualifiedAt = now;
+      persistQualifiedListen(session, false);
+    } else if (session.qualified && session.listenedSeconds - (session.lastPersistedSeconds || 0) >= 25) {
+      session.lastPersistedSeconds = session.listenedSeconds;
+      persistQualifiedListen(session, false);
+    }
+  }
+
+  function recordDiscoverArtistIntent(artistName) {
+    if (!artistName) return;
+    state.recommendationHistory.discovery.push({ artist: String(artistName), at: Date.now() });
+    saveRecommendationHistory();
+    refreshPersonalizedCandidates();
     renderDiscoverForYouRow();
   }
 
   async function startDiscoverRadio(artistName) {
     try {
+      recordDiscoverArtistIntent(artistName);
       showToast(`Đang tạo radio quanh ${artistName}...`);
       const response = await fetch(`/api/search?q=${encodeURIComponent(`${artistName} popular songs`)}`);
       const data = await response.json();
@@ -4292,6 +4717,8 @@
     if (state.selectedCountry === 'GLOBAL' && state.currentTimeframe === 'daily' && state.trendingTracks.length) {
       state.globalTrendingTracks = state.trendingTracks;
       renderDiscoverChartCards();
+      renderDiscoverRecentList();
+      renderDiscoverForYouRow();
       return;
     }
     try {
@@ -4300,6 +4727,8 @@
       if (data?.success) {
         state.globalTrendingTracks = data.results || data.tracks || [];
         renderDiscoverChartCards();
+        renderDiscoverRecentList();
+        renderDiscoverForYouRow();
       }
     } catch (error) {
       console.warn('[Global discovery chart error]:', error);
@@ -5228,6 +5657,7 @@
 
   function renderFavorites() {
     if (!dom.favoriteTracksGrid) return;
+    refreshPersonalizedCandidates();
     dom.favoriteTracksGrid.innerHTML = '';
 
     if (state.favorites.length === 0) {
@@ -5527,9 +5957,11 @@
 
       dom.audio.addEventListener('ended', () => {
         if (state.activeEngine !== 'audio') return;
+        finishRecommendationPlayback(true);
         if (state.loopMode === 'one') {
           const window = getTrackAudioTrimWindow(state.currentTrack, getEffectiveAudioDuration());
           dom.audio.currentTime = window.isTrimmed ? window.start : 0;
+          beginRecommendationPlaybackSession(state.currentTrack);
           dom.audio.play().catch(() => {});
         } else {
           playNextTrack();
