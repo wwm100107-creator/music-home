@@ -54,17 +54,6 @@ Trình phát nhạc trên trình duyệt lấy cảm hứng từ khung cảnh th
 - Trên máy chủ Termux, tạo/sửa `~/music-home/.env` một lần. Tệp `.env` đã được Git bỏ qua nên auto-sync không ghi đè và key không bị đẩy lên GitHub. Khởi động lại `server.js` sau khi thêm key.
 - Khi chưa có key, mục này vẫn dùng bảng xếp hạng và gu nghe cục bộ; các nghệ sĩ liên quan từ Last.fm sẽ chưa xuất hiện. Mỗi thẻ có liên kết nguồn “Powered by AudioScrobbler”.
 
-### Nguồn ảnh nghệ sĩ và album
-- Các nguồn nhạc hiện có (YouTube Music/YouTube, iTunes dự phòng và dữ liệu nghệ sĩ liên quan từ Last.fm) tiếp tục quyết định bài hát, nghệ sĩ và thứ hạng. `ArtworkResolver` chỉ tìm ảnh sau khi hệ thống đã chọn mục nhạc; ảnh không ảnh hưởng đề xuất. Nếu thiếu ảnh, mục nhạc vẫn giữ nguyên và thẻ nghệ sĩ hiện chữ cái đại diện.
-- `ArtworkResolver` ưu tiên thumbnail YouTube Music. Nếu thiếu ảnh, nó tìm MusicBrainz ID theo tên nghệ sĩ hoặc tên album + nghệ sĩ; ảnh bìa album được tìm trong Cover Art Archive rồi mới thử Fanart.tv. Fanart.tv cần MusicBrainz ID, không tìm trực tiếp theo tên.
-- Để bật Fanart.tv, tạo API key rồi thêm các biến này vào `.env`. `FANART_CLIENT_KEY` là tùy chọn:
-  ```env
-  FANART_API_KEY=your_fanart_api_key
-  FANART_CLIENT_KEY=
-  ```
-- Fanart.tv trả về URL ảnh gốc; giao diện dùng biến thể `/bigpreview/` (tối đa 400 px) để tải ảnh thẻ nhẹ hơn. Không có key hoặc không tìm thấy ảnh thì dùng thumbnail nguồn, sau đó mới dùng ảnh nền trung tính.
-- Mục **Album và đĩa đơn phổ biến** gom các bản phát hành có ID từ bảng nhạc khu vực hiện tại, tính độ nổi bật, loại bản trùng và giới hạn một bản phát hành mỗi nghệ sĩ trước khi hiển thị.
-
 ---
 
 ## ⌨ Phím tắt điều khiển
