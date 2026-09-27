@@ -7665,6 +7665,275 @@ body.twilight-mode .bg-playback-chip.disabled {
   white-space: normal;
 }
 
+/* Discovery home: horizontal shelves, concise listening history, and chart covers. */
+.discover-section {
+  margin: 34px 0 38px;
+}
+
+.discover-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.discover-section-heading h2 {
+  margin: 0;
+  color: inherit;
+  font-size: clamp(1.12rem, 2.1vw, 1.55rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.discover-section-heading p {
+  margin: 5px 0 0;
+  color: rgba(55, 67, 52, 0.68);
+  font-size: 0.86rem;
+}
+
+body.twilight-mode .discover-section-heading p {
+  color: rgba(235, 244, 232, 0.64);
+}
+
+.discover-horizontal-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 2px 2px 12px;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(82, 125, 91, 0.42) transparent;
+}
+
+.discover-horizontal-row > * {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+.discover-radio-card,
+.discover-chart-card,
+.discover-album-card,
+.discover-artist-card,
+.discover-track-card,
+.discover-recent-track {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.discover-radio-card,
+.discover-chart-card,
+.discover-album-card,
+.discover-artist-card,
+.discover-track-card {
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+}
+
+.discover-radio-card {
+  width: clamp(196px, 24vw, 258px);
+  gap: 8px;
+}
+
+.discover-radio-art {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 0.94;
+  overflow: hidden;
+  border: 1px solid rgba(32, 67, 48, 0.18);
+  border-radius: 12px;
+  background: #d8e7bb;
+}
+
+.discover-radio-tone-1 .discover-radio-art { background: #afd9ce; }
+.discover-radio-tone-2 .discover-radio-art { background: #f1ce8e; }
+.discover-radio-tone-3 .discover-radio-art { background: #c9c6e4; }
+.discover-radio-tone-4 .discover-radio-art { background: #e2b9a2; }
+
+.discover-radio-mark {
+  position: absolute;
+  z-index: 2;
+  top: 11px;
+  right: 12px;
+  color: rgba(20, 45, 31, 0.8);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.discover-radio-collage {
+  position: absolute;
+  inset: 15% 3% 27%;
+}
+
+.discover-radio-face {
+  position: absolute;
+  top: 18%;
+  width: 37%;
+  aspect-ratio: 1;
+  border: 3px solid rgba(244, 239, 212, 0.9);
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 5px 13px rgba(29, 48, 35, 0.18);
+}
+
+.discover-radio-face-1 { left: 0; transform: scale(0.76); }
+.discover-radio-face-2 { left: 31%; z-index: 1; width: 43%; }
+.discover-radio-face-3 { right: 0; transform: scale(0.76); }
+
+.discover-radio-art > strong {
+  position: absolute;
+  right: 12px;
+  bottom: 9px;
+  left: 12px;
+  overflow: hidden;
+  color: #18251b;
+  font-size: clamp(1.1rem, 2vw, 1.48rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.discover-card-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: rgba(50, 60, 49, 0.76);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+body.twilight-mode .discover-card-copy { color: rgba(235, 244, 232, 0.68); }
+.discover-card-copy strong { color: inherit; font-weight: 800; }
+.discover-radio-card .discover-card-copy { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+
+.discover-track-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 24px;
+}
+
+.discover-recent-track {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-radius: 9px;
+  padding: 7px;
+  color: inherit;
+  background: transparent;
+  transition: background-color 150ms ease;
+}
+
+.discover-recent-track:hover { background: rgba(82, 125, 91, 0.12); }
+.discover-recent-track > img { width: 54px; height: 54px; flex: 0 0 54px; border-radius: 7px; object-fit: cover; }
+.discover-recent-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 3px; }
+.discover-recent-copy strong,
+.discover-recent-copy span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.discover-recent-copy strong { font-size: 0.9rem; font-weight: 750; }
+.discover-recent-copy span { color: rgba(50, 60, 49, 0.67); font-size: 0.78rem; }
+body.twilight-mode .discover-recent-copy span { color: rgba(235, 244, 232, 0.62); }
+.discover-recent-play { padding: 7px 9px; color: #2d6a4f; font-size: 0.8rem; }
+
+.discover-chart-row { margin: 7px 0 12px; }
+.discover-chart-card { width: clamp(174px, 20vw, 224px); gap: 8px; }
+.discover-chart-art {
+  position: relative;
+  display: flex;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgba(35, 45, 31, 0.12);
+  border-radius: 12px;
+  padding: 17px;
+  color: #fff8e8;
+  background-image: linear-gradient(155deg, rgba(255, 155, 80, 0.84), rgba(158, 29, 68, 0.9)), var(--chart-cover);
+  background-position: center;
+  background-size: cover;
+  text-align: center;
+}
+
+.discover-chart-global .discover-chart-art {
+  background-image: linear-gradient(155deg, rgba(35, 116, 117, 0.82), rgba(27, 55, 109, 0.91)), var(--chart-cover);
+}
+
+.discover-chart-brand { position: absolute; top: 12px; left: 12px; font-size: 0.54rem; font-weight: 800; letter-spacing: 0.09em; opacity: 0.78; }
+.discover-chart-art > strong { font-size: clamp(1.9rem, 4vw, 2.5rem); letter-spacing: -0.05em; }
+.discover-chart-region { margin-top: 5px; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.18em; }
+.discover-chart-play { position: absolute; right: 11px; bottom: 11px; display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; color: #143322; background: #d7edbd; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+
+.discover-chart-details { margin: 0 0 28px; }
+.discover-chart-details > summary { width: fit-content; margin: 0 0 12px; color: #2d6a4f; font-size: 0.83rem; font-weight: 750; cursor: pointer; }
+body.twilight-mode .discover-chart-details > summary { color: #a8d994; }
+.discover-chart-details .nature-songs-grid { margin-bottom: 4px; }
+
+.discover-album-card,
+.discover-track-card { width: clamp(150px, 18vw, 194px); gap: 7px; }
+.discover-square-art { display: block; width: 100%; aspect-ratio: 1 / 1; border: 1px solid rgba(42, 57, 42, 0.12); border-radius: 9px; object-fit: cover; background: rgba(82, 125, 91, 0.12); }
+.discover-album-card > strong,
+.discover-album-card > span,
+.discover-track-card > strong,
+.discover-track-card > span { display: -webkit-box; width: 100%; overflow: hidden; color: inherit; font-size: 0.88rem; line-height: 1.35; text-overflow: ellipsis; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
+.discover-album-card > strong,
+.discover-track-card > strong { margin-top: 3px; font-weight: 800; }
+.discover-album-card > span,
+.discover-track-card > span { color: rgba(50, 60, 49, 0.68); font-size: 0.78rem; }
+body.twilight-mode .discover-album-card > span,
+body.twilight-mode .discover-track-card > span { color: rgba(235, 244, 232, 0.62); }
+
+.discover-artist-row { gap: 18px; }
+.discover-artist-card { width: clamp(118px, 14vw, 156px); align-items: center; gap: 9px; text-align: center; }
+.discover-artist-card > img { display: block; width: 100%; aspect-ratio: 1 / 1; border: 1px solid rgba(37, 58, 39, 0.14); border-radius: 50%; object-fit: cover; background: rgba(82, 125, 91, 0.14); }
+.discover-artist-card > strong { max-width: 100%; overflow: hidden; color: inherit; font-size: 0.83rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+
+.discover-track-art-wrap { position: relative; display: block; width: 100%; }
+.discover-track-play { position: absolute; right: 9px; bottom: 9px; display: grid; width: 35px; height: 35px; place-items: center; border-radius: 50%; color: #173a26; background: #c7e6aa; opacity: 0; transform: translateY(4px); transition: opacity 130ms ease, transform 130ms ease; }
+.discover-track-card:hover .discover-track-play,
+.discover-track-card:focus-visible .discover-track-play { opacity: 1; transform: translateY(0); }
+
+.discover-radio-card:focus-visible,
+.discover-chart-card:focus-visible,
+.discover-album-card:focus-visible,
+.discover-artist-card:focus-visible,
+.discover-track-card:focus-visible,
+.discover-recent-track:focus-visible,
+.discover-chart-details > summary:focus-visible { outline: 3px solid #d5a64b; outline-offset: 3px; }
+
+@media (max-width: 700px) {
+  .discover-section { margin: 27px 0 31px; }
+  .discover-section-heading { margin-bottom: 10px; }
+  .discover-section-heading h2 { font-size: 1.22rem; }
+  .discover-section-heading p { font-size: 0.76rem; }
+  .discover-horizontal-row { gap: 12px; padding-bottom: 10px; scroll-snap-type: x mandatory; }
+  .discover-radio-card { width: min(67vw, 252px); }
+  .discover-chart-card { width: min(44vw, 194px); }
+  .discover-album-card,
+  .discover-track-card { width: min(44vw, 190px); }
+  .discover-artist-card { width: min(32vw, 138px); }
+  .discover-track-list { grid-template-columns: minmax(0, 1fr); gap: 1px; }
+  .discover-recent-track { gap: 10px; padding: 6px; }
+  .discover-recent-track > img { width: 49px; height: 49px; flex-basis: 49px; }
+  .discover-card-copy { font-size: 0.77rem; }
+  .discover-chart-art { padding: 13px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .discover-recent-track,
+  .discover-track-play { transition: none; }
+}
+
 .lyrics-contribution-player-time {
   color: rgba(235, 244, 232, 0.72);
   font-variant-numeric: tabular-nums;

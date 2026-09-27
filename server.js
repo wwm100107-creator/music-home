@@ -1450,7 +1450,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
           if (isSpamTrack(cleaned.title, cleaned.artist, durationSec)) continue;
 
           validCandidates.push({ item, id, cleaned, duration, durationSec });
-          if (validCandidates.length >= 20) break;
+          if (validCandidates.length >= 50) break;
         }
 
         const resolvedTracks = await Promise.all(
@@ -1529,7 +1529,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
               if (isSpamTrack(cleaned.title, cleaned.artist, durationSec)) continue;
 
               fallbackCandidates.push({ item, id, cleaned, duration, durationSec });
-              if (tracks.length + fallbackCandidates.length >= 20) break;
+              if (tracks.length + fallbackCandidates.length >= 50) break;
             }
 
             const resolvedCandidates = await Promise.all(
@@ -1579,7 +1579,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
           console.warn(`[Trending] Query "${query}" gặp lỗi:`, err.message);
         }
 
-        if (tracks.length >= 20) break;
+        if (tracks.length >= 50) break;
       }
     }
 

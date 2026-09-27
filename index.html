@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&family=Comfortaa:wght@600;700;800;900&family=Fredoka:wght@500;600;700;800&family=Sniglet:wght@800&family=Quicksand:wght@600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=5.6">
+  <link rel="stylesheet" href="style.css?v=5.7">
 </head>
 <body class="ghibli-app-body">
 
@@ -314,8 +314,8 @@
               <span class="region-badge-flag" id="heroFlag">🇻🇳</span>
               <span class="region-badge-text" id="heroGreetingText">Việt Nam • Bảng Xếp Hạng & Xu Hướng Thịnh Hành Hôm Nay</span>
             </div>
-            <h1 class="hero-main-title">Khu Vườn Giai Điệu Trong Trẻo</h1>
-            <p class="hero-sub-description">Thưởng thức âm nhạc chất lượng cao không quảng cáo, lấy cảm hứng từ thiên nhiên Studio Ghibli.</p>
+            <h1 class="hero-main-title">Khám phá âm nhạc</h1>
+            <p class="hero-sub-description">Bảng xếp hạng theo khu vực, nghệ sĩ và những giai điệu hợp gu bạn.</p>
             
             <!-- Dynamic Genre Filter Pills -->
             <div class="genre-pills-row" id="genrePillContainer">
@@ -328,6 +328,20 @@
             </div>
           </div>
         </div>
+
+        <section class="discover-section" aria-labelledby="discoverRadioTitle">
+          <div class="discover-section-heading">
+            <div><h2 id="discoverRadioTitle">Radio phổ biến</h2><p>Những dòng nhạc đang lên trong khu vực của bạn</p></div>
+          </div>
+          <div class="discover-horizontal-row discover-radio-row" id="discoverRadioRow" aria-label="Radio nghệ sĩ phổ biến"></div>
+        </section>
+
+        <section class="discover-section" aria-labelledby="discoverRecentTitle">
+          <div class="discover-section-heading">
+            <div><h2 id="discoverRecentTitle">Bắt đầu nghe</h2><p id="discoverRecentCaption">Tiếp tục từ những bài bạn vừa nghe</p></div>
+          </div>
+          <div class="discover-track-list" id="discoverRecentList" aria-label="Bài hát nghe gần đây"></div>
+        </section>
 
         <!-- Trending Section -->
         <div class="section-heading-row chart-heading-row">
@@ -343,16 +357,35 @@
               <span class="pill-chart-icon"><svg class="ghibli-svg-icon ghibli-icon-bamboo-chart" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="14" width="3.5" height="7" rx="1" stroke="currentColor" stroke-width="1.4" fill="currentColor" fill-opacity="0.2"/><line x1="4" y1="17.5" x2="7.5" y2="17.5" stroke="currentColor" stroke-width="1"/><rect x="10" y="9" width="3.5" height="12" rx="1" stroke="currentColor" stroke-width="1.4" fill="currentColor" fill-opacity="0.2"/><line x1="10" y1="13" x2="13.5" y2="13" stroke="currentColor" stroke-width="1"/><line x1="10" y1="17" x2="13.5" y2="17" stroke="currentColor" stroke-width="1"/><rect x="16" y="4" width="3.5" height="17" rx="1" stroke="currentColor" stroke-width="1.4" fill="currentColor" fill-opacity="0.2"/><line x1="16" y1="9.5" x2="19.5" y2="9.5" stroke="currentColor" stroke-width="1"/><line x1="16" y1="15" x2="19.5" y2="15" stroke="currentColor" stroke-width="1"/><path d="M4 12c3-2 6-5 15-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M16 4.5l3.5.5-.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Tuần Này
             </button>
           </div>
-          <span class="heading-badge-counter" id="trendingCounter">Top 20 bài</span>
+          <span class="heading-badge-counter" id="trendingCounter">Top 50 bài</span>
         </div>
 
-        <!-- Trending Tracks Grid -->
-        <div class="nature-songs-grid" id="trendingTracksGrid">
-          <div class="ghibli-loading-placeholder">
-            <div class="loading-leaf-spinner"><svg class="ghibli-svg-icon ghibli-icon-leaf-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21c0-6 2.5-11 8.5-13-1 6-4 10-8.5 13z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" fill="currentColor" fill-opacity="0.25"/><path d="M12 21c-2-5-6-8-9-8 1-4 5-6 9-4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" fill="currentColor" fill-opacity="0.15"/><path d="M12 21V9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
-            <p class="loading-text">Đang lắng nghe giai điệu từ thiên nhiên...</p>
+        <div class="discover-horizontal-row discover-chart-row" id="discoverChartRow" aria-label="Bảng xếp hạng theo khu vực"></div>
+
+        <details class="discover-chart-details" id="trendingTracksDetails">
+          <summary>Xem các bài trong bảng xếp hạng</summary>
+          <div class="nature-songs-grid" id="trendingTracksGrid">
+            <div class="ghibli-loading-placeholder">
+              <div class="loading-leaf-spinner"><svg class="ghibli-svg-icon ghibli-icon-leaf-sprout" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21c0-6 2.5-11 8.5-13-1 6-4 10-8.5 13z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" fill="currentColor" fill-opacity="0.25"/><path d="M12 21c-2-5-6-8-9-8 1-4 5-6 9-4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" fill="currentColor" fill-opacity="0.15"/><path d="M12 21V9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+              <p class="loading-text">Đang lắng nghe giai điệu từ thiên nhiên...</p>
+            </div>
           </div>
-        </div>
+        </details>
+
+        <section class="discover-section" aria-labelledby="discoverAlbumsTitle">
+          <div class="discover-section-heading"><div><h2 id="discoverAlbumsTitle">Album và đĩa đơn phổ biến</h2><p>Tuyển chọn theo khu vực bạn đang khám phá</p></div></div>
+          <div class="discover-horizontal-row discover-album-row" id="discoverAlbumRow" aria-label="Album và đĩa đơn được gợi ý"></div>
+        </section>
+
+        <section class="discover-section" aria-labelledby="discoverArtistsTitle">
+          <div class="discover-section-heading"><div><h2 id="discoverArtistsTitle">Nghệ sĩ phổ biến</h2><p>Được xếp theo thứ hạng và số bài trong bảng khu vực</p></div></div>
+          <div class="discover-horizontal-row discover-artist-row" id="discoverArtistRow" aria-label="Nghệ sĩ đang thịnh hành"></div>
+        </section>
+
+        <section class="discover-section discover-for-you-section" aria-labelledby="discoverForYouTitle">
+          <div class="discover-section-heading"><div><h2 id="discoverForYouTitle">Dành riêng cho bạn</h2><p id="discoverForYouCaption">Gợi ý từ bảng xếp hạng và gu nghe của bạn</p></div></div>
+          <div class="discover-horizontal-row discover-track-row" id="discoverForYouRow" aria-label="Bài hát được gợi ý cho bạn"></div>
+        </section>
 
       </section>
 
@@ -1504,13 +1537,13 @@
 
   <!-- Scripts: YouTube Engine & Ghibli App -->
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script src="app.js?v=5.6"></script>
+  <script src="app.js?v=5.7"></script>
 
   <!-- PWA Offline Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=5.6')
+        navigator.serviceWorker.register('./sw.js?v=5.7')
           .then((reg) => {
             console.log('🍃 [PWA] Service Worker registered:', reg.scope);
             reg.update().catch(() => {});

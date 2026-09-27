@@ -174,9 +174,20 @@
     selectedCountry: 'VN',
     activeGenre: 'all',
     trendingTracks: [],
+    globalTrendingTracks: [],
+    selectedCountryName: 'Vietnam',
+    recentTracks: (() => {
+      try {
+        const saved = JSON.parse(localStorage.getItem('ghibli_recent_tracks') || '[]');
+        return Array.isArray(saved) ? saved.filter(track => track && track.id && track.title).slice(0, 12) : [];
+      } catch (_) {
+        return [];
+      }
+    })(),
     searchResults: [],
     favorites: [],
     regionalAlbums: [],
+    homeAlbums: [],
     albumsLoadedCountry: null,
     communityTracks: [],
     communityLoaded: false,
@@ -268,7 +279,16 @@
     timeframeWeeklyBtn: document.getElementById('timeframeWeeklyBtn'),
     trendingSectionTitle: document.getElementById('trendingSectionTitle'),
     trendingCounter: document.getElementById('trendingCounter'),
+    trendingTracksDetails: document.getElementById('trendingTracksDetails'),
     trendingTracksGrid: document.getElementById('trendingTracksGrid'),
+    discoverRadioRow: document.getElementById('discoverRadioRow'),
+    discoverRecentCaption: document.getElementById('discoverRecentCaption'),
+    discoverRecentList: document.getElementById('discoverRecentList'),
+    discoverChartRow: document.getElementById('discoverChartRow'),
+    discoverAlbumRow: document.getElementById('discoverAlbumRow'),
+    discoverArtistRow: document.getElementById('discoverArtistRow'),
+    discoverForYouCaption: document.getElementById('discoverForYouCaption'),
+    discoverForYouRow: document.getElementById('discoverForYouRow'),
     ambientModeBtn: document.getElementById('ambientModeBtn'),
     ambientModeText: document.getElementById('ambientModeText'),
 
@@ -3268,6 +3288,7 @@
     if (!track || !track.id) return;
 
     state.currentTrack = track;
+    rememberRecentlyPlayed(track);
     audioTrimLastSeekAt = 0;
     audioTrimLastSeekTrackId = null;
     audioTrimHandledEndTrackId = null;
@@ -3740,7 +3761,11 @@
 
       if (data && data.success) {
         state.selectedCountry = data.countryCode || 'VN';
+        state.selectedCountryName = data.countryName || state.selectedCountry;
         state.trendingTracks = data.results || data.tracks || [];
+        if (state.selectedCountry === 'GLOBAL' && curTimeframe === 'daily') {
+          state.globalTrendingTracks = state.trendingTracks;
+        }
 
         // Đồng bộ Dropdown quốc gia
         if (dom.countrySelectDropdown) {
@@ -3769,6 +3794,7 @@
           state.queueIndex = 0;
           renderQueueDrawer();
         }
+        refreshDiscoverSections();
       }
     } catch (err) {
       console.error('[Load Trending Error]:', err);
@@ -3796,6 +3822,7 @@
         document.querySelectorAll('.genre-pill-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         state.activeGenre = genre;
+        if (dom.trendingTracksDetails) dom.trendingTracksDetails.open = true;
 
         if (genre === 'Tất cả' || genre === 'All' || genre === '전체' || genre === 'すべて') {
           renderTrendingGrid(state.trendingTracks);
@@ -3854,6 +3881,319 @@
       });
       dom.trendingTracksGrid.appendChild(card);
     });
+  }
+
+  function normalizeDiscoverArtist(name) {
+    return String(name || '').trim().toLocaleLowerCase().replace(/\s+/g, ' ');
+  }
+
+  function getDiscoverArtistNames(track) {
+    const names = Array.isArray(track?.artists) && track.artists.length
+      ? track.artists
+      : [track?.artist];
+    return [...new Set(names.map(name => String(name || '').trim()).filter(Boolean))];
+  }
+
+  function getDiscoverArtistRankings() {
+    const ranking = new Map();
+    const add = (name, track, weight) => {
+      const normalizedName = normalizeDiscoverArtist(name);
+      if (!normalizedName) return;
+      const current = ranking.get(normalizedName) || { name, score: 0, tracks: [] };
+      current.score += weight;
+      if (track && !current.tracks.some(item => item.id === track.id)) current.tracks.push(track);
+      ranking.set(normalizedName, current);
+    };
+
+    state.trendingTracks.forEach((track, index) => {
+      const rank = Number(track.rank) || index + 1;
+      const chartWeight = Math.max(1, 51 - rank);
+      getDiscoverArtistNames(track).forEach(name => add(name, track, chartWeight));
+    });
+    (state.favorites || []).forEach(track => {
+      getDiscoverArtistNames(track).forEach(name => add(name, track, 18));
+    });
+    (state.recentTracks || []).forEach((track, index) => {
+      getDiscoverArtistNames(track).forEach(name => add(name, track, Math.max(5, 12 - index)));
+    });
+
+    if (!ranking.size) {
+      (state.homeAlbums || []).forEach(album => add(album.artist, {
+        id: album.id,
+        title: album.title,
+        artist: album.artist,
+        thumbnail: album.thumbnail
+      }, 1));
+    }
+
+    return [...ranking.values()].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)).slice(0, 12);
+  }
+
+  function renderDiscoverRadioRow() {
+    if (!dom.discoverRadioRow) return;
+    const artists = getDiscoverArtistRankings().slice(0, 7);
+    dom.discoverRadioRow.innerHTML = '';
+    artists.forEach((artist, index) => {
+      const neighboringTracks = artist.tracks.slice(0, 3);
+      const collageTracks = neighboringTracks.length >= 3
+        ? neighboringTracks
+        : [...neighboringTracks, ...state.trendingTracks.filter(track => !neighboringTracks.some(item => item.id === track.id))].slice(0, 3);
+      const images = collageTracks.slice(0, 3).map(track => upgradeThumbnailUrl(track.thumbnail) || 'wood_2.jpg');
+      const companions = getDiscoverArtistRankings()
+        .filter(candidate => normalizeDiscoverArtist(candidate.name) !== normalizeDiscoverArtist(artist.name))
+        .slice(0, 3)
+        .map(candidate => candidate.name);
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = `discover-radio-card discover-radio-tone-${index % 5}`;
+      card.setAttribute('aria-label', `Phát radio phổ biến của ${artist.name}`);
+      card.innerHTML = `
+        <span class="discover-radio-art" aria-hidden="true">
+          <span class="discover-radio-mark">RADIO</span>
+          <span class="discover-radio-collage">
+            ${images.map((src, imageIndex) => `<img class="discover-radio-face discover-radio-face-${imageIndex + 1}" src="${escapeHtml(src)}" alt="" loading="lazy">`).join('')}
+          </span>
+          <strong>${escapeHtml(artist.name)}</strong>
+        </span>
+        <span class="discover-card-copy">Cùng xu hướng: ${escapeHtml(companions.join(', ') || 'nhạc mới trong khu vực')}</span>
+      `;
+      card.addEventListener('click', () => startDiscoverRadio(artist.name));
+      dom.discoverRadioRow.appendChild(card);
+    });
+  }
+
+  function renderDiscoverRecentList() {
+    if (!dom.discoverRecentList) return;
+    const recentTracks = state.recentTracks.length
+      ? state.recentTracks
+      : (state.favorites.length ? state.favorites : state.trendingTracks);
+    const tracks = recentTracks.slice(0, 5);
+    dom.discoverRecentList.innerHTML = '';
+    if (dom.discoverRecentCaption) {
+      dom.discoverRecentCaption.textContent = state.recentTracks.length
+        ? 'Tiếp tục từ những bài bạn vừa nghe trên thiết bị này'
+        : (state.favorites.length ? 'Bắt đầu từ các bài bạn đã lưu yêu thích' : 'Bắt đầu với những bài đang đứng đầu bảng khu vực');
+    }
+
+    tracks.forEach(track => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'discover-recent-track';
+      item.setAttribute('aria-label', `Phát ${track.title} của ${track.artist || 'nghệ sĩ chưa rõ'}`);
+      item.innerHTML = `
+        <img src="${escapeHtml(upgradeThumbnailUrl(track.thumbnail) || 'wood_2.jpg')}" alt="" loading="lazy">
+        <span class="discover-recent-copy"><strong>${escapeHtml(track.title || 'Bài hát')}</strong><span>${escapeHtml(track.artist || 'Nghệ sĩ')}</span></span>
+        <span class="discover-recent-play" aria-hidden="true">▶</span>
+      `;
+      item.addEventListener('click', () => playTrack(track, true));
+      dom.discoverRecentList.appendChild(item);
+    });
+  }
+
+  function renderDiscoverChartCards() {
+    if (!dom.discoverChartRow) return;
+    const currentRegionTracks = state.trendingTracks || [];
+    const globalTracks = state.selectedCountry === 'GLOBAL' && state.currentTimeframe === 'daily'
+      ? currentRegionTracks
+      : state.globalTrendingTracks;
+    const regionLabel = state.selectedCountryName || state.selectedCountry || 'Khu vực';
+    const timeframeLabel = state.currentTimeframe === 'weekly' ? 'tuần này' : 'hôm nay';
+    const charts = [];
+    if (currentRegionTracks.length) {
+      charts.push({
+        title: `Top ${Math.min(50, currentRegionTracks.length)} • ${regionLabel}`,
+        detail: `Thứ hạng YouTube Music ${timeframeLabel}`,
+        tracks: currentRegionTracks,
+        tone: 'local'
+      });
+    }
+    if (globalTracks.length && state.selectedCountry !== 'GLOBAL') {
+      charts.push({
+        title: 'Top 50 • Global',
+        detail: 'Thứ hạng YouTube Music toàn cầu hôm nay',
+        tracks: globalTracks,
+        tone: 'global'
+      });
+    }
+
+    dom.discoverChartRow.innerHTML = '';
+    charts.forEach(chart => {
+      const topTrack = chart.tracks[0];
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = `discover-chart-card discover-chart-${chart.tone}`;
+      card.setAttribute('aria-label', `Phát bảng xếp hạng ${chart.title}`);
+      card.innerHTML = `
+        <span class="discover-chart-art" style="--chart-cover:url('${escapeHtml(upgradeThumbnailUrl(topTrack?.thumbnail) || 'wood_2.jpg')}')">
+          <span class="discover-chart-brand">HOME MUSIC CHARTS</span>
+          <strong>TOP ${Math.min(50, chart.tracks.length)}</strong>
+          <span class="discover-chart-region">${escapeHtml(chart.tone === 'global' ? 'GLOBAL' : regionLabel.toLocaleUpperCase())}</span>
+          <span class="discover-chart-play" aria-hidden="true">▶</span>
+        </span>
+        <span class="discover-card-copy"><strong>${escapeHtml(chart.title)}</strong><span>${escapeHtml(chart.detail)} · ${chart.tracks.length} bài</span></span>
+      `;
+      card.addEventListener('click', () => playDiscoverChart(chart.tracks, chart.title));
+      dom.discoverChartRow.appendChild(card);
+    });
+  }
+
+  function renderDiscoverAlbumRow() {
+    if (!dom.discoverAlbumRow) return;
+    dom.discoverAlbumRow.innerHTML = '';
+    (state.homeAlbums || []).slice(0, 10).forEach(album => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'discover-album-card';
+      card.setAttribute('aria-label', `Mở ${album.type || 'album'} ${album.title} của ${album.artist || 'nghệ sĩ'}`);
+      card.innerHTML = `
+        <img class="discover-square-art" src="${escapeHtml(upgradeThumbnailUrl(album.thumbnail) || 'wood_2.jpg')}" alt="" loading="lazy">
+        <strong>${escapeHtml(album.title || 'Album')}</strong>
+        <span>${escapeHtml(album.artist || 'Nghệ sĩ')}</span>
+      `;
+      card.addEventListener('click', () => {
+        switchTab('playlists');
+        dom.albumDetailView?.classList.add('hidden');
+        dom.albumsMainView?.classList.remove('hidden');
+        openAlbumDetailView(album.id, album);
+      });
+      dom.discoverAlbumRow.appendChild(card);
+    });
+  }
+
+  function renderDiscoverArtistRow() {
+    if (!dom.discoverArtistRow) return;
+    dom.discoverArtistRow.innerHTML = '';
+    getDiscoverArtistRankings().slice(0, 10).forEach(artist => {
+      const portrait = artist.tracks.find(track => track.thumbnail)?.thumbnail;
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'discover-artist-card';
+      card.setAttribute('aria-label', `Mở radio của ${artist.name}`);
+      card.innerHTML = `
+        <img src="${escapeHtml(upgradeThumbnailUrl(portrait) || 'wood_2.jpg')}" alt="" loading="lazy">
+        <strong>${escapeHtml(artist.name)}</strong>
+      `;
+      card.addEventListener('click', () => startDiscoverRadio(artist.name));
+      dom.discoverArtistRow.appendChild(card);
+    });
+  }
+
+  function renderDiscoverForYouRow() {
+    if (!dom.discoverForYouRow) return;
+    const favoriteArtists = new Set((state.favorites || []).flatMap(getDiscoverArtistNames).map(normalizeDiscoverArtist));
+    const recentArtists = new Set((state.recentTracks || []).flatMap(getDiscoverArtistNames).map(normalizeDiscoverArtist));
+    const recentlyPlayedIds = new Set((state.recentTracks || []).map(track => String(track.id)));
+    const recommendations = state.trendingTracks.map((track, index) => {
+      const artists = getDiscoverArtistNames(track).map(normalizeDiscoverArtist);
+      let score = 50 - (Number(track.rank) || index + 1);
+      if (artists.some(artist => favoriteArtists.has(artist))) score += 42;
+      if (artists.some(artist => recentArtists.has(artist))) score += 24;
+      if (recentlyPlayedIds.has(String(track.id))) score -= 38;
+      if (track.id === state.currentTrack?.id) score -= 16;
+      return { track, score };
+    }).sort((a, b) => b.score - a.score || (Number(a.track.rank) || 99) - (Number(b.track.rank) || 99));
+
+    dom.discoverForYouRow.innerHTML = '';
+    recommendations.slice(0, 8).forEach(({ track }) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'discover-track-card';
+      card.setAttribute('aria-label', `Phát gợi ý ${track.title} của ${track.artist || 'nghệ sĩ'}`);
+      card.innerHTML = `
+        <span class="discover-track-art-wrap"><img class="discover-square-art" src="${escapeHtml(upgradeThumbnailUrl(track.thumbnail) || 'wood_2.jpg')}" alt="" loading="lazy"><span class="discover-track-play" aria-hidden="true">▶</span></span>
+        <strong>${escapeHtml(track.title || 'Bài hát')}</strong>
+        <span>${escapeHtml(track.artist || 'Nghệ sĩ')}</span>
+      `;
+      card.addEventListener('click', () => playTrack(track, true));
+      dom.discoverForYouRow.appendChild(card);
+    });
+    if (dom.discoverForYouCaption) {
+      const basis = favoriteArtists.size || recentArtists.size
+        ? 'Yêu thích và lượt nghe gần đây đang được ưu tiên trong bảng xếp hạng.'
+        : `Các bài thứ hạng cao tại ${state.selectedCountryName || 'khu vực của bạn'}. Lưu yêu thích để cá nhân hóa thêm.`;
+      dom.discoverForYouCaption.textContent = basis;
+    }
+  }
+
+  function refreshDiscoverSections() {
+    renderDiscoverRadioRow();
+    renderDiscoverRecentList();
+    renderDiscoverChartCards();
+    renderDiscoverAlbumRow();
+    renderDiscoverArtistRow();
+    renderDiscoverForYouRow();
+  }
+
+  function rememberRecentlyPlayed(track) {
+    const recentTrack = {
+      id: String(track.id),
+      title: String(track.title || 'Bài hát'),
+      artist: String(track.artist || ''),
+      artists: Array.isArray(track.artists) ? track.artists.slice(0, 8) : [],
+      album: String(track.album || ''),
+      duration: String(track.duration || ''),
+      durationSec: Number(track.durationSec) || 0,
+      thumbnail: String(track.thumbnail || '')
+    };
+    state.recentTracks = [recentTrack, ...state.recentTracks.filter(item => String(item.id) !== recentTrack.id)].slice(0, 12);
+    try { localStorage.setItem('ghibli_recent_tracks', JSON.stringify(state.recentTracks)); } catch (_) {}
+    renderDiscoverRadioRow();
+    renderDiscoverRecentList();
+    renderDiscoverArtistRow();
+    renderDiscoverForYouRow();
+  }
+
+  async function startDiscoverRadio(artistName) {
+    try {
+      showToast(`Đang tạo radio quanh ${artistName}...`);
+      const response = await fetch(`/api/search?q=${encodeURIComponent(`${artistName} popular songs`)}`);
+      const data = await response.json();
+      const results = Array.isArray(data.results) ? data.results : [];
+      const normalizedArtist = normalizeDiscoverArtist(artistName);
+      const matchingTracks = results.filter(track => getDiscoverArtistNames(track)
+        .some(name => normalizeDiscoverArtist(name) === normalizedArtist));
+      const radioTracks = (matchingTracks.length ? matchingTracks : results)
+        .filter((track, index, tracks) => track?.id && tracks.findIndex(candidate => candidate.id === track.id) === index)
+        .slice(0, 25);
+      if (!radioTracks.length) {
+        showToast(`Chưa tìm được bài hát cho radio ${artistName}.`);
+        return;
+      }
+      state.queue = radioTracks;
+      state.queueIndex = 0;
+      renderQueueDrawer();
+      playTrack(radioTracks[0], false);
+    } catch (error) {
+      console.warn('[Discover radio error]:', error);
+      showToast('Chưa tạo được radio lúc này. Hãy thử lại sau nhé.');
+    }
+  }
+
+  function playDiscoverChart(tracks, chartTitle) {
+    if (!tracks?.length) return;
+    state.queue = [...tracks];
+    state.queueIndex = 0;
+    renderQueueDrawer();
+    playTrack(state.queue[0], false);
+    showToast(`Đang phát ${chartTitle} theo thứ hạng bảng nhạc.`);
+  }
+
+  async function loadDiscoverGlobalChart() {
+    if (state.selectedCountry === 'GLOBAL' && state.currentTimeframe === 'daily' && state.trendingTracks.length) {
+      state.globalTrendingTracks = state.trendingTracks;
+      renderDiscoverChartCards();
+      return;
+    }
+    try {
+      const response = await fetch('/api/trending?country=GLOBAL&timeframe=daily');
+      const data = await response.json();
+      if (data?.success) {
+        state.globalTrendingTracks = data.results || data.tracks || [];
+        renderDiscoverChartCards();
+      }
+    } catch (error) {
+      console.warn('[Global discovery chart error]:', error);
+    }
   }
 
   // ==========================================================================
@@ -3963,6 +4303,12 @@
       if (data && data.albums && data.albums.length > 0) {
         state.regionalAlbums = data.albums;
         state.albumsLoadedCountry = country;
+        if (!q) {
+          state.homeAlbums = data.albums;
+          renderDiscoverAlbumRow();
+          renderDiscoverRadioRow();
+          renderDiscoverArtistRow();
+        }
 
         if (dom.albumCounterPill) {
           dom.albumCounterPill.textContent = `${data.albums.length} Đĩa Tuyển Chọn`;
@@ -3979,6 +4325,12 @@
         renderAlbumsGrid(data.albums);
       } else {
         state.regionalAlbums = [];
+        if (!q) {
+          state.homeAlbums = [];
+          renderDiscoverAlbumRow();
+          renderDiscoverRadioRow();
+          renderDiscoverArtistRow();
+        }
         dom.albumsGrid.innerHTML = '';
         if (dom.albumsEmptyState) {
           dom.albumsEmptyState.classList.remove('hidden');
@@ -3991,6 +4343,7 @@
       }
     } catch (err) {
       console.error('[Load Albums Error]:', err);
+      if (!query.trim()) renderDiscoverAlbumRow();
       if (dom.albumsLoadingState) dom.albumsLoadingState.classList.add('hidden');
       if (dom.albumsEmptyState) dom.albumsEmptyState.classList.remove('hidden');
     }
@@ -4775,6 +5128,10 @@
           <p>Bấm biểu tượng trái tim ${GhibliIcons.leafHeartFilled} ở thanh phát nhạc để lưu vào đây nhé!</p>
         </div>
       `;
+      renderDiscoverRadioRow();
+      renderDiscoverRecentList();
+      renderDiscoverArtistRow();
+      renderDiscoverForYouRow();
       return;
     }
 
@@ -4784,6 +5141,10 @@
       });
       dom.favoriteTracksGrid.appendChild(card);
     });
+    renderDiscoverRadioRow();
+    renderDiscoverRecentList();
+    renderDiscoverArtistRow();
+    renderDiscoverForYouRow();
   }
 
   // ==========================================================================
@@ -6510,6 +6871,9 @@
 
     // Tự động tải danh sách thịnh hành theo Geo-IP (Việt Nam 🇻🇳)
     loadTrendingMusic();
+    loadDiscoverGlobalChart();
+    loadAlbumsByRegion(state.selectedCountry);
+    refreshDiscoverSections();
   }
 
   // Expose
