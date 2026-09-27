@@ -9681,6 +9681,17 @@ body.twilight-mode .discover-section-heading p {
   box-shadow: 0 5px 13px rgba(29, 48, 35, 0.18);
 }
 
+.discover-radio-monogram {
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 34% 26%, #f5e8b4, #8db997 76%);
+  color: #183522;
+  font-size: clamp(1rem, 2.5vw, 1.55rem);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
 .discover-radio-face-1 { left: 0; transform: scale(0.76); }
 .discover-radio-face-2 { left: 31%; z-index: 1; width: 43%; }
 .discover-radio-face-3 { right: 0; transform: scale(0.76); }
