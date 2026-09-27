@@ -12,6 +12,8 @@
   // High-craft vector SVG icons tailored for Studio Ghibli woodland theme
   // ==========================================================================
   const GhibliIcons = {
+    trimScissors: `<svg class="ghibli-svg-icon ghibli-icon-trim-scissors" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="6" r="3" stroke="currentColor" stroke-width="1.5" fill="currentColor" fill-opacity=".18"/><circle cx="6" cy="18" r="3" stroke="currentColor" stroke-width="1.5" fill="currentColor" fill-opacity=".18"/><path d="m8.2 8.2 12.3 12.3M8.2 15.8 20.5 3.5M12 12l4.5-4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M17.2 3.5c1.5-1 3-.5 3.3.7-.4 1-1.5 1.2-3.3-.7z" fill="#a9c982"/></svg>`,
+    errorMark: `<svg class="ghibli-svg-icon ghibli-icon-error-mark" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" fill="currentColor" fill-opacity=".12"/><path d="m8.5 8.5 7 7m0-7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
     totoroAcorn: `<svg class="ghibli-svg-icon ghibli-icon-totoro-acorn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 8.5C5 5.5 8 4 12 4s7 1.5 7 4.5c0 1-.8 1.8-2 2H7c-1.2-.2-2-1-2-2z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" fill="currentColor" fill-opacity="0.25"/><path d="M8 6.5l2 3M11 5.5l2 4M14 6.5l2 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/><path d="M12 4V2c-.6-.6-1.5-.5-1.8.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12 2.5c1.2-.8 2.8-.5 3 .8-.2.8-1.5 1.2-3-.8z" fill="var(--ghibli-leaf-green, #52b788)" opacity="0.9"/><path d="M6.5 10.5C6.5 16 9.5 21.5 12 22c2.5-.5 5.5-6 5.5-11.5H6.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" fill="currentColor" fill-opacity="0.12"/><path d="M8.5 13.5c.4 2.5 1.5 4.5 2.5 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/></svg>`,
 
     leafBattery: `<svg class="ghibli-svg-icon ghibli-icon-leaf-battery" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="6" width="16" height="12" rx="3.5" stroke="currentColor" stroke-width="1.6" fill="currentColor" fill-opacity="0.08"/><path d="M20.5 10v4c1-.5 1-3.5 0-4z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M6.5 14c0-2.2 1-3.2 2.5-3.2.5 1.5 0 3.2-2.5 3.2z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><path d="M10.5 14c0-3.2 1.2-4.5 3-4.5.5 2 0 4.5-3 4.5z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><path d="M14.5 14c0-4.2 1.5-6 3.5-6 .5 2.5 0 6-3.5 6z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><path d="M8 6c0-1.8 1.5-2.8 3-2.8.3 1.2-.5 2.5-2 2.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="var(--ghibli-leaf-green, #52b788)" opacity="0.8"/></svg>`,
@@ -148,6 +150,8 @@
       .replace(/☀️|☀/g, GhibliIcons.sunWarm)
       .replace(/🌙/g, GhibliIcons.moonCrescent)
       .replace(/⚠️|⚠/g, GhibliIcons.fireflyLantern)
+      .replace(/✂️|✂/g, GhibliIcons.trimScissors)
+      .replace(/❌/g, GhibliIcons.errorMark)
       .replace(/♪/g, GhibliIcons.musicSprout);
   }
 
@@ -928,7 +932,7 @@
         const level = Math.round(battery.level * 100);
         const isCharging = battery.charging;
         if (dom.batterySaverLevel) {
-          dom.batterySaverLevel.textContent = `OLED Eco • ${level}%${isCharging ? ' ⚡' : ''}`;
+          dom.batterySaverLevel.textContent = `OLED Eco • ${level}%${isCharging ? ' • Đang sạc' : ''}`;
         }
       }).catch(() => {
         if (dom.batterySaverLevel) dom.batterySaverLevel.textContent = 'OLED Eco Mode';
@@ -2059,7 +2063,7 @@
           const wordTime = Number.isFinite(Number(word.time)) ? Number(word.time) : time;
           return `<span class="lyric-word" data-word-index="${wordIdx}" data-time="${wordTime}">${escapeHtml(word.text)}</span>`;
         }).join('')
-        : escapeHtml(item.text || '♪');
+        : (item.text ? escapeHtml(item.text) : GhibliIcons.musicSprout);
       return `
         <div class="lyric-line" data-index="${idx}" data-time="${time}">
           <span class="lyric-text">${lyricText}</span>
@@ -2217,7 +2221,7 @@
     if (button) {
       button.setAttribute('aria-pressed', String(lyricsContributionWordMode));
       button.classList.toggle('is-active', lyricsContributionWordMode);
-      button.textContent = lyricsContributionWordMode ? '✓ Đang chỉnh từng từ' : '🎤 Chỉnh từng từ';
+      button.innerHTML = lyricsContributionWordMode ? '✓ Đang chỉnh từng từ' : `${GhibliIcons.vintageMic} Chỉnh từng từ`;
     }
   }
 
@@ -2882,9 +2886,9 @@
           state.lyrics = estimateTimedLyricsWords(parsedLines);
           const hasEstimatedWords = state.lyrics.some(line => line.wordsEstimated);
           if (dom.lyricsSyncBadge) {
-            dom.lyricsSyncBadge.textContent = hasEstimatedWords
-              ? '✨ Đồng bộ theo dòng • Karaoke ước lượng từng từ'
-              : '✨ Lời đồng bộ do tác giả đính kèm';
+            dom.lyricsSyncBadge.innerHTML = hasEstimatedWords
+              ? `${GhibliIcons.sparkleStar} Đồng bộ theo dòng • Karaoke ước lượng từng từ`
+              : `${GhibliIcons.sparkleStar} Lời đồng bộ do tác giả đính kèm`;
           }
           renderLyricsLines(state.lyrics);
 
@@ -3044,7 +3048,9 @@
         state.lyrics = [];
         state.lyricsSource = null;
         const isAi = data.reason === 'ai_generated';
-        const badgeText = isAi ? '🤖 Nhạc do AI tạo (Chưa có dữ liệu lời)' : '🍃 Chưa có dữ liệu lời bài hát';
+        const badgeText = isAi
+          ? `${GhibliIcons.musicSprout} Nhạc do AI tạo (Chưa có dữ liệu lời)`
+          : `${GhibliIcons.leafSprout} Chưa có dữ liệu lời bài hát`;
         if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.innerHTML = badgeText;
 
         const mainTitle = data.message || 'Chưa có dữ liệu cho phần lời bài hát này';
@@ -3059,7 +3065,7 @@
               <h4 style="font-size: 1.3rem; margin: 12px 0 8px; color: var(--text-primary); font-weight: 600;">${escapeHtml(mainTitle)}</h4>
               <p style="max-width: 480px; margin: 0 auto 16px; line-height: 1.6; opacity: 0.85; font-size: 0.98rem;">${escapeHtml(subDetail)}</p>
               <div style="font-size: 0.85rem; opacity: 0.65; font-style: italic;">
-                ✨ Hệ thống hiển thị dữ liệu ca từ xác thực 100%, tuyệt đối không tự bịa đặt lời bài hát.
+                ${GhibliIcons.sparkleStar} Hệ thống hiển thị dữ liệu ca từ xác thực 100%, tuyệt đối không tự bịa đặt lời bài hát.
               </div>
             </div>
           `;
@@ -3073,7 +3079,7 @@
       console.warn('[Lyrics Fetch Error]:', err.message);
       state.lyricsLoading = false;
       state.lyricsSource = null;
-      if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.textContent = '⚠️ Chưa thể nạp lời';
+      if (dom.lyricsSyncBadge) dom.lyricsSyncBadge.innerHTML = `${GhibliIcons.fireflyLantern} Chưa thể nạp lời`;
       if (dom.lyricsLinesContainer) {
         dom.lyricsLinesContainer.innerHTML = `
           <div class="lyrics-empty-state">
@@ -3336,7 +3342,7 @@
   }
 
   // ==========================================================================
-  // 3. WAVY VINE PROGRESS BAR & CHÚ LỬA CALCIFER (FIRE.GIF)
+  // 3. WAVY VINE PROGRESS BAR & CHÚ LỬA CALCIFER (CUSTOM SVG)
   // ==========================================================================
   function updateProgressUI(percent) {
     const clamped = Math.max(0, Math.min(100, percent));
@@ -3653,7 +3659,7 @@
       if (dom.trendingTracksGrid) {
         dom.trendingTracksGrid.innerHTML = `
           <div class="ghibli-loading-placeholder">
-            <p class="loading-text">🍂 Không thể tải danh sách bài hát lúc này. Hãy thử lại sau nhé!</p>
+            <p class="loading-text">${GhibliIcons.autumnLeaf} Không thể tải danh sách bài hát lúc này. Hãy thử lại sau nhé!</p>
           </div>
         `;
       }
@@ -4562,7 +4568,7 @@
       li.innerHTML = `
         <div class="card-left-group">
           <!-- Checkbox Hạt Dẻ -->
-          <label class="acorn-checkbox-wrapper" title="Tích để lặp bài này trong chế độ Hạt Dẻ 🌰">
+          <label class="acorn-checkbox-wrapper" title="Tích để lặp bài này trong chế độ Hạt Dẻ">
             <input type="checkbox" class="acorn-checkbox-input" ${isAcornChecked ? 'checked' : ''}>
             <span class="acorn-checkbox-icon"></span>
           </label>
@@ -5452,8 +5458,8 @@
           { src: safeArtUrl, sizes: '384x384', type: 'image/jpeg' },
           { src: safeArtUrl, sizes: '512x512', type: 'image/jpeg' }
         ] : [
-          { src: new URL('icon-192.png', window.location.origin).href, sizes: '192x192', type: 'image/png' },
-          { src: new URL('icon-512.png', window.location.origin).href, sizes: '512x512', type: 'image/png' }
+          { src: new URL('icon-192.png?v=5.3', window.location.origin).href, sizes: '192x192', type: 'image/png' },
+          { src: new URL('icon-512.png?v=5.3', window.location.origin).href, sizes: '512x512', type: 'image/png' }
         ]
       });
 
@@ -5714,7 +5720,7 @@
       dom.sidebarUserName.textContent = isLogged ? (user.displayName || user.username) : 'Khách (Guest)';
     }
     if (dom.sidebarUserStatus) {
-      dom.sidebarUserStatus.textContent = isLogged ? '☁️ Đã kết nối Đám Mây' : 'Chạm để đăng nhập';
+      dom.sidebarUserStatus.innerHTML = isLogged ? `${GhibliIcons.skyCloud} Đã kết nối Đám Mây` : 'Chạm để đăng nhập';
     }
     renderAvatarToElement(dom.sidebarUserAvatar, currentAvatar);
 
@@ -5809,7 +5815,7 @@
     }
 
     try {
-      if (dom.sidebarUserStatus) dom.sidebarUserStatus.textContent = '☁️ Đang kết nối...';
+      if (dom.sidebarUserStatus) dom.sidebarUserStatus.innerHTML = `${GhibliIcons.skyCloud} Đang kết nối...`;
       const res = await fetch('/api/auth/me', {
         method: 'GET',
         headers: {
@@ -6074,7 +6080,7 @@
           dom.profileSyncStatusText.textContent = `Đã đồng bộ (${timeStr})`;
         }
         if (dom.sidebarUserStatus) {
-          dom.sidebarUserStatus.textContent = '☁️ Đã đồng bộ';
+          dom.sidebarUserStatus.innerHTML = `${GhibliIcons.skyCloud} Đã đồng bộ`;
         }
         if (dom.syncFavCount) dom.syncFavCount.textContent = state.favorites.length;
         if (dom.syncDropCount) dom.syncDropCount.textContent = localDrops.length;
@@ -6106,7 +6112,7 @@
         username: state.currentUser.username,
         displayName: state.currentUser.displayName,
         avatar: state.currentUser.avatar
-      } : { username: 'guest', displayName: 'Khách', avatar: '🌰' },
+      } : { username: 'guest', displayName: 'Khách', avatar: 'icon-home.png' },
       favorites: state.favorites || [],
       myDroppedMusic: localDrops,
       lyricOffsets: state.lyricOffsetStore || {},

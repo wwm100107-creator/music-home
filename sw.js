@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const CACHE_NAME = 'antigravity-ghibli-v5.1-shared-audio-trims';
+const CACHE_NAME = 'antigravity-ghibli-v5.3-hand-drawn-icon-set';
 
 // Danh sách các tài nguyên tĩnh cốt lõi cần lưu trữ offline
 const STATIC_ASSETS = [
@@ -14,12 +14,12 @@ const STATIC_ASSETS = [
   './style.css',
   './app.js',
   './manifest.json',
-  './favicon.png',
-  './favicon-32x32.png',
-  './apple-touch-icon.png',
-  './icon.png',
-  './icon-192.png',
-  './icon-512.png',
+  './favicon.png?v=5.3',
+  './favicon-32x32.png?v=5.3',
+  './apple-touch-icon.png?v=5.3',
+  './icon.png?v=5.3',
+  './icon-192.png?v=5.3',
+  './icon-512.png?v=5.3',
   './icon-home-music.png',
   './icon-home.png',
   './icon-search.png',
@@ -29,7 +29,6 @@ const STATIC_ASSETS = [
   './wood_2.jpg',
   './wood_2.png',
   './bg.jpg',
-  './fire.gif',
   './1FTV-Austie-Bost-Happy-Holly.otf'
 ];
 
@@ -37,7 +36,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('🍃 [Service Worker] Pre-caching Ghibli UI Shell v5.1...');
+      console.log('🍃 [Service Worker] Pre-caching Ghibli UI Shell v5.3...');
       return cache.addAll(STATIC_ASSETS);
     }).then(() => self.skipWaiting())
   );

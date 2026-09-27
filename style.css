@@ -5,7 +5,7 @@
  * - background.mp4: Fullscreen dynamic video background
  * - taskbar.png: Left glassmorphic sidebar with precise icons & typography
  * - wood.jpg / wood.png: Active "Playlists" wooden plank with Kodama spirit
- * - fire.gif: Calcifer flame thumb riding along wavy vine progress bar
+ * - Calcifer flame thumb is drawn as inline SVG along the wavy vine progress bar
  * ============================================================================
  * 
  * HỆ THỐNG SKILLS ĐƯỢC ÁP DỤNG TRONG CSS:
@@ -102,6 +102,14 @@ html, body {
   color: inherit;
   stroke: currentColor;
   transition: transform 0.28s var(--ease-out-spring), filter 0.25s ease, color 0.2s ease;
+  pointer-events: none;
+}
+
+.ghibli-icon-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
   pointer-events: none;
 }
 
@@ -348,7 +356,8 @@ body.ghibli-app-body {
 .brand-icon {
   width: 42px;
   height: 42px;
-  object-fit: contain;
+  color: #e9c67c;
+  overflow: visible;
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.35));
   transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   will-change: transform;
@@ -479,7 +488,7 @@ body.ghibli-app-body {
 .nav-icon {
   width: 32px;
   height: 32px;
-  object-fit: contain;
+  color: #f0d89b;
   flex-shrink: 0;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.28));
   transition: transform 0.38s cubic-bezier(0.25, 1, 0.5, 1), filter 0.25s ease;
@@ -517,6 +526,7 @@ body.ghibli-app-body {
 }
 
 .sidebar-nav-item.active .nav-icon {
+  color: #fff0bc;
   filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45)) brightness(1.15);
 }
 
@@ -2011,10 +2021,10 @@ body.twilight-mode .vine-progress-fill {
 }
 
 .calcifer-flame {
-  width: auto;
+  width: 32px;
   height: 60px;
   max-width: 50px;
-  object-fit: contain;
+  overflow: visible;
   filter: drop-shadow(0 0 10px rgba(255, 120, 20, 0.85)) drop-shadow(0 0 4px rgba(255, 200, 0, 0.6));
   transform-origin: bottom center;
   pointer-events: none;
@@ -5225,7 +5235,8 @@ body.twilight-mode .drop-lyrics-file-badge {
   .mobile-header-icon {
     width: 32px;
     height: 32px;
-    object-fit: contain;
+    color: #e9c67c;
+    overflow: visible;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
   }
 
@@ -5636,6 +5647,7 @@ body.twilight-mode .drop-lyrics-file-badge {
   }
 
   .calcifer-flame {
+    width: 18px !important;
     height: 34px !important;
     max-width: 28px !important;
   }
@@ -6303,7 +6315,7 @@ body.twilight-mode .nature-waveform-eq .eq-stem {
   .mob-nav-icon {
     width: 26px;
     height: 26px;
-    object-fit: contain;
+    color: #8b7148;
     filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.18));
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s ease;
   }
@@ -6325,6 +6337,7 @@ body.twilight-mode .nature-waveform-eq .eq-stem {
   }
 
   .mobile-nav-item.active .mob-nav-icon {
+    color: #2d6a4f;
     transform: scale(1.18) translateY(-2px);
     filter: drop-shadow(0 4px 10px rgba(45, 106, 79, 0.5));
   }
