@@ -9829,3 +9829,204 @@ body.twilight-mode .discover-track-card > span { color: rgba(235, 244, 232, 0.62
   .discover-recent-track,
   .discover-track-play { transition: none; }
 }
+
+/* Artist garden: hand-framed portraits that echo the site's forest palette. */
+.discover-artist-garden-section {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(72, 112, 76, 0.18);
+  border-radius: 22px;
+  padding: 22px 20px 12px;
+  background:
+    radial-gradient(ellipse at 4% 12%, rgba(151, 192, 119, 0.14), transparent 34%),
+    linear-gradient(130deg, rgba(225, 235, 204, 0.48), rgba(241, 236, 215, 0.3));
+}
+
+body.twilight-mode .discover-artist-garden-section {
+  border-color: rgba(135, 183, 115, 0.2);
+  background:
+    radial-gradient(ellipse at 4% 12%, rgba(104, 158, 86, 0.14), transparent 36%),
+    linear-gradient(130deg, rgba(16, 40, 27, 0.52), rgba(24, 40, 29, 0.35));
+}
+
+.discover-artist-garden-section .discover-section-heading {
+  margin-bottom: 16px;
+}
+
+.discover-artist-row {
+  gap: 20px;
+  padding: 7px 8px 20px;
+}
+
+.discover-artist-card {
+  width: clamp(142px, 15vw, 178px);
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.discover-artist-avatar {
+  --artist-accent: #769b62;
+  --artist-paper: #e5e9cd;
+  position: relative;
+  display: grid;
+  width: 100%;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--artist-accent) 56%, transparent);
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 28%, #fff9dc 0 12%, var(--artist-paper) 58%, color-mix(in srgb, var(--artist-accent) 25%, var(--artist-paper)) 100%);
+  box-shadow: 0 10px 24px rgba(36, 59, 35, 0.15), inset 0 0 0 5px rgba(255, 251, 225, 0.62);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.discover-artist-avatar::before {
+  position: absolute;
+  inset: 7px;
+  border: 1px dashed color-mix(in srgb, var(--artist-accent) 65%, transparent);
+  border-radius: 50%;
+  content: "";
+  opacity: 0.72;
+  transform: rotate(-12deg);
+}
+
+.discover-artist-avatar::after {
+  position: absolute;
+  inset: 17px 13px 13px 17px;
+  border: 1px solid rgba(255, 255, 238, 0.68);
+  border-radius: 48% 52% 50% 50%;
+  content: "";
+  pointer-events: none;
+  transform: rotate(13deg);
+}
+
+.discover-artist-tone-1 .discover-artist-avatar { --artist-accent: #bc8461; --artist-paper: #ead9c4; }
+.discover-artist-tone-2 .discover-artist-avatar { --artist-accent: #7f9f96; --artist-paper: #d9e6d2; }
+.discover-artist-tone-3 .discover-artist-avatar { --artist-accent: #a587a9; --artist-paper: #e4d8df; }
+.discover-artist-tone-4 .discover-artist-avatar { --artist-accent: #c29a55; --artist-paper: #eee3bc; }
+.discover-artist-tone-5 .discover-artist-avatar { --artist-accent: #738da0; --artist-paper: #dce5dc; }
+
+.discover-artist-avatar > img,
+.discover-artist-monogram {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 78%;
+  aspect-ratio: 1;
+  place-items: center;
+  overflow: hidden;
+  border: 3px solid rgba(255, 250, 224, 0.88);
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 5px 14px rgba(25, 45, 30, 0.2);
+}
+
+.discover-artist-monogram {
+  color: #203a2d;
+  background: linear-gradient(145deg, rgba(255, 248, 214, 0.94), color-mix(in srgb, var(--artist-accent) 37%, #d9e4c8));
+  font-family: var(--font-heading, "Plus Jakarta Sans", sans-serif);
+  font-size: clamp(1.8rem, 4vw, 2.7rem);
+  font-weight: 800;
+  letter-spacing: -0.07em;
+}
+
+.discover-artist-rank {
+  position: absolute;
+  z-index: 2;
+  bottom: 11%;
+  left: 5%;
+  display: grid;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  border: 2px solid rgba(255, 248, 220, 0.94);
+  border-radius: 50%;
+  color: #fff9e8;
+  background: #365c3d;
+  box-shadow: 0 3px 8px rgba(23, 43, 28, 0.22);
+  font-size: 0.61rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.discover-artist-sprout {
+  position: absolute;
+  z-index: 2;
+  top: 3%;
+  right: 3%;
+  width: 34px;
+  height: 34px;
+  overflow: visible;
+  color: #4c7948;
+  filter: drop-shadow(0 2px 2px rgba(255, 251, 224, 0.72));
+  transform: rotate(12deg);
+}
+
+.discover-artist-sprout path {
+  fill: #8ab974;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.55;
+}
+
+.discover-artist-copy {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.discover-artist-copy > strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.discover-artist-copy > span {
+  max-width: 100%;
+  border: 1px solid rgba(83, 123, 77, 0.22);
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: #486647;
+  background: rgba(250, 248, 225, 0.56);
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.015em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+body.twilight-mode .discover-artist-copy > span {
+  border-color: rgba(149, 194, 126, 0.24);
+  color: #c5e0a8;
+  background: rgba(36, 68, 42, 0.55);
+}
+
+.discover-artist-card:hover .discover-artist-avatar,
+.discover-artist-card:focus-visible .discover-artist-avatar {
+  box-shadow: 0 14px 28px rgba(36, 59, 35, 0.22), inset 0 0 0 5px rgba(255, 251, 225, 0.74);
+  transform: translateY(-4px) rotate(-2deg);
+}
+
+@media (max-width: 700px) {
+  .discover-artist-garden-section { margin-right: -4px; margin-left: -4px; border-radius: 18px; padding: 17px 12px 8px; }
+  .discover-artist-garden-section .discover-section-heading { padding: 0 3px; }
+  .discover-artist-garden-section .discover-section-heading p { max-width: 35ch; line-height: 1.45; }
+  .discover-artist-row { gap: 16px; padding: 6px 5px 18px; }
+  .discover-artist-card { width: min(35vw, 145px); gap: 9px; }
+  .discover-artist-rank { width: 27px; height: 27px; font-size: 0.57rem; }
+  .discover-artist-sprout { width: 30px; height: 30px; }
+  .discover-artist-copy > strong { font-size: 0.82rem; }
+  .discover-artist-copy > span { padding: 4px 7px; font-size: 0.6rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .discover-artist-avatar { transition: none; }
+}

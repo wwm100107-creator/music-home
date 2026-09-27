@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&family=Comfortaa:wght@600;700;800;900&family=Fredoka:wght@500;600;700;800&family=Sniglet:wght@800&family=Quicksand:wght@600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=5.7">
+  <link rel="stylesheet" href="style.css?v=5.8">
 </head>
 <body class="ghibli-app-body">
 
@@ -377,8 +377,8 @@
           <div class="discover-horizontal-row discover-album-row" id="discoverAlbumRow" aria-label="Album và đĩa đơn được gợi ý"></div>
         </section>
 
-        <section class="discover-section" aria-labelledby="discoverArtistsTitle">
-          <div class="discover-section-heading"><div><h2 id="discoverArtistsTitle">Nghệ sĩ phổ biến</h2><p>Được xếp theo thứ hạng và số bài trong bảng khu vực</p></div></div>
+        <section class="discover-section discover-artist-garden-section" aria-labelledby="discoverArtistsTitle">
+          <div class="discover-section-heading"><div><h2 id="discoverArtistsTitle">Gương mặt V-Pop thế hệ mới</h2><p id="discoverArtistsCaption">Làn sóng nghệ sĩ trẻ nổi bật từ 2018 · ưu tiên theo bảng khu vực và gu nghe của bạn</p></div></div>
           <div class="discover-horizontal-row discover-artist-row" id="discoverArtistRow" aria-label="Nghệ sĩ đang thịnh hành"></div>
         </section>
 
@@ -1537,13 +1537,13 @@
 
   <!-- Scripts: YouTube Engine & Ghibli App -->
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script src="app.js?v=5.7"></script>
+  <script src="app.js?v=5.8"></script>
 
   <!-- PWA Offline Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=5.7')
+        navigator.serviceWorker.register('./sw.js?v=5.8')
           .then((reg) => {
             console.log('🍃 [PWA] Service Worker registered:', reg.scope);
             reg.update().catch(() => {});

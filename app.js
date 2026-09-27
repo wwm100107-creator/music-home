@@ -286,6 +286,8 @@
     discoverRecentList: document.getElementById('discoverRecentList'),
     discoverChartRow: document.getElementById('discoverChartRow'),
     discoverAlbumRow: document.getElementById('discoverAlbumRow'),
+    discoverArtistsTitle: document.getElementById('discoverArtistsTitle'),
+    discoverArtistsCaption: document.getElementById('discoverArtistsCaption'),
     discoverArtistRow: document.getElementById('discoverArtistRow'),
     discoverForYouCaption: document.getElementById('discoverForYouCaption'),
     discoverForYouRow: document.getElementById('discoverForYouRow'),
@@ -3884,7 +3886,12 @@
   }
 
   function normalizeDiscoverArtist(name) {
-    return String(name || '').trim().toLocaleLowerCase().replace(/\s+/g, ' ');
+    return String(name || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
   }
 
   function getDiscoverArtistNames(track) {
@@ -3892,6 +3899,49 @@
       ? track.artists
       : [track?.artist];
     return [...new Set(names.map(name => String(name || '').trim()).filter(Boolean))];
+  }
+
+  const VIETNAMESE_NEW_WAVE_ARTISTS = [
+    { name: 'HIEUTHUHAI', aliases: ['Hiếu Thứ Hai'], style: 'Rap · Pop' },
+    { name: 'tlinh', aliases: ['Tlinh'], style: 'R&B · Pop' },
+    { name: 'MCK', aliases: ['RPT MCK'], style: 'Rap · R&B' },
+    { name: 'Low G', aliases: ['Low G'], style: 'Rap · Hip-hop' },
+    { name: 'Pháo', aliases: ['Phao'], style: 'Rap · Pop' },
+    { name: 'Obito', aliases: ['Obito'], style: 'Rap · Hip-hop' },
+    { name: 'Wxrdie', aliases: ['Wxr Die'], style: 'Rap · Trap' },
+    { name: 'Wren Evans', aliases: ['Wren'], style: 'Pop · Alternative' },
+    { name: 'Amee', aliases: ['AMee'], style: 'Pop · R&B' },
+    { name: 'Orange', aliases: ['Orange'], style: 'Pop · R&B' },
+    { name: 'Jack - J97', aliases: ['Jack J97', 'Jack'], style: 'Pop · Rap' },
+    { name: 'Quân A.P', aliases: ['Quan AP', 'Quân AP'], style: 'Pop · Ballad' },
+    { name: 'Quang Hùng MasterD', aliases: ['Quang Hung MasterD', 'Quang Hùng'], style: 'Pop · R&B' },
+    { name: 'MONO', aliases: ['Mono'], style: 'Pop · Dance' },
+    { name: 'Grey D', aliases: ['Grey'], style: 'Pop · R&B' },
+    { name: 'Dương Domic', aliases: ['Duong Domic'], style: 'Pop · Alternative' },
+    { name: 'Liu Grace', aliases: ['Liu Grace'], style: 'Rap · R&B' },
+    { name: 'VSTRA', aliases: ['Vstra'], style: 'Indie · Pop' },
+    { name: 'Dangrangto', aliases: ['Dang Rang To'], style: 'Rap · Hip-hop' },
+    { name: 'HURRYKNG', aliases: ['Hurry Kng'], style: 'Rap · Pop' },
+    { name: 'RHYDER', aliases: ['Rhyder'], style: 'Pop · R&B' },
+    { name: 'OgeNus', aliases: ['Ogenus'], style: 'Rap · Hip-hop' },
+    { name: 'Captain Boy', aliases: ['CaptainBoy'], style: 'Pop · Rap' },
+    { name: '52Hz', aliases: ['52 Hz'], style: 'Indie · Pop' },
+    { name: 'buitruonglinh', aliases: ['Bùi Trường Linh'], style: 'Pop · Ballad' },
+    { name: 'Juky San', aliases: ['JukySan'], style: 'Pop · Ballad' },
+    { name: 'T.R.I', aliases: ['TRI'], style: 'Pop · R&B' },
+    { name: 'Madihu', aliases: ['Madihu'], style: 'Indie · Pop' },
+    { name: 'Tăng Duy Tân', aliases: ['Tang Duy Tan'], style: 'Pop · Dance' },
+    { name: 'Phúc Du', aliases: ['Phuc Du'], style: 'Rap · Hip-hop' },
+    { name: 'Seachains', aliases: ['Sea Chains'], style: 'Rap · Hip-hop' },
+    { name: '7dnight', aliases: ['7Dnight'], style: 'Rap · Alternative' }
+  ];
+
+  function artistMatchesSeed(track, seed) {
+    const aliases = [seed.name, ...(seed.aliases || [])].map(normalizeDiscoverArtist).filter(Boolean);
+    return getDiscoverArtistNames(track).some(name => {
+      const candidate = normalizeDiscoverArtist(name);
+      return aliases.some(alias => candidate === alias || candidate.includes(alias));
+    });
   }
 
   function getDiscoverArtistRankings() {
@@ -3917,6 +3967,43 @@
       getDiscoverArtistNames(track).forEach(name => add(name, track, Math.max(5, 12 - index)));
     });
 
+    if (state.selectedCountry === 'VN') {
+      const playlistRankedTracks = state.trendingTracks || [];
+      const favoriteTracks = state.favorites || [];
+      const recentTracks = state.recentTracks || [];
+      const albumTracks = (state.homeAlbums || []).map(album => ({
+        id: album.id,
+        title: album.title,
+        artist: album.artist,
+        thumbnail: album.thumbnail
+      }));
+
+      return VIETNAMESE_NEW_WAVE_ARTISTS.map((seed, index) => {
+        const chartTracks = playlistRankedTracks.filter(track => artistMatchesSeed(track, seed));
+        const favoriteMatches = favoriteTracks.filter(track => artistMatchesSeed(track, seed));
+        const recentMatches = recentTracks.filter(track => artistMatchesSeed(track, seed));
+        const albumMatch = albumTracks.find(track => artistMatchesSeed(track, seed));
+        const tracks = [...chartTracks, ...favoriteMatches, ...recentMatches, ...(albumMatch ? [albumMatch] : [])]
+          .filter((track, trackIndex, all) => track && all.findIndex(candidate => candidate.id === track.id) === trackIndex);
+        const chartScore = chartTracks.reduce((sum, track, trackIndex) => {
+          const rank = Number(track.rank) || playlistRankedTracks.indexOf(track) + 1;
+          return sum + Math.max(1, 51 - rank) / (trackIndex + 1);
+        }, 0);
+        const recencyScore = recentMatches.reduce((sum, track) => {
+          const recentIndex = recentTracks.findIndex(candidate => candidate.id === track.id);
+          return sum + Math.max(4, 14 - Math.max(0, recentIndex));
+        }, 0);
+        return {
+          name: seed.name,
+          score: 12 + chartScore + (favoriteMatches.length * 22) + recencyScore + Math.max(0, 5 - index * 0.12),
+          tracks,
+          style: seed.style,
+          aliases: seed.aliases,
+          isNewWave: true
+        };
+      }).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+    }
+
     if (!ranking.size) {
       (state.homeAlbums || []).forEach(album => add(album.artist, {
         id: album.id,
@@ -3926,7 +4013,7 @@
       }, 1));
     }
 
-    return [...ranking.values()].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)).slice(0, 12);
+    return [...ranking.values()].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)).slice(0, 24);
   }
 
   function renderDiscoverRadioRow() {
@@ -4063,16 +4150,39 @@
   function renderDiscoverArtistRow() {
     if (!dom.discoverArtistRow) return;
     dom.discoverArtistRow.innerHTML = '';
-    getDiscoverArtistRankings().slice(0, 10).forEach(artist => {
+    const isVietnamWave = state.selectedCountry === 'VN';
+    if (dom.discoverArtistsTitle) {
+      dom.discoverArtistsTitle.textContent = isVietnamWave ? 'Gương mặt V-Pop thế hệ mới' : 'Nghệ sĩ phổ biến';
+    }
+    if (dom.discoverArtistsCaption) {
+      dom.discoverArtistsCaption.textContent = isVietnamWave
+        ? 'Làn sóng nghệ sĩ trẻ nổi bật từ 2018 · ưu tiên theo bảng khu vực và gu nghe của bạn'
+        : 'Nghệ sĩ được xếp theo thứ hạng bảng nhạc tại khu vực của bạn';
+    }
+    getDiscoverArtistRankings().slice(0, isVietnamWave ? VIETNAMESE_NEW_WAVE_ARTISTS.length : 24).forEach((artist, index) => {
       const portrait = artist.tracks.find(track => track.thumbnail)?.thumbnail;
+      const initials = artist.name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase();
       const card = document.createElement('button');
       card.type = 'button';
-      card.className = 'discover-artist-card';
+      card.className = `discover-artist-card discover-artist-tone-${index % 6}`;
       card.setAttribute('aria-label', `Mở radio của ${artist.name}`);
       card.innerHTML = `
-        <img src="${escapeHtml(upgradeThumbnailUrl(portrait) || 'wood_2.jpg')}" alt="" loading="lazy">
-        <strong>${escapeHtml(artist.name)}</strong>
+        <span class="discover-artist-avatar" aria-hidden="true">
+          ${portrait ? `<img src="${escapeHtml(upgradeThumbnailUrl(portrait))}" alt="" loading="lazy">` : `<span class="discover-artist-monogram">${escapeHtml(initials || '♪')}</span>`}
+          <span class="discover-artist-rank">${String(index + 1).padStart(2, '0')}</span>
+          <svg class="discover-artist-sprout" viewBox="0 0 32 32" focusable="false"><path d="M15.8 25.8c.2-6.1 2.8-11.4 8.7-15.2-.4 6.5-3.7 11.6-8.7 15.2Z"/><path d="M15.8 25.8C14 20 10.5 16.7 5 15.3c.4 5.4 4.4 9.4 10.8 10.5ZM15.8 26V9.5"/></svg>
+        </span>
+        <span class="discover-artist-copy"><strong>${escapeHtml(artist.name)}</strong><span>${escapeHtml(artist.isNewWave ? artist.style : 'Đang thịnh hành')}</span></span>
       `;
+      if (portrait) {
+        const portraitImage = card.querySelector('.discover-artist-avatar > img');
+        portraitImage?.addEventListener('error', () => {
+          const monogram = document.createElement('span');
+          monogram.className = 'discover-artist-monogram';
+          monogram.textContent = initials || '♪';
+          portraitImage.replaceWith(monogram);
+        }, { once: true });
+      }
       card.addEventListener('click', () => startDiscoverRadio(artist.name));
       dom.discoverArtistRow.appendChild(card);
     });
