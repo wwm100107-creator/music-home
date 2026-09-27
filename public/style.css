@@ -1720,24 +1720,52 @@ body.twilight-mode .bottom-player-glass {
 .album-cover-frame {
   width: 64px;
   height: 64px;
-  border-radius: 12px;
+  border-radius: 15px;
   overflow: hidden;
-  border: 2px solid var(--ghibli-brown-dark);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+  padding: 2px;
+  border: 1px solid rgba(82, 58, 35, 0.82);
+  background: linear-gradient(145deg, #f1d99d 0%, #9c7747 18%, #4a3827 48%, #c6a66b 78%, #745235 100%);
+  box-shadow: 0 5px 14px rgba(24, 19, 12, 0.3), inset 0 1px 1px rgba(255, 246, 212, 0.48);
   flex-shrink: 0;
-  background: #1f3020;
   position: relative;
+  isolation: isolate;
 }
 
 body.twilight-mode .album-cover-frame {
-  border-color: #52b788;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), 0 0 10px rgba(82, 183, 136, 0.2);
+  border-color: rgba(126, 145, 91, 0.86);
+  background: linear-gradient(145deg, #d8c18b 0%, #796647 18%, #283425 48%, #9b8657 78%, #435039 100%);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.46), inset 0 1px 1px rgba(255, 239, 190, 0.25);
+}
+
+.album-cover-frame::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  z-index: 3;
+  border: 1px solid rgba(255, 239, 190, 0.48);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(43, 35, 23, 0.16);
+  pointer-events: none;
+}
+
+body.twilight-mode .album-cover-frame::after {
+  border-color: rgba(214, 203, 152, 0.42);
+}
+
+.bottom-player-glass.is-playing .album-cover-frame {
+  box-shadow: 0 6px 16px rgba(18, 18, 12, 0.34), 0 0 12px rgba(180, 145, 73, 0.22), inset 0 1px 1px rgba(255, 246, 212, 0.5);
+}
+
+body.twilight-mode .bottom-player-glass.is-playing .album-cover-frame {
+  border-color: rgba(173, 162, 105, 0.9);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5), 0 0 13px rgba(128, 156, 91, 0.2), inset 0 1px 1px rgba(255, 239, 190, 0.28);
 }
 
 .now-playing-cover {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 10px;
   will-change: opacity, transform;
 }
 
@@ -5999,7 +6027,7 @@ body.twilight-mode .player-ambient-aura {
 .now-playing-cover {
   position: relative;
   z-index: 2;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
+  box-shadow: 0 2px 5px rgba(20, 17, 12, 0.2) !important;
 }
 
 .mini-vinyl-center {

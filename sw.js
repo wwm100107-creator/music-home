@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const CACHE_NAME = 'antigravity-ghibli-v5.4-hand-drawn-icon-set';
+const CACHE_NAME = 'antigravity-ghibli-v5.5-player-cover-frame';
 
 // Danh sách các tài nguyên tĩnh cốt lõi cần lưu trữ offline
 const STATIC_ASSETS = [
@@ -37,7 +37,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('🍃 [Service Worker] Pre-caching Ghibli UI Shell v5.4...');
+      console.log('🍃 [Service Worker] Pre-caching Ghibli UI Shell v5.5...');
       return cache.addAll(STATIC_ASSETS);
     }).then(() => self.skipWaiting())
   );
