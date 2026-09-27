@@ -3982,7 +3982,7 @@
     const ensureArtist = name => {
       const key = normalizeDiscoverArtist(name);
       if (!key) return null;
-      if (!artists.has(key)) artists.set(key, { name: String(name).trim(), score: 0, tracks: [], chartTracks: 0, recentAlbumYear: 0 });
+      if (!artists.has(key)) artists.set(key, { name: String(name).trim(), score: 0, tracks: [], chartTracks: 0, recentAlbumYear: 0, artistId: '', artistThumbnail: '' });
       return artists.get(key);
     };
 
@@ -3992,6 +3992,11 @@
       getDiscoverArtistNames(track).forEach((name, artistIndex) => {
         const entry = ensureArtist(name);
         if (!entry) return;
+        const primaryArtistKey = normalizeDiscoverArtist(track.primaryArtist || track.artist || track.artists?.[0]);
+        if (primaryArtistKey === normalizeDiscoverArtist(name)) {
+          if (!entry.artistId && track.artistId) entry.artistId = String(track.artistId);
+          if (!entry.artistThumbnail && track.artistThumbnail) entry.artistThumbnail = String(track.artistThumbnail);
+        }
         if (!entry.tracks.some(item => String(item.id) === String(track.id))) {
           entry.score += momentum / ((artistIndex + 1) * (1 + entry.chartTracks * 0.7));
           entry.chartTracks += 1;
@@ -4013,7 +4018,10 @@
           title: album.title,
           artist: album.artist,
           thumbnail: album.thumbnail,
-          year: album.year
+          year: album.year,
+          source: album.source || 'youtube-music-album',
+          albumId: album.albumId || album.id,
+          releaseId: album.releaseId || ''
         });
       }
     });
@@ -4365,7 +4373,63 @@
   });
   const RADIO_SIMILARITY_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
   const radioArtistDiscoveryCache = new Map();
+  const discoverArtworkCache = new Map();
+  const discoverArtworkPending = new Set();
   let lastRadioDiagnosticsSnapshot = '';
+
+  function getDiscoverArtworkKey(kind, item = {}) {
+    if (kind === 'artist') {
+      const artistId = String(item.artistId || item.mbid || item._radioMbid || '').trim();
+      return `artist:${artistId || normalizeDiscoverArtist(item.artist || item.primaryArtist || item.name)}`;
+    }
+    const stableId = String(item.releaseId || item.albumId || item.id || '').trim();
+    return `release:${stableId || `${normalizeDiscoverArtist(item.title)}|${normalizeDiscoverArtist(item.artist || item.primaryArtist)}`}`;
+  }
+
+  function getResolvedDiscoverArtwork(kind, item) {
+    const cached = discoverArtworkCache.get(getDiscoverArtworkKey(kind, item));
+    if (!cached || cached.expiresAt <= Date.now()) return null;
+    return cached.value;
+  }
+
+  function requestDiscoverArtwork(kind, items, onResolved) {
+    const unique = new Map();
+    (items || []).forEach(item => {
+      if (!item) return;
+      const key = getDiscoverArtworkKey(kind, item);
+      const cached = discoverArtworkCache.get(key);
+      if (!key.endsWith(':') && (!cached || cached.expiresAt <= Date.now()) && !discoverArtworkPending.has(key)) {
+        unique.set(key, { ...item, kind });
+      }
+    });
+    const requests = [...unique.entries()];
+    if (!requests.length) return;
+
+    // Keep batches small so the MusicBrainz throttle can return partial artwork promptly.
+    for (let offset = 0; offset < requests.length; offset += 8) {
+      const batch = requests.slice(offset, offset + 8);
+      batch.forEach(([key]) => discoverArtworkPending.add(key));
+      fetch('/api/artwork/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: batch.map(([, item]) => item) })
+      }).then(async response => {
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !Array.isArray(payload.results)) throw new Error(payload.error || 'Artwork lookup failed');
+        payload.results.forEach((result, index) => {
+          const [key] = batch[index] || [];
+          if (!key || !result) return;
+          discoverArtworkCache.set(key, {
+            value: result,
+            expiresAt: Date.now() + (result.thumbnail || result.artistThumbnail ? 24 * 60 * 60 * 1000 : 5 * 60 * 1000)
+          });
+        });
+        onResolved?.();
+      }).catch(error => {
+        console.warn(`[Artwork Resolver] ${kind} lookup unavailable:`, error?.message || error);
+      }).finally(() => batch.forEach(([key]) => discoverArtworkPending.delete(key)));
+    }
+  }
 
   function splitRadioArtistCredits(value) {
     return String(value?.name || value?.text || value || '')
@@ -4463,6 +4527,7 @@
           artist: name,
           artists: [name],
           thumbnail: String(similarArtist.image || ''),
+          _radioMbid: String(similarArtist.mbid || ''),
           rank: Number(similarArtist.rank) || index + 1,
           _radioRelatedSeed: seed.artist,
           _radioSimilarity: Math.min(1, similarity),
@@ -4542,9 +4607,12 @@
       names.forEach((name, artistIndex) => {
         const key = normalizeDiscoverArtist(name);
         if (!key || key.length < 2 || ['unknown artist', 'various artists', 'artist'].includes(key)) return;
-        const candidate = candidates.get(key) || {
+        const artistId = String(track.artistId || track._radioMbid || '').trim().toLocaleLowerCase();
+        const identityKey = artistId || key;
+        const candidate = candidates.get(identityKey) || candidates.get(key) || {
           key,
           name: String(name).trim(),
+          artistId: artistId || '',
           tracks: [],
           trackIds: new Set(),
           sourceScores: {},
@@ -4560,6 +4628,9 @@
         };
         if (source === 'relatedDiscovery' && track._radioProfileUrl) {
           candidate.lastFmUrl = String(track._radioProfileUrl);
+        }
+        if (!candidate.artistId && (track.artistId || track._radioMbid)) {
+          candidate.artistId = String(track.artistId || track._radioMbid);
         }
         const artistCreditPenalty = 1 / (artistIndex + 1);
         const sourceMatch = source === 'relatedDiscovery'
@@ -4577,6 +4648,7 @@
           candidate.tracks.push({ track, source, rank, rankSignal, sourceMeta });
         }
         candidates.set(key, candidate);
+        candidates.set(identityKey, candidate);
       });
 
       if (names.length > 1) {
@@ -4653,7 +4725,7 @@
     const trendingAnchorKeys = new Set([...regionalTracks.slice(0, 12), ...globalTracks.slice(0, 8)].flatMap(getRadioArtistNames).map(normalizeDiscoverArtist));
     const similarityAnchors = userAnchorKeys.size ? userAnchorKeys : trendingAnchorKeys;
 
-    const ranked = [...candidates.values()].map(candidate => {
+    const ranked = [...new Set(candidates.values())].map(candidate => {
       candidate.relationshipMap = relationships.get(candidate.key) || new Map();
       candidate.genres = [...candidate.genreScores.entries()].sort((a, b) => b[1] - a[1]).map(([genre]) => genre);
       const regionalRank = Math.min(...candidate.regionalRanks, Infinity);
@@ -4798,15 +4870,39 @@
     return companions;
   }
 
-  function getRadioCandidateThumbnail(candidate) {
+  function getRadioCandidateArtworkData(candidate) {
     const artistKey = candidate?.key || normalizeDiscoverArtist(candidate?.name);
-    const artistProfile = (candidate?.tracks || []).find(item => {
+    const metadataTrack = (candidate?.tracks || []).find(item => {
+      if (!item.track?.artistThumbnail) return false;
+      const primaryArtist = normalizeDiscoverArtist(item.track.primaryArtist || item.track.artist || item.track.artists?.[0]);
+      return primaryArtist === artistKey;
+    });
+    // Last.fm's artist.getSimilar image belongs to the related artist itself and
+    // is stored as `thumbnail`; it is safe to use only for relatedDiscovery rows
+    // whose artist credit matches this candidate. Never treat a song cover as a
+    // portrait for regional chart tracks.
+    const relatedArtistTrack = (candidate?.tracks || []).find(item => {
       if (item.source !== 'relatedDiscovery' || !item.track?.thumbnail) return false;
-      const imageUrl = String(item.track.thumbnail);
+      const imageUrl = String(item.track.thumbnail).trim();
       if (!/^https:\/\//i.test(imageUrl) || /2a96cbd8b46e442fc41c2b86b821562f/i.test(imageUrl)) return false;
       return getRadioArtistNames(item.track).some(name => normalizeDiscoverArtist(name) === artistKey);
     });
-    return artistProfile ? upgradeThumbnailUrl(artistProfile.track.thumbnail) : '';
+    return {
+      kind: 'artist',
+      artist: candidate?.name || '',
+      primaryArtist: candidate?.name || '',
+      artistId: relatedArtistTrack?.track?._radioMbid || candidate?.artistId || '',
+      artistThumbnail: metadataTrack?.track?.artistThumbnail || relatedArtistTrack?.track?.thumbnail || '',
+      source: relatedArtistTrack && !metadataTrack ? 'lastfm' : 'youtube-music',
+      sourceThumbnail: ''
+    };
+  }
+
+  function getRadioCandidateThumbnail(candidate) {
+    const artworkData = getRadioCandidateArtworkData(candidate);
+    const resolved = getResolvedDiscoverArtwork('artist', artworkData);
+    const thumbnail = resolved?.artistThumbnail || resolved?.thumbnail || '';
+    return thumbnail ? upgradeThumbnailUrl(thumbnail) : '';
   }
 
   function getRadioArtistInitials(candidate) {
@@ -4823,8 +4919,13 @@
   }
 
   function logRadioRecommendationDiagnostics(pipeline, selected, cardData) {
-    if (pipeline.snapshot === lastRadioDiagnosticsSnapshot) return;
-    lastRadioDiagnosticsSnapshot = pipeline.snapshot;
+    const artworkSnapshot = cardData.map(card => {
+      const faces = [card.supports[0]?.candidate, card.primary, card.supports[1]?.candidate].filter(Boolean);
+      return faces.map(candidate => getResolvedDiscoverArtwork('artist', getRadioCandidateArtworkData(candidate))?.artworkSource || 'pending').join(',');
+    }).join('|');
+    const diagnosticSnapshot = `${pipeline.snapshot}|${artworkSnapshot}`;
+    if (diagnosticSnapshot === lastRadioDiagnosticsSnapshot) return;
+    lastRadioDiagnosticsSnapshot = diagnosticSnapshot;
     const uniquePrimaryArtists = new Set(cardData.map(card => card.primary.key)).size;
     const duplicateCards = new Set();
     let duplicateCardCount = 0;
@@ -4837,8 +4938,20 @@
       genreDistribution[genre] = (genreDistribution[genre] || 0) + 1;
     });
     const finalCards = selected.map((selection, index) => {
-      const card = cardData[index];
+      const card = cardData.find(entry => entry.primary.key === selection.candidate.key) || { supports: [] };
       return {
+        section: 'Radio phổ biến',
+        title: selection.candidate.name,
+        artist: selection.candidate.name,
+        album: '',
+        source: [...new Set(selection.candidate.tracks.map(item => item.track?.source || item.source || 'unknown'))].join('+'),
+        rankingScore: Number(selection.finalScore.toFixed(3)),
+        artistId: selection.candidate.artistId || '',
+        albumId: '',
+        artworkSource: getResolvedDiscoverArtwork('artist', getRadioCandidateArtworkData(selection.candidate))?.artworkSource || 'pending',
+        supportingArtworkSources: card.supports.map(item =>
+          getResolvedDiscoverArtwork('artist', getRadioCandidateArtworkData(item.candidate))?.artworkSource || 'pending'
+        ),
         primaryArtist: selection.candidate.name,
         genre: selection.candidate.genres[0] || 'chưa phân loại',
         trendScore: Number(selection.candidate.scoreParts.trendScore.toFixed(3)),
@@ -4868,15 +4981,6 @@
 
   function renderDiscoverRadioRow() {
     if (!dom.discoverRadioRow) return;
-    if (dom.discoverRadioCaption) {
-      dom.discoverRadioCaption.textContent = state.lastFmRadioConfigured === false
-        ? 'Bảng xếp hạng khu vực và gu nghe của bạn · thêm LASTFM_API_KEY để mở rộng nghệ sĩ liên quan.'
-        : (state.lastFmRadioUnavailable
-          ? 'Last.fm đang tạm lỗi; hiện dùng bảng xếp hạng khu vực và gu nghe của bạn.'
-          : (state.lastFmRadioConfigured === true
-          ? 'Bảng xếp hạng khu vực kết hợp nghệ sĩ tương tự và gu nghe của bạn.'
-          : 'Đang kết hợp bảng xếp hạng khu vực, nghệ sĩ liên quan và gu nghe của bạn.'));
-    }
     const pipeline = buildRadioRecommendationCandidates();
     const selected = selectDiverseRadioArtists(pipeline.ranked, pipeline.relationships, pipeline.snapshot);
     const supportUseCounts = new Map();
@@ -4894,7 +4998,20 @@
     const clusteredCardData = cardData.filter(card => card.supports.length > 0);
     const finalCardData = clusteredCardData.length >= 8 ? clusteredCardData : cardData;
     const finalSelected = selected.filter((_, index) => finalCardData.includes(cardData[index]));
+    const artworkRequests = finalCardData.flatMap(({ primary, supports }) =>
+      [primary, ...supports.map(item => item.candidate)].map(getRadioCandidateArtworkData)
+    );
 
+    logRadioRecommendationDiagnostics(pipeline, finalSelected, finalCardData);
+    if (dom.discoverRadioCaption) {
+      dom.discoverRadioCaption.textContent = state.lastFmRadioConfigured === false
+        ? 'Bảng xếp hạng khu vực và gu nghe của bạn · thêm LASTFM_API_KEY để mở rộng nghệ sĩ liên quan.'
+        : (state.lastFmRadioUnavailable
+          ? 'Last.fm đang tạm lỗi; hiện dùng bảng xếp hạng khu vực và gu nghe của bạn.'
+          : (state.lastFmRadioConfigured === true
+          ? 'Bảng xếp hạng khu vực kết hợp nghệ sĩ tương tự và gu nghe của bạn.'
+          : 'Đang kết hợp bảng xếp hạng khu vực, nghệ sĩ liên quan và gu nghe của bạn.'));
+    }
     dom.discoverRadioRow.innerHTML = '';
     finalCardData.forEach(({ primary, supports }, index) => {
       const faces = [supports[0]?.candidate, primary, supports[1]?.candidate].filter(Boolean);
@@ -4919,6 +5036,14 @@
         </span>
         <span class="discover-card-copy">Cùng xu hướng: ${escapeHtml(companions.join(', ') || primary.genres.slice(0, 2).join(', ') || 'nhạc mới trong khu vực')}</span>
       `;
+      card.querySelectorAll('.discover-radio-face img').forEach((image, imageIndex) => {
+        image.addEventListener('error', () => {
+          const monogram = document.createElement('span');
+          monogram.className = `${image.className} discover-radio-monogram`;
+          monogram.textContent = getRadioArtistInitials(faces[imageIndex]);
+          image.replaceWith(monogram);
+        }, { once: true });
+      });
       card.addEventListener('click', () => startDiscoverRadio(primary.name));
       const cardShell = document.createElement('div');
       cardShell.className = 'discover-radio-card-shell';
@@ -4934,7 +5059,7 @@
       }
       dom.discoverRadioRow.appendChild(cardShell);
     });
-    logRadioRecommendationDiagnostics(pipeline, finalSelected, finalCardData);
+    requestDiscoverArtwork('artist', artworkRequests, renderDiscoverRadioRow);
   }
 
   function renderDiscoverRecentList() {
@@ -5012,7 +5137,6 @@
 
   function renderDiscoverAlbumRow() {
     if (!dom.discoverAlbumRow) return;
-    dom.discoverAlbumRow.innerHTML = '';
     const exposure = getHomeArtistExposure(false);
     const rankedAlbums = (state.homeAlbums || []).map((album, index) => {
       const artistKey = normalizeDiscoverArtist(album.artist);
@@ -5021,22 +5145,60 @@
       return { album, score: (20 - index) + freshness - (exposure.get(artistKey) || 0) * 7 };
     }).sort((a, b) => b.score - a.score || (Number.parseInt(b.album.year, 10) || 0) - (Number.parseInt(a.album.year, 10) || 0));
     const seenAlbumArtists = new Set();
+    const seenReleases = new Set();
     const albums = rankedAlbums.filter(({ album }) => {
-      const artistKey = normalizeDiscoverArtist(album.artist) || `album:${album.id}`;
+      const releaseKey = String(album.releaseId || album.albumId || album.id || `${album.title}|${album.artist}`);
+      if (seenReleases.has(releaseKey)) return false;
+      seenReleases.add(releaseKey);
+      const artistKey = normalizeDiscoverArtist(album.artist) || `album:${releaseKey}`;
       if (seenAlbumArtists.has(artistKey)) return false;
       seenAlbumArtists.add(artistKey);
       return true;
     }).slice(0, 10).map(entry => entry.album);
+    const artworkRequests = albums.map(album => ({
+      kind: 'release',
+      id: album.id,
+      title: album.title,
+      artist: album.artist,
+      primaryArtist: album.artist,
+      source: album.source || 'youtube-music',
+      albumId: album.albumId || album.id,
+      releaseId: album.releaseId || '',
+      thumbnail: album.albumThumbnail || album.thumbnail || '',
+      sourceThumbnail: album.sourceThumbnail || album.thumbnail || ''
+    }));
+    console.info('[Discovery items]', JSON.stringify(albums.map(album => {
+      const artworkData = artworkRequests.find(item => String(item.albumId || item.id) === String(album.albumId || album.id));
+      const artwork = getResolvedDiscoverArtwork('release', artworkData || album);
+      return {
+        section: 'Album và đĩa đơn phổ biến',
+        title: album.title || '',
+        artist: album.artist || '',
+        album: album.title || '',
+        source: album.source || 'youtube-music',
+        rankingScore: Number(rankedAlbums.find(entry => entry.album === album)?.score || 0),
+        artistId: album.artistId || '',
+        albumId: album.albumId || album.id || '',
+        artworkSource: artwork?.artworkSource || (album.thumbnail && !String(album.thumbnail).endsWith('wood_2.jpg') ? 'youtube-music' : 'pending')
+      };
+    })));
+    dom.discoverAlbumRow.innerHTML = '';
     albums.forEach(album => {
+      const artworkData = artworkRequests.find(item => String(item.albumId || item.id) === String(album.albumId || album.id));
+      const artwork = getResolvedDiscoverArtwork('release', artworkData || album);
+      const imageUrl = artwork?.thumbnail || album.thumbnail || 'wood_2.jpg';
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'discover-album-card';
       card.setAttribute('aria-label', `Mở ${album.type || 'album'} ${album.title} của ${album.artist || 'nghệ sĩ'}`);
       card.innerHTML = `
-        <img class="discover-square-art" src="${escapeHtml(upgradeThumbnailUrl(album.thumbnail) || 'wood_2.jpg')}" alt="" loading="lazy">
+        <img class="discover-square-art" src="${escapeHtml(upgradeThumbnailUrl(imageUrl) || 'wood_2.jpg')}" alt="" loading="lazy">
         <strong>${escapeHtml(album.title || 'Album')}</strong>
         <span>${escapeHtml(album.artist || 'Nghệ sĩ')}</span>
       `;
+      card.querySelector('.discover-square-art')?.addEventListener('error', event => {
+        event.currentTarget.src = 'wood_2.jpg';
+      }, { once: true });
       card.addEventListener('click', () => {
         switchTab('playlists');
         dom.albumDetailView?.classList.add('hidden');
@@ -5045,17 +5207,43 @@
       });
       dom.discoverAlbumRow.appendChild(card);
     });
+    requestDiscoverArtwork('release', artworkRequests, renderDiscoverAlbumRow);
   }
 
   function renderDiscoverArtistRow() {
     if (!dom.discoverArtistRow) return;
-    dom.discoverArtistRow.innerHTML = '';
     const isVietnamWave = state.selectedCountry === 'VN';
     const exposure = getHomeArtistExposure(false);
     const artists = getDiscoverArtistRankings().map(artist => ({
       ...artist,
       adjustedScore: artist.score - (exposure.get(normalizeDiscoverArtist(artist.name)) || 0) * 9
     })).sort((a, b) => b.adjustedScore - a.adjustedScore || a.name.localeCompare(b.name)).slice(0, 24);
+    const artworkRequests = artists.map(artist => {
+      return {
+        kind: 'artist',
+        artist: artist.name,
+        primaryArtist: artist.name,
+        artistId: artist.artistId || '',
+        artistThumbnail: artist.artistThumbnail || '',
+        source: 'youtube-music',
+        sourceThumbnail: ''
+      };
+    });
+    console.info('[Discovery items]', JSON.stringify(artists.map((artist, index) => {
+      const artworkData = artworkRequests[index];
+      const artwork = getResolvedDiscoverArtwork('artist', artworkData);
+      return {
+        section: 'Nghệ sĩ phổ biến',
+        title: artist.name,
+        artist: artist.name,
+        album: '',
+        source: [...new Set(artist.tracks.map(track => track.source || 'youtube-music'))].join('+'),
+        rankingScore: Number(artist.adjustedScore.toFixed(3)),
+        artistId: artwork?.artistId || artworkData.artistId || '',
+        albumId: '',
+        artworkSource: artwork?.artworkSource || 'pending'
+      };
+    })));
     if (dom.discoverArtistsTitle) {
       dom.discoverArtistsTitle.textContent = isVietnamWave ? 'Gương mặt V-Pop thế hệ mới' : 'Nghệ sĩ phổ biến';
     }
@@ -5064,8 +5252,11 @@
         ? 'Gương mặt nổi bật qua bảng khu vực, đĩa gần đây và lượt nghe thực tế'
         : 'Nghệ sĩ nổi bật theo bảng khu vực, đĩa gần đây và lượt nghe thực tế';
     }
+    dom.discoverArtistRow.innerHTML = '';
     artists.forEach((artist, index) => {
-      const portrait = artist.tracks.find(track => track.thumbnail)?.thumbnail;
+      const artworkData = artworkRequests[index];
+      const artwork = getResolvedDiscoverArtwork('artist', artworkData);
+      const portrait = artwork?.artistThumbnail || artwork?.thumbnail || '';
       const initials = artist.name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase();
       const card = document.createElement('button');
       card.type = 'button';
@@ -5091,6 +5282,7 @@
       card.addEventListener('click', () => startDiscoverRadio(artist.name));
       dom.discoverArtistRow.appendChild(card);
     });
+    requestDiscoverArtwork('artist', artworkRequests, renderDiscoverArtistRow);
   }
 
   function renderDiscoverForYouRow() {
@@ -5126,8 +5318,24 @@
     })).sort((a, b) => b.score - a.score);
     const recommendations = diversifyRankedCandidates(candidates, 8, 2);
 
+    console.info('[Discovery items]', JSON.stringify(recommendations.map(({ track, score, source }) => ({
+      section: 'Dành riêng cho bạn',
+      title: track.title || '',
+      artist: track.primaryArtist || track.artist || '',
+      album: track.album || '',
+      source: track.source || source,
+      recommendationSource: source,
+      rankingScore: Number(score.toFixed(3)),
+      artistId: track.artistId || '',
+      albumId: track.albumId || track.releaseId || '',
+      artworkSource: track.thumbnail && !String(track.thumbnail).endsWith('wood_2.jpg')
+        ? (track.source || 'music-source-thumbnail')
+        : 'neutral-fallback'
+    }))));
+
     dom.discoverForYouRow.innerHTML = '';
-    recommendations.forEach(track => {
+    recommendations.forEach(recommendation => {
+      const { track } = recommendation;
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'discover-track-card';
@@ -5163,15 +5371,24 @@
   function serializeRecommendationTrack(track) {
     return {
       id: String(track?.id || ''),
+      source: String(track?.source || 'unknown'),
+      videoId: String(track?.videoId || track?.originalVideoId || ''),
       title: String(track?.title || 'Bài hát'),
       artist: String(track?.artist || ''),
       artists: Array.isArray(track?.artists) ? track.artists.slice(0, 8) : [],
+      primaryArtist: String(track?.primaryArtist || track?.artist || ''),
+      artistId: String(track?.artistId || ''),
       album: String(track?.album || ''),
+      albumId: String(track?.albumId || ''),
+      releaseId: String(track?.releaseId || ''),
       duration: String(track?.duration || ''),
       durationSec: Number(track?.durationSec) || 0,
       genre: String(track?.genre || ''),
       genres: Array.isArray(track?.genres) ? track.genres.slice(0, 8) : [],
-      thumbnail: String(track?.thumbnail || '')
+      thumbnail: String(track?.thumbnail || ''),
+      artistThumbnail: String(track?.artistThumbnail || ''),
+      popularity: Number(track?.popularity || 0),
+      publishedAt: String(track?.publishedAt || '')
     };
   }
 

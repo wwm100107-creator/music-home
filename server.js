@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'url';
 import { Innertube, ClientType, UniversalCache, Platform } from 'youtubei.js';
 import { parse as parseYaml } from 'yaml';
+import ArtworkResolver from './artwork-resolver.js';
 
 // Setup high-performance JavaScript evaluator for Innertube deciphering
 if (Platform && Platform.shim) {
@@ -738,8 +739,6 @@ const COUNTRY_HUBS = {
     dailyPlaylistId: 'PL4fGSI1pDJn57DkisEwlIpcs9FAt5yudJ',
     weeklyPlaylistId: 'PL4fGSI1pDJn4FPCRZtojwqQro5GPY6cuV',
     queries: ['nhạc trẻ vpop thịnh hành', 'top bài hát việt nam', 'hit vpop hay nhất hiện nay'],
-    albumQueries: ['top albums vpop', 'album nhạc việt', 'vpop ep album'],
-    albumArtistSeeds: ['Sơn Tùng M-TP', 'HIEUTHUHAI', 'Vũ.', 'Wren Evans', 'Bích Phương', 'MIN', 'Đen', 'MONO', 'Thắng', 'Anh Trai Say Hi'],
     genres: ['Tất cả', 'V-Pop', 'Nhạc Trẻ Thịnh Hành', 'Indie Việt', 'Vinahouse', 'Ballad Buồn']
   },
   US: {
@@ -750,8 +749,6 @@ const COUNTRY_HUBS = {
     dailyPlaylistId: 'PL4fGSI1pDJn6t3TXLGiiJdD-sZbrG3tG0',
     weeklyPlaylistId: 'PL4fGSI1pDJn69On1f-8NAvX_CYlx7QyZc',
     queries: ['top 100 songs 2026', 'billboard hot 100 hits', 'us pop hits'],
-    albumQueries: ['billboard top albums', 'top us pop albums', 'grammy albums'],
-    albumArtistSeeds: ['Taylor Swift', 'Billie Eilish', 'Olivia Rodrigo', 'The Weeknd', 'Post Malone', 'Ariana Grande', 'Bruno Mars', 'Kendrick Lamar', 'Sabrina Carpenter', 'Dua Lipa'],
     genres: ['All', 'Billboard Top 100', 'Pop Hits', 'Hip-Hop & Rap', 'R&B', 'Indie Rock']
   },
   KR: {
@@ -762,8 +759,6 @@ const COUNTRY_HUBS = {
     dailyPlaylistId: 'PL4fGSI1pDJn6Q7vxp4-2ETPMtSuAPuZ8Y',
     weeklyPlaylistId: 'PL4fGSI1pDJn5S09aId3dUGp40ygUqmPGc',
     queries: ['kpop top hits 2026', 'melon top 100', 'korean pop'],
-    albumQueries: ['kpop top albums', 'melon top albums', 'k-drama ost album'],
-    albumArtistSeeds: ['NewJeans', 'BTS', 'BLACKPINK', 'aespa', 'IVE', 'LE SSERAFIM', 'IU', 'SEVENTEEN', 'Stray Kids', 'Taeyeon'],
     genres: ['전체', 'K-Pop Top 100', 'K-Drama OST', 'K-Indie', 'Korean Hip-Hop', 'Ballad']
   },
   JP: {
@@ -774,8 +769,6 @@ const COUNTRY_HUBS = {
     dailyPlaylistId: 'PL4fGSI1pDJn5cKcVCiye7vSc7fpUkPVEi',
     weeklyPlaylistId: 'PL4fGSI1pDJn5FhDrWnRp2NLzJCoPliNgT',
     queries: ['jpop top hits 2026', 'anime opening songs', 'japanese songs'],
-    albumQueries: ['jpop top albums', 'anime soundtrack album', 'studio ghibli soundtrack album'],
-    albumArtistSeeds: ['Joe Hisaishi', 'YOASOBI', 'Kenshi Yonezu', 'Ado', 'Fujii Kaze', 'RADWIMPS', 'King Gnu', 'Aimyon', 'Official HIGE DANdism', 'LiSA'],
     genres: ['すべて', 'J-Pop Oricon', 'Anime OST', 'City Pop', 'J-Rock', 'Vocaloid']
   },
   GB: {
@@ -786,8 +779,6 @@ const COUNTRY_HUBS = {
     dailyPlaylistId: 'PL4fGSI1pDJn6vTu7hGDifnY39hfhuNTgt',
     weeklyPlaylistId: 'PLywWGW4ILrvpqqkgKRV8jpZMaUPohQipP',
     queries: ['uk top 40 2026', 'british pop hits', 'uk drill'],
-    albumQueries: ['uk top albums', 'british pop albums', 'official uk album chart'],
-    albumArtistSeeds: ['Adele', 'Ed Sheeran', 'Coldplay', 'Dua Lipa', 'Harry Styles', 'Sam Smith', 'Arctic Monkeys', 'Oasis', 'Lewis Capaldi', 'Charli xcx'],
     genres: ['All', 'UK Official Top 40', 'Britpop', 'Grime & Drill', 'Indie Alternative', 'EDM']
   },
   GLOBAL: {
@@ -798,8 +789,6 @@ const COUNTRY_HUBS = {
     dailyPlaylistId: 'PL4fGSI1pDJn6t3TXLGiiJdD-sZbrG3tG0',
     weeklyPlaylistId: 'PL4fGSI1pDJn5kI81J1fYWK5eZRl1zJ5kM',
     queries: ['today top hits 2026', 'global viral songs', 'popular songs global'],
-    albumQueries: ['top albums worldwide', 'global hit albums', 'grammy best album'],
-    albumArtistSeeds: ['Taylor Swift', 'The Weeknd', 'Billie Eilish', 'Bruno Mars', 'Coldplay', 'BTS', 'Dua Lipa', 'Post Malone', 'Ed Sheeran', 'Sabrina Carpenter'],
     genres: ['All', 'Global Viral 50', "Today's Top Hits", 'Dance & EDM', 'Acoustic Pop', 'Chill Hits']
   }
 };
@@ -868,6 +857,11 @@ function extractThumbnail(thumbnails) {
     rawUrl = thumbnails;
   }
   return upgradeThumbnailUrl(rawUrl);
+}
+
+function extractArtistThumbnail(item) {
+  const artist = item?.artists?.[0] || item?.authors?.[0] || item?.author;
+  return artist?.thumbnails ? extractThumbnail(artist.thumbnails) : '';
 }
 
 // ============================================================================
@@ -955,255 +949,6 @@ function isSpamAlbum(title, artist) {
   }
   return false;
 }
-
-// ============================================================================
-// 7.3. CURATED HIGH-QUALITY FALLBACK ALBUMS (Always available & resilient)
-// ============================================================================
-const FALLBACK_ALBUMS = {
-  VN: [
-    {
-      id: 'MPREb_rL78Ovsej32',
-      title: 'm-tp M-TP',
-      artist: 'Sơn Tùng M-TP',
-      year: '2017',
-      thumbnail: 'https://yt3.googleusercontent.com/ngVF3KN1kOURKqMJEBfDsUknmCkMzlFXEyACOFCIXNLdu8SfTcrbJR1Zgk2PxT6DiYlP2lBlIjxHxI4A=w544-h544-l90-rj',
-      type: 'Album'
-    },
-    {
-      id: 'MPREb_9pY0H77v7p2',
-      title: 'Ai Cũng Phải Bắt Đầu Từ Đâu Đó',
-      artist: 'HIEUTHUHAI',
-      year: '2023',
-      thumbnail: 'https://yt3.googleusercontent.com/C4JZMM3eX4wGoEl3HeyYuhwJnQDoxkkSzpZGdC5ouXug5wK28x02-rcgw9JUic5dD-EbwCS5VOVnhnKL=w544-h544-l90-rj',
-      type: 'Album'
-    },
-    {
-      id: 'MPREb_9Y6pP2l0g1H',
-      title: 'Một Vạn Năm',
-      artist: 'Vũ.',
-      year: '2022',
-      thumbnail: 'https://yt3.googleusercontent.com/gFTAr9PoP3GLk0c4D9g0Pe_Ra8zpcqH4T3Pi6ezyMjxbwGJmrKH2GlTsVpUnw4RuR0D6373dkl0Trbg8=w544-h544-l90-rj',
-      type: 'Album'
-    },
-    {
-      id: 'MPREb_8wY0L3hK1m2',
-      title: 'LoiChoi: The Lion King',
-      artist: 'Wren Evans',
-      year: '2023',
-      thumbnail: 'https://yt3.googleusercontent.com/IF6xrt6-1gtyN9mugQylNTAePWYdQmwsNEtFQqfswgpsKXvDGaQCRVR2vrLGgY6rv2_NWdIiHiElKJ2y=w544-h544-l90-rj',
-      type: 'Album'
-    },
-    {
-      id: 'MPREb_L9k1H8w7p4Y',
-      title: 'LINK',
-      artist: 'Hoàng Thùy Linh',
-      year: '2022',
-      thumbnail: 'https://yt3.googleusercontent.com/XYvvkDk8QH7On9v6f-BvbVYm_gWPkB91_BCqnlS2kXbVQY_8tw_Gz3NcltF8CfFMoyDLuaj_QXGvMUqs=w544-h544-l90-rj',
-      type: 'Album'
-    },
-    {
-      id: 'MPREb_1J7p2H8w9K0',
-      title: 'Tháng Tư Là Lời Nói Dối Của Em',
-      artist: 'Hà Anh Tuấn',
-      year: '2017',
-      thumbnail: 'https://yt3.googleusercontent.com/guPkUMfq6XoStEBVJwwWMD5dttVFgi0OXpzHZ0hvPD0kWxdVkrMbMCBNRDZlUy_N953vMI_r-6x1X_IEWQ=w544-h544-l90-rj',
-      type: 'EP'
-    },
-    {
-      id: 'MPREb_0P8w7k1L9H2',
-      title: 'Cho Bảo',
-      artist: 'B Ray',
-      year: '2025',
-      thumbnail: 'https://yt3.googleusercontent.com/yvAlf00RoCCR-z9kzE173fBrZhKgLwL29ZXfuIv5hHlkGiAjYK8hAxS9PFARQBom9MrTOtYe3Mt7D5Kp=w544-h544-l90-rj',
-      type: 'Album'
-    },
-    {
-      id: 'MPREb_8w9K0P1L2H3',
-      title: '22',
-      artist: 'MONO',
-      year: '2022',
-      thumbnail: 'https://yt3.googleusercontent.com/XUL3o2EPMtfAppLw5fDHBPqB8CmWLfsWQTalYQmhQAkAdlsWsVIdUgnT6lYfpYE_dBFdOYiWLlo70tgR=w544-h544-l90-rj',
-      type: 'Album'
-    },
-    {
-      id: 'MPREb_3H4k1L8w9P0',
-      title: 'Cái Đầu Tiên',
-      artist: 'Thắng',
-      year: '2023',
-      thumbnail: 'https://yt3.googleusercontent.com/guPkUMfq6XoStEBVJwwWMD5dttVFgi0OXpzHZ0hvPD0kWxdVkrMbMCBNRDZlUy_N953vMI_r-6x1X_IEWQ=w544-h544-l90-rj',
-      type: 'Album'
-    },
-    {
-      id: 'MPREb_7L9w8k1P0H2',
-      title: 'Sky Tour (Original Soundtrack)',
-      artist: 'Sơn Tùng M-TP',
-      year: '2020',
-      thumbnail: 'https://yt3.googleusercontent.com/yvAlf00RoCCR-z9kzE173fBrZhKgLwL29ZXfuIv5hHlkGiAjYK8hAxS9PFARQBom9MrTOtYe3Mt7D5Kp=w544-h544-l90-rj',
-      type: 'Album'
-    }
-  ],
-  US: [
-    { id: 'MPREb_TS_Midnights', title: 'Midnights', artist: 'Taylor Swift', year: '2022', thumbnail: 'https://yt3.googleusercontent.com/yvAlf00RoCCR-z9kzE173fBrZhKgLwL29ZXfuIv5hHlkGiAjYK8hAxS9PFARQBom9MrTOtYe3Mt7D5Kp=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_BE_HitMeHard', title: 'HIT ME HARD AND SOFT', artist: 'Billie Eilish', year: '2024', thumbnail: 'https://yt3.googleusercontent.com/IF6xrt6-1gtyN9mugQylNTAePWYdQmwsNEtFQqfswgpsKXvDGaQCRVR2vrLGgY6rv2_NWdIiHiElKJ2y=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_OR_GUTS', title: 'GUTS', artist: 'Olivia Rodrigo', year: '2023', thumbnail: 'https://yt3.googleusercontent.com/XYvvkDk8QH7On9v6f-BvbVYm_gWPkB91_BCqnlS2kXbVQY_8tw_Gz3NcltF8CfFMoyDLuaj_QXGvMUqs=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_TW_AfterHours', title: 'After Hours', artist: 'The Weeknd', year: '2020', thumbnail: 'https://yt3.googleusercontent.com/C4JZMM3eX4wGoEl3HeyYuhwJnQDoxkkSzpZGdC5ouXug5wK28x02-rcgw9JUic5dD-EbwCS5VOVnhnKL=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_SC_ShortSweet', title: 'Short n\' Sweet', artist: 'Sabrina Carpenter', year: '2024', thumbnail: 'https://yt3.googleusercontent.com/gFTAr9PoP3GLk0c4D9g0Pe_Ra8zpcqH4T3Pi6ezyMjxbwGJmrKH2GlTsVpUnw4RuR0D6373dkl0Trbg8=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_AG_EternalSun', title: 'eternal sunshine', artist: 'Ariana Grande', year: '2024', thumbnail: 'https://yt3.googleusercontent.com/XUL3o2EPMtfAppLw5fDHBPqB8CmWLfsWQTalYQmhQAkAdlsWsVIdUgnT6lYfpYE_dBFdOYiWLlo70tgR=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_PM_Austin', title: 'AUSTIN', artist: 'Post Malone', year: '2023', thumbnail: 'https://yt3.googleusercontent.com/guPkUMfq6XoStEBVJwwWMD5dttVFgi0OXpzHZ0hvPD0kWxdVkrMbMCBNRDZlUy_N953vMI_r-6x1X_IEWQ=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_BM_SilkSonic', title: 'An Evening with Silk Sonic', artist: 'Bruno Mars', year: '2021', thumbnail: 'https://yt3.googleusercontent.com/ngVF3KN1kOURKqMJEBfDsUknmCkMzlFXEyACOFCIXNLdu8SfTcrbJR1Zgk2PxT6DiYlP2lBlIjxHxI4A=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_KL_GNX', title: 'GNX', artist: 'Kendrick Lamar', year: '2024', thumbnail: 'https://yt3.googleusercontent.com/C4JZMM3eX4wGoEl3HeyYuhwJnQDoxkkSzpZGdC5ouXug5wK28x02-rcgw9JUic5dD-EbwCS5VOVnhnKL=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_DL_RadicalOpt', title: 'Radical Optimism', artist: 'Dua Lipa', year: '2024', thumbnail: 'https://yt3.googleusercontent.com/XYvvkDk8QH7On9v6f-BvbVYm_gWPkB91_BCqnlS2kXbVQY_8tw_Gz3NcltF8CfFMoyDLuaj_QXGvMUqs=w544-h544-l90-rj', type: 'Album' }
-  ],
-  KR: [
-    { id: 'MPREb_NJ_GetUp', title: 'Get Up', artist: 'NewJeans', year: '2023', thumbnail: 'https://yt3.googleusercontent.com/IF6xrt6-1gtyN9mugQylNTAePWYdQmwsNEtFQqfswgpsKXvDGaQCRVR2vrLGgY6rv2_NWdIiHiElKJ2y=w544-h544-l90-rj', type: 'EP' },
-    { id: 'MPREb_Aes_Armageddon', title: 'Armageddon', artist: 'aespa', year: '2024', thumbnail: 'https://yt3.googleusercontent.com/XYvvkDk8QH7On9v6f-BvbVYm_gWPkB91_BCqnlS2kXbVQY_8tw_Gz3NcltF8CfFMoyDLuaj_QXGvMUqs=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_IVE_Switch', title: 'IVE SWITCH', artist: 'IVE', year: '2024', thumbnail: 'https://yt3.googleusercontent.com/C4JZMM3eX4wGoEl3HeyYuhwJnQDoxkkSzpZGdC5ouXug5wK28x02-rcgw9JUic5dD-EbwCS5VOVnhnKL=w544-h544-l90-rj', type: 'EP' },
-    { id: 'MPREb_LS_Easy', title: 'EASY', artist: 'LE SSERAFIM', year: '2024', thumbnail: 'https://yt3.googleusercontent.com/gFTAr9PoP3GLk0c4D9g0Pe_Ra8zpcqH4T3Pi6ezyMjxbwGJmrKH2GlTsVpUnw4RuR0D6373dkl0Trbg8=w544-h544-l90-rj', type: 'EP' },
-    { id: 'MPREb_BTS_Proof', title: 'Proof', artist: 'BTS', year: '2022', thumbnail: 'https://yt3.googleusercontent.com/yvAlf00RoCCR-z9kzE173fBrZhKgLwL29ZXfuIv5hHlkGiAjYK8hAxS9PFARQBom9MrTOtYe3Mt7D5Kp=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_BP_BornPink', title: 'BORN PINK', artist: 'BLACKPINK', year: '2022', thumbnail: 'https://yt3.googleusercontent.com/guPkUMfq6XoStEBVJwwWMD5dttVFgi0OXpzHZ0hvPD0kWxdVkrMbMCBNRDZlUy_N953vMI_r-6x1X_IEWQ=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_IU_TheWinning', title: 'The Winning', artist: 'IU', year: '2024', thumbnail: 'https://yt3.googleusercontent.com/XUL3o2EPMtfAppLw5fDHBPqB8CmWLfsWQTalYQmhQAkAdlsWsVIdUgnT6lYfpYE_dBFdOYiWLlo70tgR=w544-h544-l90-rj', type: 'EP' },
-    { id: 'MPREb_SVT_17IsRight', title: '17 IS RIGHT HERE', artist: 'SEVENTEEN', year: '2024', thumbnail: 'https://yt3.googleusercontent.com/ngVF3KN1kOURKqMJEBfDsUknmCkMzlFXEyACOFCIXNLdu8SfTcrbJR1Zgk2PxT6DiYlP2lBlIjxHxI4A=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_SKZ_Ate', title: 'ATE', artist: 'Stray Kids', year: '2024', thumbnail: 'https://yt3.googleusercontent.com/C4JZMM3eX4wGoEl3HeyYuhwJnQDoxkkSzpZGdC5ouXug5wK28x02-rcgw9JUic5dD-EbwCS5VOVnhnKL=w544-h544-l90-rj', type: 'EP' },
-    { id: 'MPREb_TY_ToX', title: 'To. X', artist: 'TAEYEON', year: '2023', thumbnail: 'https://yt3.googleusercontent.com/IF6xrt6-1gtyN9mugQylNTAePWYdQmwsNEtFQqfswgpsKXvDGaQCRVR2vrLGgY6rv2_NWdIiHiElKJ2y=w544-h544-l90-rj', type: 'EP' }
-  ],
-  JP: [
-    { id: 'MPREb_JH_SpiritedAway', title: 'Spirited Away (Soundtrack)', artist: 'Joe Hisaishi', year: '2001', thumbnail: 'wood_2.png', type: 'Album' },
-    { id: 'MPREb_JH_HowlsCastle', title: 'Howl\'s Moving Castle (Soundtrack)', artist: 'Joe Hisaishi', year: '2004', thumbnail: 'bg.jpg', type: 'Album' },
-    { id: 'MPREb_JH_Totoro', title: 'My Neighbor Totoro (Soundtrack)', artist: 'Joe Hisaishi', year: '1988', thumbnail: 'icon-home-music.png', type: 'Album' },
-    { id: 'MPREb_YOA_TheBook3', title: 'THE BOOK 3', artist: 'YOASOBI', year: '2023', thumbnail: 'https://yt3.googleusercontent.com/IF6xrt6-1gtyN9mugQylNTAePWYdQmwsNEtFQqfswgpsKXvDGaQCRVR2vrLGgY6rv2_NWdIiHiElKJ2y=w544-h544-l90-rj', type: 'EP' },
-    { id: 'MPREb_KY_LostCorner', title: 'LOST CORNER', artist: 'Kenshi Yonezu', year: '2024', thumbnail: 'https://yt3.googleusercontent.com/XYvvkDk8QH7On9v6f-BvbVYm_gWPkB91_BCqnlS2kXbVQY_8tw_Gz3NcltF8CfFMoyDLuaj_QXGvMUqs=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_Ado_Zanmu', title: 'Zanmu', artist: 'Ado', year: '2024', thumbnail: 'https://yt3.googleusercontent.com/C4JZMM3eX4wGoEl3HeyYuhwJnQDoxkkSzpZGdC5ouXug5wK28x02-rcgw9JUic5dD-EbwCS5VOVnhnKL=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_FK_BestOf', title: 'Best of Fujii Kaze 2020-2024', artist: 'Fujii Kaze', year: '2024', thumbnail: 'https://yt3.googleusercontent.com/gFTAr9PoP3GLk0c4D9g0Pe_Ra8zpcqH4T3Pi6ezyMjxbwGJmrKH2GlTsVpUnw4RuR0D6373dkl0Trbg8=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_RAD_YourName', title: 'Your Name.', artist: 'RADWIMPS', year: '2016', thumbnail: 'https://yt3.googleusercontent.com/XUL3o2EPMtfAppLw5fDHBPqB8CmWLfsWQTalYQmhQAkAdlsWsVIdUgnT6lYfpYE_dBFdOYiWLlo70tgR=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_KG_Greatest', title: 'THE GREATEST UNKNOWN', artist: 'King Gnu', year: '2023', thumbnail: 'https://yt3.googleusercontent.com/yvAlf00RoCCR-z9kzE173fBrZhKgLwL29ZXfuIv5hHlkGiAjYK8hAxS9PFARQBom9MrTOtYe3Mt7D5Kp=w544-h544-l90-rj', type: 'Album' },
-    { id: 'MPREb_LiSA_Lander', title: 'LANDER', artist: 'LiSA', year: '2022', thumbnail: 'https://yt3.googleusercontent.com/guPkUMfq6XoStEBVJwwWMD5dttVFgi0OXpzHZ0hvPD0kWxdVkrMbMCBNRDZlUy_N953vMI_r-6x1X_IEWQ=w544-h544-l90-rj', type: 'Album' }
-  ]
-};
-FALLBACK_ALBUMS.GB = FALLBACK_ALBUMS.US;
-FALLBACK_ALBUMS.GLOBAL = FALLBACK_ALBUMS.US;
-
-// Fallback tracks map for offline/fallback albums
-const FALLBACK_ALBUM_TRACKS = {
-  default: [
-    { id: 'hO4X_mJSqPI', title: 'Cơn Mưa Ngang Qua', artist: 'Sơn Tùng M-TP', duration: '3:51', durationSec: 231, thumbnail: 'bg.jpg' },
-    { id: '9PUfFR1PDG0', title: 'Anh Sai Rồi', artist: 'Sơn Tùng M-TP', duration: '4:13', durationSec: 253, thumbnail: 'bg.jpg' },
-    { id: '488ceQWoGGw', title: 'Nắng Ấm Xa Dần', artist: 'Sơn Tùng M-TP', duration: '3:12', durationSec: 192, thumbnail: 'bg.jpg' },
-    { id: 'knW7-x7Y7Rg', title: 'Hãy Trao Cho Anh', artist: 'Sơn Tùng M-TP', duration: '4:06', durationSec: 246, thumbnail: 'bg.jpg' },
-    { id: 'FN7ALfpGxiI', title: 'Nơi Này Có Anh', artist: 'Sơn Tùng M-TP', duration: '4:39', durationSec: 279, thumbnail: 'bg.jpg' }
-  ],
-  MPREb_JH_SpiritedAway: [
-    { id: 'GZ3zL7De6ug', title: 'One Summer\'s Day', artist: 'Joe Hisaishi', duration: '3:09', durationSec: 189, thumbnail: 'wood_2.png' },
-    { id: 'yY8pIe0a8Zk', title: 'Reprise', artist: 'Joe Hisaishi', duration: '4:52', durationSec: 292, thumbnail: 'wood_2.png' }
-  ],
-  MPREb_JH_HowlsCastle: [
-    { id: 'yY8pIe0a8Zk', title: 'Merry-Go-Round of Life', artist: 'Joe Hisaishi', duration: '5:10', durationSec: 310, thumbnail: 'bg.jpg' }
-  ],
-  MPREb_JH_Totoro: [
-    { id: '1-S4pC1b1lM', title: 'The Path of the Wind', artist: 'Joe Hisaishi', duration: '3:16', durationSec: 196, thumbnail: 'icon-home-music.png' }
-  ]
-};
-const FALLBACK_TRENDING_TRACKS = [
-  {
-    id: 'CLSUxac0F9Q',
-    title: 'MVP (MƯA VỘI PHÓNG) (feat. Wren Evans, Ali Hoàng Dương, CODY NAM VÕ & HYO)',
-    artist: 'Anh Trai Say Hi',
-    artists: ['Anh Trai Say Hi', 'Wren Evans'],
-    album: 'TẬP 4 ANH TRAI SAY HI',
-    duration: '3:42',
-    durationSec: 222,
-    thumbnail: 'https://yt3.googleusercontent.com/IF6xrt6-1gtyN9mugQylNTAePWYdQmwsNEtFQqfswgpsKXvDGaQCRVR2vrLGgY6rv2_NWdIiHiElKJ2y=w120-h120-l90-rj'
-  },
-  {
-    id: '6Hv80f1-9UQ',
-    title: 'Cảm Ơn Người Đã Thức Cùng Tôi',
-    artist: 'Phùng Khánh Linh',
-    artists: ['Phùng Khánh Linh'],
-    album: 'Cảm Ơn Người Đã Thức Cùng Tôi',
-    duration: '4:54',
-    durationSec: 294,
-    thumbnail: 'https://yt3.googleusercontent.com/XYvvkDk8QH7On9v6f-BvbVYm_gWPkB91_BCqnlS2kXbVQY_8tw_Gz3NcltF8CfFMoyDLuaj_QXGvMUqs=w120-h120-l90-rj'
-  },
-  {
-    id: 'HK2eoCbiBPg',
-    title: 'Vạn Sự Như Ý',
-    artist: 'Trúc Nhân',
-    artists: ['Trúc Nhân'],
-    album: 'Vạn Sự Như Ý',
-    duration: '4:06',
-    durationSec: 246,
-    thumbnail: 'https://yt3.googleusercontent.com/C4JZMM3eX4wGoEl3HeyYuhwJnQDoxkkSzpZGdC5ouXug5wK28x02-rcgw9JUic5dD-EbwCS5VOVnhnKL=w120-h120-l90-rj'
-  },
-  {
-    id: 'FZZBvg_D-Z0',
-    title: 'Dạo Bước HongKong 1999',
-    artist: 'NHONHO',
-    artists: ['NHONHO'],
-    album: 'Dạo Bước HongKong 1999',
-    duration: '3:30',
-    durationSec: 210,
-    thumbnail: 'https://yt3.googleusercontent.com/gFTAr9PoP3GLk0c4D9g0Pe_Ra8zpcqH4T3Pi6ezyMjxbwGJmrKH2GlTsVpUnw4RuR0D6373dkl0Trbg8=w120-h120-l90-rj'
-  },
-  {
-    id: 'Pv8urr9RH6Y',
-    title: 'Come My Way',
-    artist: 'Sơn Tùng M-TP',
-    artists: ['Sơn Tùng M-TP'],
-    album: 'Come My Way',
-    duration: '3:13',
-    durationSec: 193,
-    thumbnail: 'https://yt3.googleusercontent.com/yvAlf00RoCCR-z9kzE173fBrZhKgLwL29ZXfuIv5hHlkGiAjYK8hAxS9PFARQBom9MrTOtYe3Mt7D5Kp=w120-h120-l90-rj'
-  },
-  {
-    id: 'qHpE45b4INk',
-    title: 'Nơi Này Có Anh',
-    artist: 'Sơn Tùng M-TP',
-    artists: ['Sơn Tùng M-TP'],
-    album: 'Nơi Này Có Anh',
-    duration: '4:21',
-    durationSec: 261,
-    thumbnail: 'https://yt3.googleusercontent.com/guPkUMfq6XoStEBVJwwWMD5dttVFgi0OXpzHZ0hvPD0kWxdVkrMbMCBNRDZlUy_N953vMI_r-6x1X_IEWQ=w120-h120-l90-rj'
-  },
-  {
-    id: 'emMR03tG2CE',
-    title: 'Hãy Trao Cho Anh (feat. Snoop Dogg)',
-    artist: 'Sơn Tùng M-TP',
-    artists: ['Sơn Tùng M-TP', 'Snoop Dogg'],
-    album: 'Hãy Trao Cho Anh',
-    duration: '4:06',
-    durationSec: 246,
-    thumbnail: 'https://yt3.googleusercontent.com/XUL3o2EPMtfAppLw5fDHBPqB8CmWLfsWQTalYQmhQAkAdlsWsVIdUgnT6lYfpYE_dBFdOYiWLlo70tgR=w120-h120-l90-rj'
-  },
-  {
-    id: 'GZ3zL7De6ug',
-    title: "One Summer's Day (Spirited Away)",
-    artist: 'Joe Hisaishi',
-    artists: ['Joe Hisaishi', 'Studio Ghibli'],
-    album: 'Spirited Away Soundtrack',
-    duration: '3:09',
-    durationSec: 189,
-    thumbnail: 'wood_2.jpg'
-  },
-  {
-    id: '1-S4pC1b1lM',
-    title: 'The Path of the Wind (My Neighbor Totoro)',
-    artist: 'Joe Hisaishi',
-    artists: ['Joe Hisaishi', 'Studio Ghibli'],
-    album: 'My Neighbor Totoro Soundtrack',
-    duration: '3:16',
-    durationSec: 196,
-    thumbnail: 'wood_2.jpg'
-  },
-  {
-    id: 'yY8pIe0a8Zk',
-    title: 'Merry-Go-Round of Life (Howl\'s Moving Castle)',
-    artist: 'Joe Hisaishi',
-    artists: ['Joe Hisaishi', 'Studio Ghibli'],
-    album: 'Howl\'s Moving Castle Soundtrack',
-    duration: '5:10',
-    durationSec: 310,
-    thumbnail: 'wood_2.jpg'
-  }
-];
 
 // ============================================================================
 // 9. MIDDLEWARES & STATIC ASSETS
@@ -1416,6 +1161,36 @@ function extractTrackGenre(item) {
   return genre ? genre.trim() : '';
 }
 
+function normalizeMusicMetadata(item = {}, source = 'unknown') {
+  const artists = Array.isArray(item.artists) && item.artists.length
+    ? item.artists.map(artist => String(artist?.name || artist || '').trim()).filter(Boolean)
+    : [String(item.primaryArtist || item.artist || '').trim()].filter(Boolean);
+  const id = String(item.id || item.videoId || item.releaseId || item.albumId || '');
+  const isYouTubeSource = String(source).startsWith('youtube');
+  const videoId = String(item.videoId || item.originalVideoId || (isYouTubeSource && /^[\w-]{11}$/.test(id) ? id : ''));
+  return {
+    ...item,
+    id,
+    source: String(item.source || source),
+    videoId,
+    title: String(item.title || item.trackName || 'Bài hát'),
+    artists,
+    primaryArtist: String(item.primaryArtist || artists[0] || item.artist || ''),
+    artist: String(item.artist || item.primaryArtist || artists[0] || ''),
+    artistId: String(item.artistId || item.artistMbid || item.artists?.[0]?.id || ''),
+    album: String(item.album || item.collectionName || ''),
+    albumId: String(item.albumId || item.youtubeAlbumId || (source === 'youtube-music-album' ? item.id : '')),
+    releaseId: String(item.releaseId || item.releaseGroupId || ''),
+    duration: String(item.duration || ''),
+    thumbnail: String(item.thumbnail || ''),
+    albumThumbnail: String(item.albumThumbnail || ''),
+    sourceThumbnail: String(item.sourceThumbnail || ''),
+    artistThumbnail: String(item.artistThumbnail || ''),
+    popularity: Number(item.popularity ?? item.rank ?? item.views) || 0,
+    publishedAt: String(item.publishedAt || item.releaseDate || '')
+  };
+}
+
 // 10.3. YouTube Music chart playlists by region. These playlist positions are
 // not Music Home stream counts and must not be presented as Top/Viral scores.
 apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpointName: 'trending' }), async (req, res) => {
@@ -1498,11 +1273,16 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
               title: cand.cleaned.title,
               artist: cand.cleaned.artist,
               artists: cand.cleaned.artist ? [cand.cleaned.artist] : [],
-              album: '',
+              album: cand.item.album?.name || cand.item.album?.title || '',
+              albumId: cand.item.album?.id || cand.item.album?.browseId || '',
+              albumThumbnail: cand.item.album?.thumbnails || cand.item.album?.thumbnail
+                ? extractThumbnail(cand.item.album.thumbnails || cand.item.album.thumbnail)
+                : '',
               genre: extractTrackGenre(cand.item),
               duration: finalDuration,
               durationSec: finalDurationSec,
               thumbnail,
+              artistThumbnail: extractArtistThumbnail(cand.item),
               rank,
               views: null,
               youtubeViewsText: null
@@ -1518,7 +1298,8 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
     // 2. Nếu playlist chart không có kết quả, fallback sang tìm kiếm từ khóa
     if (tracks.length === 0) {
       rankingBasis = 'youtube-music-search-order';
-      for (const query of hub.queries) {
+      for (const configuredQuery of hub.queries) {
+        const query = configuredQuery.replace(/\b20\d{2}\b/g, String(new Date().getFullYear()));
         try {
           let searchResult = null;
           if (ytSearch.music && typeof ytSearch.music.search === 'function') {
@@ -1578,11 +1359,16 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
                   title: cand.cleaned.title,
                   artist: cand.cleaned.artist,
                   artists: cand.cleaned.artist ? [cand.cleaned.artist] : [],
-                  album: cand.item.album?.name || '',
+                  album: cand.item.album?.name || cand.item.album?.title || '',
+                  albumId: cand.item.album?.id || cand.item.album?.browseId || '',
+                  albumThumbnail: cand.item.album?.thumbnails || cand.item.album?.thumbnail
+                    ? extractThumbnail(cand.item.album.thumbnails || cand.item.album.thumbnail)
+                    : '',
                   genre: extractTrackGenre(cand.item),
                   duration: finalDuration,
                   durationSec: finalDurationSec,
                   thumbnail,
+                  artistThumbnail: extractArtistThumbnail(cand.item),
                   rank,
                   views: null,
                   youtubeViewsText: null
@@ -1599,16 +1385,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
       }
     }
 
-    // 3. Fallback sang danh sách mẫu có sẵn nếu không kết nối được
-    if (tracks.length === 0) {
-      rankingBasis = 'fallback-list-order';
-      tracks = FALLBACK_TRENDING_TRACKS.map((t, idx) => ({
-        ...t,
-        rank: idx + 1,
-        views: null,
-        youtubeViewsText: null
-      }));
-    }
+    if (tracks.length === 0) rankingBasis = 'no-live-results';
 
     // YouTube exposes lifetime video views here, not Music Home or daily streams.
     try {
@@ -1632,6 +1409,11 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
       console.warn('[Live Views Sync Warning]:', viewsErr.message);
     }
 
+    tracks = tracks.map(track => normalizeMusicMetadata({
+      ...track,
+      popularity: track.views || track.rank || 0
+    }, track.previewUrl ? 'itunes-preview' : 'youtube-music'));
+
     const responsePayload = {
       success: true,
       timeframe,
@@ -1653,42 +1435,32 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
       cached: false
     });
   } catch (error) {
-    console.warn('[Trending Fallback Activated]:', error.message);
-    const fallbackTracks = FALLBACK_TRENDING_TRACKS.map((t, idx) => ({
-      ...t,
-      rank: idx + 1,
-      views: null,
-      youtubeViewsText: null
-    }));
-
-    const fallbackPayload = {
-      success: true,
+    console.warn('[Trending Source Unavailable]:', error.message);
+    const unavailablePayload = {
+      success: false,
       timeframe,
       countryCode: hub.code,
       countryName: hub.name,
       flag: hub.flag,
       greeting: hub.greeting,
       genres: hub.genres,
-      rankingBasis: 'fallback-list-order',
-      results: fallbackTracks,
-      tracks: fallbackTracks,
-      cached: false,
-      fallback: true
+      rankingBasis: 'temporarily-unavailable',
+      results: [],
+      tracks: [],
+      cached: false
     };
-    trendingCache.set(cacheKey, fallbackPayload);
-    res.json(fallbackPayload);
+    res.status(503).json(unavailablePayload);
   }
 });
 
-function getLastFmApiKey() {
-  const environmentKey = String(process.env.LASTFM_API_KEY || '').trim();
-  if (environmentKey) return environmentKey;
+function getPrivateEnvValue(name) {
+  const environmentValue = String(process.env[name] || '').trim();
+  if (environmentValue) return environmentValue;
 
-  // A private, git-ignored .env file lets the Termux server retain the key
-  // while auto-sync replaces tracked files from GitHub.
+  const escapedName = String(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   try {
     const envContents = fs.readFileSync(path.join(__dirname, '.env'), 'utf8');
-    const line = envContents.split(/\r?\n/).find(item => /^\s*LASTFM_API_KEY\s*=/.test(item));
+    const line = envContents.split(/\r?\n/).find(item => new RegExp(`^\\s*${escapedName}\\s*=`).test(item));
     if (!line) return '';
     let value = line.slice(line.indexOf('=') + 1).trim().replace(/\s+#.*$/, '');
     if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
@@ -1699,6 +1471,55 @@ function getLastFmApiKey() {
     return '';
   }
 }
+
+function getLastFmApiKey() {
+  return getPrivateEnvValue('LASTFM_API_KEY');
+}
+
+const artworkResolver = new ArtworkResolver({
+  getFanartApiKey: () => getPrivateEnvValue('FANART_API_KEY'),
+  getFanartClientKey: () => getPrivateEnvValue('FANART_CLIENT_KEY')
+});
+
+/**
+ * @route POST /api/artwork/resolve
+ * @body items - Array of 1-24 artist/release records
+ * @returns 200 Resolved artwork records, in request order
+ * @returns 400 Invalid or empty artwork batch
+ * @returns 502 Artwork providers are temporarily unavailable
+ */
+apiRouter.post('/artwork/resolve', rateLimit({ maxRequests: 40, windowMs: 60000, endpointName: 'artwork-resolve' }), async (req, res) => {
+  const items = req.body?.items;
+  if (!Array.isArray(items) || items.length < 1 || items.length > 24 ||
+      items.some(item => !item || !['artist', 'release'].includes(item.kind))) {
+    return res.status(400).json({ success: false, error: 'Artwork batch must contain 1 to 24 artist or release items.' });
+  }
+
+  const safeItems = items.map(item => {
+    const source = String(item.source || 'unknown').slice(0, 40);
+    const normalized = normalizeMusicMetadata(item, source);
+    return {
+      ...normalized,
+      kind: item.kind,
+      artist: String(item.artist || normalized.primaryArtist).slice(0, 120),
+      primaryArtist: String(item.primaryArtist || item.artist || normalized.primaryArtist).slice(0, 120),
+      title: String(item.title || '').slice(0, 180),
+      artistId: String(item.artistId || '').slice(0, 64),
+      releaseId: String(item.releaseId || '').slice(0, 64),
+      thumbnail: item.kind === 'artist' ? '' : String(item.thumbnail || '').slice(0, 2000),
+      artistThumbnail: String(item.artistThumbnail || '').slice(0, 2000),
+      sourceThumbnail: String(item.sourceThumbnail || '').slice(0, 2000)
+    };
+  });
+
+  try {
+    const results = await Promise.all(safeItems.map(item => artworkResolver.resolve(item)));
+    res.json({ success: true, results });
+  } catch (error) {
+    console.warn('[Artwork Resolver Warning]:', error?.message || error);
+    res.status(502).json({ success: false, error: 'Artwork providers are temporarily unavailable.' });
+  }
+});
 
 // 10.4. Related artists for popular radio clusters (Last.fm similarity data)
 apiRouter.get('/radio-related', rateLimit({ maxRequests: 20, windowMs: 60000, endpointName: 'radio-related' }), async (req, res) => {
@@ -1819,7 +1640,7 @@ apiRouter.get('/search', rateLimit({ maxRequests: 50, windowMs: 60000, endpointN
 
         const thumbnail = extractThumbnail(item.thumbnails || item.thumbnail);
 
-        tracks.push({
+        tracks.push(normalizeMusicMetadata({
           id: finalId,
           originalVideoId: id,
           title,
@@ -1829,8 +1650,9 @@ apiRouter.get('/search', rateLimit({ maxRequests: 50, windowMs: 60000, endpointN
           genre: extractTrackGenre(item),
           duration,
           durationSec,
-          thumbnail
-        });
+          thumbnail,
+          artistThumbnail: extractArtistThumbnail(item)
+        }, 'youtube-music'));
 
         if (tracks.length >= 25) break;
       }
@@ -1849,7 +1671,7 @@ apiRouter.get('/search', rateLimit({ maxRequests: 50, windowMs: 60000, endpointN
           const durationSec = Math.floor((item.trackTimeMillis || 0) / 1000);
           const m = Math.floor(durationSec / 60);
           const s = durationSec % 60;
-          tracks.push({
+          tracks.push(normalizeMusicMetadata({
             id: `itunes_${item.trackId}`,
             title: item.trackName || 'Unknown Title',
             artist: item.artistName || '',
@@ -1860,21 +1682,12 @@ apiRouter.get('/search', rateLimit({ maxRequests: 50, windowMs: 60000, endpointN
             durationSec,
             thumbnail: item.artworkUrl100?.replace('100x100bb', '300x300bb') || 'wood_2.jpg',
             previewUrl: item.previewUrl
-          });
+          }, 'itunes-preview'));
         }
       }
     } catch (itunesErr) {
       console.warn('[iTunes Fallback Search Warning]:', itunesErr.message);
     }
-  }
-
-  // Fallback 2: Lọc từ danh sách bài hát có sẵn
-  if (tracks.length === 0) {
-    const qLower = query.toLowerCase();
-    tracks = FALLBACK_TRENDING_TRACKS.filter(t =>
-      t.title.toLowerCase().includes(qLower) ||
-      t.artist.toLowerCase().includes(qLower)
-    );
   }
 
   const payload = {
@@ -1923,7 +1736,7 @@ apiRouter.get('/albums', rateLimit({ maxRequests: 60, windowMs: 60000, endpointN
         if (!id || albums.some(a => a.id === id)) continue;
         const title = item.title?.text || item.title?.toString() || 'Album';
         const artist = item.author?.name || item.artists?.[0]?.name || '';
-        if (isSpamAlbum(title, artist)) continue;
+        if (!artist || isSpamAlbum(title, artist)) continue;
 
         const thumbnail = extractThumbnail(item.thumbnails || item.thumbnail);
         const year = item.year ? String(item.year) : '';
@@ -1931,110 +1744,100 @@ apiRouter.get('/albums', rateLimit({ maxRequests: 60, windowMs: 60000, endpointN
         const isEP = lowerTitle.includes('ep') || lowerTitle.includes('single') || lowerTitle.includes('mini');
         const albumType = isEP ? 'EP' : 'Album';
 
-        albums.push({
+        albums.push(normalizeMusicMetadata({
           id,
+          albumId: id,
+          releaseId: item.releaseId || item.releaseGroupId || '',
+          source: 'youtube-music-album',
           title,
-          artist: artist || 'Nghệ sĩ',
+          artist,
           year,
           thumbnail,
-          type: albumType
-        });
+          type: albumType,
+          artists: artist ? [artist] : []
+        }, 'youtube-music-album'));
 
         if (albums.length >= 10) break;
       }
     } else {
-      // 2. Liệt kê 10 EP / Album nghệ sĩ theo vùng quốc gia đã chọn
-      const queries = hub.albumQueries || [`${hub.name} top albums`];
-      const seenArtists = new Set();
-
-      for (const query of queries) {
-        try {
-          const searchRes = await ytSearch.music.search(query, { type: 'album' });
-          const contents = searchRes.albums?.contents || searchRes.results || [];
-
-          for (const item of contents) {
-            const id = item.id;
-            if (!id || albums.some(a => a.id === id)) continue;
-
-            const title = item.title?.text || item.title?.toString() || 'Album';
-            const artist = item.author?.name || item.artists?.[0]?.name || '';
-
-            if (isSpamAlbum(title, artist)) continue;
-
-            // Đảm bảo đa dạng nghệ sĩ (mỗi nghệ sĩ tối đa 1 album trong top 10)
-            const normArtist = artist.toLowerCase().trim();
-            if (normArtist && seenArtists.has(normArtist)) continue;
-
-            const thumbnail = extractThumbnail(item.thumbnails || item.thumbnail);
-            const year = item.year ? String(item.year) : '';
-            const lowerTitle = title.toLowerCase();
-            const isEP = lowerTitle.includes('ep') || lowerTitle.includes('single') || lowerTitle.includes('mini');
-            const albumType = isEP ? 'EP' : 'Album';
-
-            if (normArtist) seenArtists.add(normArtist);
-
-            albums.push({
-              id,
-              title,
-              artist: artist || 'Nghệ sĩ',
-              year,
-              thumbnail,
-              type: albumType
-            });
-
-            if (albums.length >= 10) break;
-          }
-        } catch (err) {
-          console.warn(`[Albums] Query "${query}" warning:`, err.message);
-        }
-
-        if (albums.length >= 10) break;
+      // Derive releases only from the current regional trend dataset.
+      let trendTracks = trendingCache.get(`trending:${hub.code}:daily`)?.tracks || [];
+      if (!trendTracks.length && hub.dailyPlaylistId && ytSearch.music?.getPlaylist) {
+        const playlist = await ytSearch.music.getPlaylist(hub.dailyPlaylistId);
+        trendTracks = playlist.items || [];
       }
 
-      // Quét thêm qua hạt giống nghệ sĩ nếu chưa đủ 10 album
-      if (albums.length < 10 && hub.albumArtistSeeds) {
-        for (const artistName of hub.albumArtistSeeds) {
-          const normArtist = artistName.toLowerCase().trim();
-          if (seenArtists.has(normArtist)) continue;
+      const groupedReleases = new Map();
+      const addReleaseFromTrack = (track, index) => {
+        const rawAlbum = track.album && typeof track.album === 'object'
+          ? track.album
+          : { name: track.album, id: track.albumId, year: track.year };
+        const title = String(rawAlbum.name || rawAlbum.title || '').trim();
+        const artist = String(track.primaryArtist || track.artist || track.artists?.[0]?.name || track.authors?.[0]?.name || track.author?.name || '').trim();
+        const albumId = String(track.albumId || rawAlbum.id || rawAlbum.browseId || '');
+        if (!title || !artist || !albumId || isSpamAlbum(title, artist)) return;
 
+        const key = albumId || `${title.toLocaleLowerCase()}|${artist.toLocaleLowerCase()}`;
+        const current = groupedReleases.get(key) || {
+          id: albumId,
+          albumId,
+          releaseId: track.releaseId || rawAlbum.releaseId || rawAlbum.releaseGroupId || '',
+          title,
+          artist,
+          artists: [artist],
+          year: String(rawAlbum.year || track.year || ''),
+          thumbnail: track.albumThumbnail || (rawAlbum.thumbnails || rawAlbum.thumbnail
+            ? extractThumbnail(rawAlbum.thumbnails || rawAlbum.thumbnail)
+            : ''),
+          sourceThumbnail: track.thumbnail || (track.thumbnails ? extractThumbnail(track.thumbnails) : ''),
+          albumThumbnail: track.albumThumbnail || (rawAlbum.thumbnails || rawAlbum.thumbnail
+            ? extractThumbnail(rawAlbum.thumbnails || rawAlbum.thumbnail)
+            : ''),
+          type: /\b(ep|single|mini)\b/i.test(title) ? 'EP' : 'Album',
+          popularity: 0,
+          rank: index + 1,
+          source: 'youtube-music'
+        };
+        current.popularity += 1 / Math.sqrt(index + 1);
+        if (!current.thumbnail || current.thumbnail === 'wood_2.jpg') {
+          current.thumbnail = track.albumThumbnail || (rawAlbum.thumbnails || rawAlbum.thumbnail
+            ? extractThumbnail(rawAlbum.thumbnails || rawAlbum.thumbnail)
+            : '');
+        }
+        groupedReleases.set(key, current);
+      };
+      trendTracks.forEach(addReleaseFromTrack);
+
+      // If chart rows omit release IDs, query the same live regional trend terms
+      // and keep only the release metadata returned with those songs.
+      if (groupedReleases.size < 10) {
+        for (const configuredQuery of hub.queries) {
+          const query = configuredQuery.replace(/\b20\d{2}\b/g, String(new Date().getFullYear()));
           try {
-            const artistRes = await ytSearch.music.search(`${artistName} album`, { type: 'album' });
-            const contents = artistRes.albums?.contents || [];
-            for (const item of contents) {
-              const id = item.id;
-              if (!id || albums.some(a => a.id === id)) continue;
-              const title = item.title?.text || item.title?.toString() || 'Album';
-              const artist = item.author?.name || item.artists?.[0]?.name || artistName;
-              if (isSpamAlbum(title, artist)) continue;
-
-              const thumbnail = extractThumbnail(item.thumbnails || item.thumbnail);
-              const year = item.year ? String(item.year) : '';
-              const lowerTitle = title.toLowerCase();
-              const isEP = lowerTitle.includes('ep') || lowerTitle.includes('single') || lowerTitle.includes('mini');
-              const albumType = isEP ? 'EP' : 'Album';
-
-              seenArtists.add(normArtist);
-              albums.push({
-                id,
-                title,
-                artist,
-                year,
-                thumbnail,
-                type: albumType
-              });
-              break;
-            }
-          } catch (e) {
-            // ignore
+            const result = await ytSearch.music.search(query, { type: 'song' });
+            const contents = result.songs?.contents || result.results || [];
+            contents.forEach((track, index) => addReleaseFromTrack(track, index));
+          } catch (error) {
+            console.warn(`[Album release metadata] Query "${query}" warning:`, error.message);
           }
-
-          if (albums.length >= 10) break;
+          if (groupedReleases.size >= 10) break;
         }
       }
-    }
 
-    if (albums.length === 0) {
-      albums = FALLBACK_ALBUMS[hub.code] || FALLBACK_ALBUMS.VN;
+      const rankedReleases = [...groupedReleases.values()].sort((a, b) =>
+        b.popularity - a.popularity || a.rank - b.rank
+      );
+      const primaryPass = [];
+      const seenArtists = new Set();
+      rankedReleases.forEach(release => {
+        const artistKey = release.artist.toLocaleLowerCase();
+        if (seenArtists.has(artistKey)) return;
+        seenArtists.add(artistKey);
+        primaryPass.push(release);
+      });
+      albums = primaryPass.slice(0, 10).map(release =>
+        normalizeMusicMetadata(release, 'youtube-music')
+      );
     }
 
     const payload = {
@@ -2051,20 +1854,17 @@ apiRouter.get('/albums', rateLimit({ maxRequests: 60, windowMs: 60000, endpointN
     circuitBreaker.recordSuccess();
     res.json({ ...payload, cached: false });
   } catch (error) {
-    console.warn('[Albums Fallback]:', error.message);
-    const fallbackList = FALLBACK_ALBUMS[hub.code] || FALLBACK_ALBUMS.VN;
-    const fallbackPayload = {
-      success: true,
+    console.warn('[Albums Source Unavailable]:', error.message);
+    res.status(503).json({
+      success: false,
       countryCode: hub.code,
       countryName: hub.name,
       flag: hub.flag,
       query: searchQuery || '',
-      results: fallbackList,
-      albums: fallbackList,
-      fallback: true
-    };
-    albumCache.set(cacheKey, fallbackPayload);
-    res.json(fallbackPayload);
+      results: [],
+      albums: [],
+      error: 'Album source is temporarily unavailable.'
+    });
   }
 });
 
@@ -2095,7 +1895,7 @@ apiRouter.get('/album/:albumId', rateLimit({ maxRequests: 80, windowMs: 60000, e
       if (parts.length > 1) artist = parts[0];
     }
     if (!artist) {
-      artist = albumData.author?.name || albumData.artists?.[0]?.name || 'Nghệ sĩ';
+      artist = albumData.author?.name || albumData.artists?.[0]?.name || '';
     }
 
     const rawContents = albumData.contents || [];
@@ -2121,16 +1921,20 @@ apiRouter.get('/album/:albumId', rateLimit({ maxRequests: 80, windowMs: 60000, e
           }
         } catch (_) {}
 
-        return {
+        return normalizeMusicMetadata({
           id: finalId,
           originalVideoId: id,
           title: trackTitle,
           artist: trackArtist,
+          artists: trackArtist ? [trackArtist] : [],
           album: title,
+          albumId,
+          source: 'youtube-music',
           duration,
           durationSec,
-          thumbnail
-        };
+          thumbnail,
+          artistThumbnail: extractArtistThumbnail(item)
+        }, 'youtube-music');
       })
     );
 
@@ -2144,6 +1948,8 @@ apiRouter.get('/album/:albumId', rateLimit({ maxRequests: 80, windowMs: 60000, e
       success: true,
       album: {
         id: albumId,
+        albumId,
+        releaseId: albumData.releaseId || albumData.releaseGroupId || '',
         title,
         artist,
         subtitle,
@@ -2157,22 +1963,8 @@ apiRouter.get('/album/:albumId', rateLimit({ maxRequests: 80, windowMs: 60000, e
     albumCache.set(cacheKey, payload);
     res.json({ ...payload, cached: false });
   } catch (err) {
-    console.warn(`[Album Detail Fallback for ${albumId}]:`, err.message);
-    const fallbackTracks = FALLBACK_ALBUM_TRACKS[albumId] || FALLBACK_ALBUM_TRACKS.default;
-    res.json({
-      success: true,
-      album: {
-        id: albumId,
-        title: 'Album Tuyển Chọn',
-        artist: 'Nghệ sĩ',
-        subtitle: 'Album',
-        type: 'Album',
-        thumbnail: 'wood_2.jpg',
-        trackCount: fallbackTracks.length,
-        tracks: fallbackTracks
-      },
-      fallback: true
-    });
+    console.warn(`[Album Detail Source Unavailable for ${albumId}]:`, err.message);
+    res.status(503).json({ success: false, error: 'Album source is temporarily unavailable.' });
   }
 });
 
