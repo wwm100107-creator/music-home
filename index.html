@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&family=Comfortaa:wght@600;700;800;900&family=Fredoka:wght@500;600;700;800&family=Sniglet:wght@800&family=Quicksand:wght@600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=3.7">
+  <link rel="stylesheet" href="style.css?v=4.0">
 </head>
 <body class="ghibli-app-body">
 
@@ -930,6 +930,7 @@
         <span class="sheet-lyrics-badge"><svg class="ghibli-svg-icon ghibli-icon-vintage-mic" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="2.5" width="8" height="11" rx="4" stroke="currentColor" stroke-width="1.6" fill="currentColor" fill-opacity="0.14"/><path d="M8.5 6.5h7M8.5 9.5h7M12 2.5v11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/><path d="M5 10c0 4 3.2 7 7 7s7-3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12 17v4.5M8 21.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12 18.5c1.5-1 2.8-.5 2.5.8-.4 1-1.6.8-2.5-.8z" fill="var(--ghibli-leaf-green, #52b788)" stroke="currentColor" stroke-width="0.8" opacity="0.9"/></svg> LỜI BÀI HÁT</span>
         <div class="sheet-lyrics-header-actions">
           <button type="button" class="sheet-sync-quick-btn" id="sheetSyncQuickBtn" title="Cân chỉnh độ lệch lời"><svg class="ghibli-svg-icon ghibli-icon-pocket-watch" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 2.5h4M12 2.5v2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="2" r="1.5" stroke="currentColor" stroke-width="1.2"/><circle cx="12" cy="13.5" r="8" stroke="currentColor" stroke-width="1.6" fill="currentColor" fill-opacity="0.1"/><path d="M12 7.5v1M17.5 13.5h-1M12 19.5v-1M6.5 13.5h1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/><path d="M12 13.5l-2.5-3M12 13.5l3.5 1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="1" fill="currentColor"/></svg> <span id="sheetLyricsOffsetLabel">0.0s</span></button>
+          <button type="button" class="lyrics-contribute-trigger sheet-lyrics-contribute-btn audio-trim-trigger" id="sheetAudioTrimBtn" title="Cắt phần đầu hoặc cuối của bài này" aria-label="Tinh chỉnh audio">✂ Audio</button>
           <button type="button" class="lyrics-contribute-trigger sheet-lyrics-contribute-btn" id="sheetLyricsContributeBtn" title="Thêm hoặc căn lời bài hát cho mọi người">＋ Lời</button>
           <button type="button" class="sheet-lyrics-fullscreen-trigger" id="sheetLyricsExpandBtn" title="Phóng to sân khấu lời nhạc">
             Mở rộng ↗
@@ -959,6 +960,7 @@
         </div>
         <div class="stage-header-right">
           <span class="lyrics-sync-badge" id="lyricsSyncBadge"><svg class="ghibli-svg-icon ghibli-icon-sparkle-star" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5L12 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="currentColor" fill-opacity="0.25"/><circle cx="18" cy="5" r="1" fill="currentColor" opacity="0.7"/><circle cx="6" cy="19" r="1" fill="currentColor" opacity="0.7"/></svg> <span class="lyrics-sync-full">Đồng bộ thời gian thực (Karaoke)</span><span class="lyrics-sync-compact">Karaoke</span></span>
+          <button type="button" class="lyrics-contribute-trigger audio-trim-trigger" id="audioTrimBtn" title="Cắt phần đầu hoặc cuối của bài này" aria-label="Tinh chỉnh audio">✂ <span class="audio-trim-full">Tinh chỉnh audio</span><span class="audio-trim-compact">Audio</span></button>
           <button type="button" class="lyrics-contribute-trigger" id="lyricsContributeBtn" title="Thêm hoặc căn lời bài hát cho mọi người" aria-label="Đóng góp lời bài hát">＋ <span class="lyrics-contribute-full">Đóng góp lời</span><span class="lyrics-contribute-compact">Lời</span></button>
           <button class="lyrics-close-btn" id="lyricsCloseBtn" aria-label="Thu nhỏ về trang chủ" title="Thu nhỏ về trang chủ [Esc / Y]">✕</button>
         </div>
@@ -1126,6 +1128,60 @@
           <button type="button" class="lyrics-contribution-secondary" id="lyricsContributionAddLineBtn">＋ Thêm dòng</button>
           <button type="button" class="lyrics-contribution-cancel" id="lyricsContributionCancelBtn">Hủy</button>
           <button type="button" class="lyrics-contribution-save" id="lyricsContributionSaveBtn">Lưu cho mọi người</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="audio-trim-modal hidden" id="audioTrimModal" role="dialog" aria-modal="true" aria-labelledby="audioTrimTitle">
+    <div class="audio-trim-backdrop" id="audioTrimBackdrop"></div>
+    <section class="audio-trim-window">
+      <header class="audio-trim-header">
+        <div>
+          <p class="audio-trim-eyebrow">CHỈNH PHẦN PHÁT DÙNG CHUNG</p>
+          <h2 id="audioTrimTitle">Tinh chỉnh audio</h2>
+          <p class="audio-trim-track" id="audioTrimTrackLabel">Chưa chọn bài hát</p>
+        </div>
+        <button type="button" class="audio-trim-close" id="audioTrimCloseBtn" aria-label="Đóng">✕</button>
+      </header>
+      <p class="audio-trim-help">Chọn điểm bắt đầu và kết thúc để bỏ phần giới thiệu hoặc kết thúc thừa. Bạn có thể nghe toàn bộ bài khi đang chỉnh; lưu xong, đoạn cắt sẽ áp dụng cho mọi người dùng bài hát này.</p>
+      <section class="audio-trim-preview" aria-label="Nghe và tua bài hát">
+        <div class="audio-trim-preview-heading">
+          <strong>Nghe để chọn mốc</strong>
+          <span><span id="audioTrimCurrentTime">00:00</span> / <span id="audioTrimDuration">00:00</span></span>
+        </div>
+        <input id="audioTrimPreviewTimeline" type="range" min="0" max="210" value="0" step="0.1" aria-label="Tua để nghe vị trí cần cắt">
+        <div class="audio-trim-preview-controls">
+          <button type="button" id="audioTrimSeekBackBtn" aria-label="Tua lùi 5 giây">−5 giây</button>
+          <button type="button" class="audio-trim-play-pause" id="audioTrimPlayPauseBtn" aria-label="Phát nhạc" aria-pressed="false">▶ Phát</button>
+          <button type="button" id="audioTrimSeekForwardBtn" aria-label="Tua tới 5 giây">+5 giây</button>
+        </div>
+      </section>
+      <div class="audio-trim-points">
+        <section class="audio-trim-point">
+          <div class="audio-trim-point-heading">
+            <label for="audioTrimStartSeconds">Bắt đầu từ (giây)</label>
+            <button type="button" id="audioTrimStartMarkBtn">Lấy vị trí phát</button>
+          </div>
+          <input id="audioTrimStartSeconds" type="number" min="0" step="0.1" value="0" aria-label="Thời điểm bắt đầu phát, tính bằng giây">
+          <input id="audioTrimStartRange" type="range" min="0" max="210" step="0.1" value="0" aria-label="Chọn điểm bắt đầu phát">
+        </section>
+        <section class="audio-trim-point">
+          <div class="audio-trim-point-heading">
+            <label for="audioTrimEndSeconds">Kết thúc tại (giây)</label>
+            <button type="button" id="audioTrimEndMarkBtn">Lấy vị trí phát</button>
+          </div>
+          <input id="audioTrimEndSeconds" type="number" min="1" step="0.1" value="210" aria-label="Thời điểm kết thúc phát, tính bằng giây">
+          <input id="audioTrimEndRange" type="range" min="1" max="210" step="0.1" value="210" aria-label="Chọn điểm kết thúc phát">
+        </section>
+      </div>
+      <p class="audio-trim-summary" id="audioTrimSummary">Đoạn sẽ phát: 00:00 → 03:30 (03:30)</p>
+      <div class="audio-trim-footer">
+        <span id="audioTrimStatus">Chưa có điểm cắt dùng chung.</span>
+        <div class="audio-trim-actions">
+          <button type="button" class="audio-trim-reset" id="audioTrimResetBtn">Xóa điểm cắt chung</button>
+          <button type="button" class="audio-trim-cancel" id="audioTrimCancelBtn">Đóng</button>
+          <button type="button" class="audio-trim-save" id="audioTrimSaveBtn">Lưu và chia sẻ</button>
         </div>
       </div>
     </section>
@@ -1373,13 +1429,13 @@
 
   <!-- Scripts: YouTube Engine & Ghibli App -->
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script src="app.js?v=4.9"></script>
+  <script src="app.js?v=5.0"></script>
 
   <!-- PWA Offline Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=4.9')
+        navigator.serviceWorker.register('./sw.js?v=5.0')
           .then((reg) => {
             console.log('🍃 [PWA] Service Worker registered:', reg.scope);
             reg.update().catch(() => {});

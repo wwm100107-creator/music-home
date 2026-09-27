@@ -2961,6 +2961,114 @@ async function fetchGeniusLyrics(cleanTitle, cleanArtist) {
   }
 }
 
+const AUDIO_TRIMS_FILENAME = 'audio-trims.json';
+let audioTrimsStore = null;
+
+function loadAudioTrimsStore() {
+  if (IS_SERVERLESS) return { version: 1, trims: {} };
+  if (audioTrimsStore) return audioTrimsStore;
+
+  const saved = readLocalJson(AUDIO_TRIMS_FILENAME);
+  audioTrimsStore = saved && saved.version === 1 && saved.trims && typeof saved.trims === 'object'
+    ? saved
+    : { version: 1, trims: {} };
+  return audioTrimsStore;
+}
+
+function isValidAudioTrimTrackId(trackId) {
+  return typeof trackId === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(trackId) &&
+    !['__proto__', 'prototype', 'constructor'].includes(trackId);
+}
+
+apiRouter.get('/audio-trims', rateLimit({ maxRequests: 30, windowMs: 60000, endpointName: 'audio-trims-list' }), (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json({ success: true, trims: loadAudioTrimsStore().trims });
+});
+
+apiRouter.get('/audio-trims/:trackId', rateLimit({ maxRequests: 120, windowMs: 60000, endpointName: 'audio-trim' }), (req, res) => {
+  if (!isValidAudioTrimTrackId(req.params.trackId)) {
+    return res.status(400).json({ success: false, error: 'Mã bài hát không hợp lệ.' });
+  }
+  return res.json({ success: true, trim: loadAudioTrimsStore().trims[req.params.trackId] || null });
+});
+
+apiRouter.post('/audio-trims/:trackId', rateLimit({ maxRequests: 5, windowMs: 60000, endpointName: 'audio-trim-save' }), (req, res) => {
+  if (IS_SERVERLESS) {
+    return res.status(503).json({
+      success: false,
+      error: 'Kho chỉnh audio cần máy chủ có ổ đĩa lưu trữ bền vững; hãy lưu trên máy chủ Android gia đình.'
+    });
+  }
+
+  const trackId = req.params.trackId;
+  const title = typeof req.body?.title === 'string' ? req.body.title.trim() : '';
+  const artist = typeof req.body?.artist === 'string' ? req.body.artist.trim() : '';
+  const durationSec = Number(req.body?.durationSec);
+  const startSec = Number(req.body?.startSec);
+  const endSec = Number(req.body?.endSec);
+  if (!isValidAudioTrimTrackId(trackId) || !title || title.length > 200 || artist.length > 200 ||
+      !Number.isFinite(durationSec) || durationSec < 1 || durationSec > 7200 ||
+      !Number.isFinite(startSec) || !Number.isFinite(endSec) || startSec < 0 ||
+      endSec - startSec < 1 || endSec > durationSec + 0.25) {
+    return res.status(400).json({ success: false, error: 'Điểm cắt không hợp lệ; đoạn phát phải dài ít nhất 1 giây và nằm trong thời lượng bài.' });
+  }
+
+  const store = loadAudioTrimsStore();
+  if (!store.trims[trackId] && Object.keys(store.trims).length >= 20000) {
+    return res.status(507).json({ success: false, error: 'Kho chỉnh audio đã đạt giới hạn lưu trữ.' });
+  }
+
+  const previous = store.trims[trackId];
+  const trim = {
+    trackId,
+    title,
+    artist: artist || 'Nghệ sĩ không tên',
+    durationSec: Number(durationSec.toFixed(3)),
+    startSec: Number(startSec.toFixed(3)),
+    endSec: Number(Math.min(endSec, durationSec).toFixed(3)),
+    revision: (Number(previous?.revision) || 0) + 1,
+    updatedAt: new Date().toISOString()
+  };
+  const nextStore = { ...store, trims: { ...store.trims, [trackId]: trim } };
+
+  try {
+    writeLocalJson(AUDIO_TRIMS_FILENAME, nextStore);
+    audioTrimsStore = nextStore;
+  } catch (err) {
+    console.error('[Audio Trim Save Error]:', err.message);
+    return res.status(500).json({ success: false, error: 'Chưa lưu được điểm cắt vào kho chung. Vui lòng thử lại.' });
+  }
+
+  return res.json({ success: true, trim });
+});
+
+apiRouter.delete('/audio-trims/:trackId', rateLimit({ maxRequests: 5, windowMs: 60000, endpointName: 'audio-trim-delete' }), (req, res) => {
+  if (IS_SERVERLESS) {
+    return res.status(503).json({
+      success: false,
+      error: 'Kho chỉnh audio cần máy chủ có ổ đĩa lưu trữ bền vững; hãy cập nhật trên máy chủ Android gia đình.'
+    });
+  }
+  if (!isValidAudioTrimTrackId(req.params.trackId)) {
+    return res.status(400).json({ success: false, error: 'Mã bài hát không hợp lệ.' });
+  }
+
+  const store = loadAudioTrimsStore();
+  if (!store.trims[req.params.trackId]) return res.json({ success: true, deleted: false });
+  const nextTrims = { ...store.trims };
+  delete nextTrims[req.params.trackId];
+  const nextStore = { ...store, trims: nextTrims };
+  try {
+    writeLocalJson(AUDIO_TRIMS_FILENAME, nextStore);
+    audioTrimsStore = nextStore;
+  } catch (err) {
+    console.error('[Audio Trim Delete Error]:', err.message);
+    return res.status(500).json({ success: false, error: 'Chưa xóa được điểm cắt khỏi kho chung. Vui lòng thử lại.' });
+  }
+
+  return res.json({ success: true, deleted: true });
+});
+
 const COMMUNITY_LYRICS_FILENAME = 'community-lyrics.json';
 let communityLyricsStore = null;
 

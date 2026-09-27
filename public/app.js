@@ -461,6 +461,29 @@
     sheetLyricsOffsetLabel: document.getElementById('sheetLyricsOffsetLabel'),
     lyricsContributeBtn: document.getElementById('lyricsContributeBtn'),
     sheetLyricsContributeBtn: document.getElementById('sheetLyricsContributeBtn'),
+    audioTrimBtn: document.getElementById('audioTrimBtn'),
+    sheetAudioTrimBtn: document.getElementById('sheetAudioTrimBtn'),
+    audioTrimModal: document.getElementById('audioTrimModal'),
+    audioTrimBackdrop: document.getElementById('audioTrimBackdrop'),
+    audioTrimTrackLabel: document.getElementById('audioTrimTrackLabel'),
+    audioTrimStartRange: document.getElementById('audioTrimStartRange'),
+    audioTrimStartSeconds: document.getElementById('audioTrimStartSeconds'),
+    audioTrimStartMarkBtn: document.getElementById('audioTrimStartMarkBtn'),
+    audioTrimEndRange: document.getElementById('audioTrimEndRange'),
+    audioTrimEndSeconds: document.getElementById('audioTrimEndSeconds'),
+    audioTrimEndMarkBtn: document.getElementById('audioTrimEndMarkBtn'),
+    audioTrimPreviewTimeline: document.getElementById('audioTrimPreviewTimeline'),
+    audioTrimCurrentTime: document.getElementById('audioTrimCurrentTime'),
+    audioTrimDuration: document.getElementById('audioTrimDuration'),
+    audioTrimPlayPauseBtn: document.getElementById('audioTrimPlayPauseBtn'),
+    audioTrimSeekBackBtn: document.getElementById('audioTrimSeekBackBtn'),
+    audioTrimSeekForwardBtn: document.getElementById('audioTrimSeekForwardBtn'),
+    audioTrimSummary: document.getElementById('audioTrimSummary'),
+    audioTrimStatus: document.getElementById('audioTrimStatus'),
+    audioTrimSaveBtn: document.getElementById('audioTrimSaveBtn'),
+    audioTrimResetBtn: document.getElementById('audioTrimResetBtn'),
+    audioTrimCloseBtn: document.getElementById('audioTrimCloseBtn'),
+    audioTrimCancelBtn: document.getElementById('audioTrimCancelBtn'),
     lyricsContributionModal: document.getElementById('lyricsContributionModal'),
     lyricsContributionBackdrop: document.getElementById('lyricsContributionBackdrop'),
     lyricsContributionTrackLabel: document.getElementById('lyricsContributionTrackLabel'),
@@ -1199,29 +1222,17 @@
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clickX = clientX - rect.left;
         const percent = Math.max(0, Math.min(1, clickX / rect.width));
-
-        updateProgressUI(percent * 100);
-
-        if (state.activeEngine === 'audio' || state.currentTrack?.previewUrl) {
-          if (dom.audio) {
-            const effDur = getEffectiveAudioDuration();
-            if (effDur > 0) {
-              dom.audio.currentTime = percent * effDur;
-              const t = formatTime(dom.audio.currentTime);
-              if (dom.currentTime) dom.currentTime.textContent = t;
-              if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = t;
-            }
-          }
+        let sourceDuration = 0;
+        if ((state.activeEngine === 'audio' || state.currentTrack?.previewUrl) && dom.audio) {
+          sourceDuration = getEffectiveAudioDuration();
         } else if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.getDuration === 'function') {
-          const dur = ytPlayer.getDuration();
-          if (dur && dur > 0) {
-            const targetTime = percent * dur;
-            ytPlayer.seekTo(targetTime, true);
-            const t = formatTime(targetTime);
-            if (dom.currentTime) dom.currentTime.textContent = t;
-            if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = t;
-          }
+          sourceDuration = Number(ytPlayer.getDuration()) || 0;
         }
+        if (sourceDuration <= 0) return;
+        const window = getTrackAudioTrimWindow(state.currentTrack, sourceDuration);
+        const targetTime = window.start + percent * window.duration;
+        seekToSeconds(targetTime);
+        updatePlaybackTimeline(targetTime, sourceDuration);
       };
 
       dom.sheetProgressWrap.addEventListener('pointerdown', handleSheetScrub);
@@ -1360,6 +1371,7 @@
     highlightActiveCard(track.id);
     updateMediaSession(track);
     updateBatterySaverTrackInfo(track);
+    refreshAudioTrimTriggerButtons(track);
   }
 
   function updateStageUpNext() {
@@ -1462,7 +1474,8 @@
               setPlaybackVisualState(true);
               state.consecutiveErrors = 0;
               const dur = ytPlayer.getDuration();
-              if (dur && dom.totalDuration) dom.totalDuration.textContent = formatTime(dur);
+              if (dur) updatePlaybackTimeline(ytPlayer.getCurrentTime(), dur);
+              enforceCurrentTrackAudioTrim();
             } else if (event.data === 2) {
               if (state.activeEngine === 'youtube') {
                 setPlaybackVisualState(false);
@@ -1470,7 +1483,8 @@
             } else if (event.data === 0) {
               if (state.activeEngine === 'youtube') {
                 if (state.loopMode === 'one') {
-                  ytPlayer.seekTo(0);
+                  const window = getTrackAudioTrimWindow(state.currentTrack, ytPlayer.getDuration());
+                  ytPlayer.seekTo(window.isTrimmed ? window.start : 0, true);
                   ytPlayer.playVideo();
                 } else {
                   playNextTrack();
@@ -1516,6 +1530,23 @@
   let lyricsContributionTrackId = null;
   let lyricsContributionWordMode = false;
   let lyricsContributionIsScrubbing = false;
+  let audioTrimStore = (() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('ghibli_shared_audio_trims') || '{}');
+      return saved && saved.version === 1 && saved.trims && typeof saved.trims === 'object' ? saved.trims : {};
+    } catch (_) {
+      return {};
+    }
+  })();
+  let audioTrimStoreLoaded = false;
+  const audioTrimLoadedTrackIds = new Set(Object.keys(audioTrimStore));
+  const audioTrimLoadRequests = new Map();
+  let audioTrimEditorTrackId = null;
+  let audioTrimEditorDurationSec = 0;
+  let audioTrimPreviewIsScrubbing = false;
+  let audioTrimLastSeekAt = 0;
+  let audioTrimLastSeekTrackId = null;
+  let audioTrimHandledEndTrackId = null;
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -1554,14 +1585,18 @@
   }
 
   function seekToSeconds(targetSeconds) {
+    let boundedTarget = Math.max(0, Number(targetSeconds) || 0);
+    if (!dom.audioTrimModal || dom.audioTrimModal.classList.contains('hidden')) {
+      boundedTarget = clampPlaybackSeekTime(boundedTarget);
+    }
     if (state.activeEngine === 'audio') {
       if (dom.audio) {
-        dom.audio.currentTime = targetSeconds;
-        syncLyricsWithTime(targetSeconds);
+        dom.audio.currentTime = boundedTarget;
+        syncLyricsWithTime(boundedTarget);
       }
     } else if (state.activeEngine === 'youtube' && ytPlayer && typeof ytPlayer.seekTo === 'function') {
-      ytPlayer.seekTo(targetSeconds, true);
-      syncLyricsWithTime(targetSeconds);
+      ytPlayer.seekTo(boundedTarget, true);
+      syncLyricsWithTime(boundedTarget);
     }
   }
 
@@ -1729,6 +1764,139 @@
     const target = Math.max(0, Math.min(getCurrentAudioTime() + deltaSeconds, duration || Infinity));
     seekToSeconds(target);
     updateLyricsContributionTimeline();
+  }
+
+  function persistAudioTrimCache() {
+    try {
+      const recent = Object.values(audioTrimStore)
+        .filter(trim => trim && typeof trim.trackId === 'string')
+        .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
+        .slice(0, 300);
+      const trims = Object.fromEntries(recent.map(trim => [trim.trackId, trim]));
+      localStorage.setItem('ghibli_shared_audio_trims', JSON.stringify({ version: 1, trims }));
+    } catch (_) {}
+  }
+
+  function getTrackAudioTrimWindow(track, sourceDuration = getLyricDurationSeconds()) {
+    const duration = Math.max(0, Number(sourceDuration) || 0);
+    const modalIsOpen = dom.audioTrimModal && !dom.audioTrimModal.classList.contains('hidden');
+    const trim = track?.id ? audioTrimStore[String(track.id)] : null;
+    if (modalIsOpen || !trim || !duration) {
+      return { start: 0, end: duration, duration, isTrimmed: false };
+    }
+
+    const start = Math.max(0, Math.min(Number(trim.startSec) || 0, duration));
+    const end = Math.max(0, Math.min(Number(trim.endSec) || duration, duration));
+    if (end - start < 1) return { start: 0, end: duration, duration, isTrimmed: false };
+    return { start, end, duration: end - start, isTrimmed: true };
+  }
+
+  function updatePlaybackTimeline(currentTime, sourceDuration) {
+    const window = getTrackAudioTrimWindow(state.currentTrack, sourceDuration);
+    const absoluteTime = Math.max(0, Math.min(Number(currentTime) || 0, window.end || window.duration));
+    const elapsed = Math.max(0, Math.min(absoluteTime - window.start, window.duration));
+    const percent = window.duration > 0 ? (elapsed / window.duration) * 100 : 0;
+    updateProgressUI(percent);
+    if (dom.currentTime) dom.currentTime.textContent = formatTime(elapsed);
+    if (dom.totalDuration) dom.totalDuration.textContent = formatTime(window.duration);
+    if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = formatTime(elapsed);
+    if (dom.sheetTotalTime) dom.sheetTotalTime.textContent = formatTime(window.duration);
+    return window;
+  }
+
+  function clampPlaybackSeekTime(targetTime, sourceDuration = getLyricDurationSeconds()) {
+    const window = getTrackAudioTrimWindow(state.currentTrack, sourceDuration);
+    return Math.max(window.start, Math.min(Number(targetTime) || 0, window.end));
+  }
+
+  function setSharedAudioTrimStore(trims) {
+    audioTrimStore = trims && typeof trims === 'object' && !Array.isArray(trims) ? trims : {};
+    for (const trackId of Object.keys(audioTrimStore)) audioTrimLoadedTrackIds.add(trackId);
+    persistAudioTrimCache();
+  }
+
+  async function loadSharedAudioTrims() {
+    try {
+      const response = await fetch('/api/audio-trims', { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Không nạp được điểm chỉnh audio.');
+      setSharedAudioTrimStore(data.trims);
+      audioTrimStoreLoaded = true;
+      refreshAudioTrimTriggerButtons(state.currentTrack);
+      if (state.currentTrack) enforceCurrentTrackAudioTrim(true);
+      return true;
+    } catch (error) {
+      console.warn('[Shared Audio Trim Load Warning]:', error.message);
+      return false;
+    }
+  }
+
+  function ensureSharedAudioTrimLoaded(track) {
+    const trackId = String(track?.id || '');
+    if (!trackId || audioTrimStoreLoaded || audioTrimLoadedTrackIds.has(trackId)) return Promise.resolve();
+    if (audioTrimLoadRequests.has(trackId)) return audioTrimLoadRequests.get(trackId);
+
+    const request = fetch(`/api/audio-trims/${encodeURIComponent(trackId)}`, { cache: 'no-store' })
+      .then(response => response.json().then(data => ({ response, data })))
+      .then(({ response, data }) => {
+        if (!response.ok || !data.success) throw new Error(data.error || 'Không nạp được điểm chỉnh audio.');
+        if (data.trim) audioTrimStore[trackId] = data.trim;
+        else delete audioTrimStore[trackId];
+        audioTrimLoadedTrackIds.add(trackId);
+        persistAudioTrimCache();
+        if (state.currentTrack?.id === trackId) {
+          refreshAudioTrimTriggerButtons(state.currentTrack);
+          enforceCurrentTrackAudioTrim(true);
+        }
+      })
+      .catch(error => console.warn('[Shared Audio Trim Load Warning]:', error.message))
+      .finally(() => audioTrimLoadRequests.delete(trackId));
+    audioTrimLoadRequests.set(trackId, request);
+    return request;
+  }
+
+  function enforceCurrentTrackAudioTrim(forceStartSeek = false) {
+    if (!state.currentTrack || (!state.isPlaying && !forceStartSeek) || !audioTrimStore[state.currentTrack.id] ||
+        (dom.audioTrimModal && !dom.audioTrimModal.classList.contains('hidden'))) return;
+
+    const trackId = String(state.currentTrack.id);
+    const sourceDuration = getLyricDurationSeconds();
+    const window = getTrackAudioTrimWindow(state.currentTrack, sourceDuration);
+    if (!window.isTrimmed) return;
+
+    const currentTime = getCurrentAudioTime();
+    const now = Date.now();
+    if (audioTrimHandledEndTrackId === trackId && currentTime < window.end - 0.5) {
+      audioTrimHandledEndTrackId = null;
+    }
+    if (currentTime < window.start - 0.35) {
+      if (audioTrimLastSeekTrackId !== trackId || now - audioTrimLastSeekAt > 1200) {
+        audioTrimLastSeekTrackId = trackId;
+        audioTrimLastSeekAt = now;
+        seekToSeconds(window.start);
+      }
+      return;
+    }
+
+    if (state.isPlaying && currentTime >= window.end - 0.08 && audioTrimHandledEndTrackId !== trackId) {
+      audioTrimHandledEndTrackId = trackId;
+      if (state.loopMode === 'one') {
+        audioTrimLastSeekTrackId = trackId;
+        audioTrimLastSeekAt = now;
+        seekToSeconds(window.start);
+        if (state.activeEngine === 'audio' && dom.audio) dom.audio.play().catch(() => {});
+        else if (state.activeEngine === 'youtube' && ytPlayer && typeof ytPlayer.playVideo === 'function') ytPlayer.playVideo();
+      } else {
+        playNextTrack();
+        // Nếu hàng đợi đã hết, playNextTrack không đổi bài; dừng tại điểm cắt
+        // để phần outro của nguồn không tiếp tục phát.
+        if (state.currentTrack?.id === trackId && audioTrimHandledEndTrackId === trackId) {
+          if (state.activeEngine === 'audio' && dom.audio) dom.audio.pause();
+          else if (state.activeEngine === 'youtube' && ytPlayer && typeof ytPlayer.pauseVideo === 'function') ytPlayer.pauseVideo();
+          setPlaybackVisualState(false);
+        }
+      }
+    }
   }
 
   // Lời tiếng Việt thường được ghi theo âm tiết cách nhau bởi dấu cách. Mỗi âm tiết
@@ -2146,6 +2314,192 @@
     dom.lyricsContributionList.appendChild(fragment);
     if (dom.lyricsContributionLineCount) {
       dom.lyricsContributionLineCount.textContent = `${draft.length} dòng`;
+    }
+  }
+
+  function refreshAudioTrimTriggerButtons(track = state.currentTrack) {
+    const isTrimmed = Boolean(track?.id && audioTrimStore[String(track.id)]);
+    [dom.audioTrimBtn, dom.sheetAudioTrimBtn].forEach(button => {
+      if (button) button.classList.toggle('has-audio-trim', isTrimmed);
+    });
+  }
+
+  function syncAudioTrimEditorBounds(changedControl = '') {
+    if (!dom.audioTrimStartSeconds || !dom.audioTrimEndSeconds) return;
+    const duration = Math.max(1, Number(audioTrimEditorDurationSec) || 1);
+    let start = Number(dom.audioTrimStartSeconds.value);
+    let end = Number(dom.audioTrimEndSeconds.value);
+    if (!Number.isFinite(start)) start = 0;
+    if (!Number.isFinite(end)) end = duration;
+
+    start = Math.max(0, Math.min(start, duration - 1));
+    end = Math.max(1, Math.min(end, duration));
+    if (end - start < 1) {
+      if (changedControl === 'end') start = Math.max(0, end - 1);
+      else end = Math.min(duration, start + 1);
+    }
+
+    dom.audioTrimStartSeconds.value = start.toFixed(1);
+    dom.audioTrimEndSeconds.value = end.toFixed(1);
+    dom.audioTrimStartSeconds.max = String(Math.max(0, duration - 1));
+    dom.audioTrimEndSeconds.min = String(Math.min(duration, start + 1));
+    dom.audioTrimEndSeconds.max = String(duration);
+    if (dom.audioTrimStartRange) {
+      dom.audioTrimStartRange.max = String(Math.max(0, duration - 1));
+      dom.audioTrimStartRange.value = String(start);
+    }
+    if (dom.audioTrimEndRange) {
+      dom.audioTrimEndRange.min = String(Math.min(duration, start + 1));
+      dom.audioTrimEndRange.max = String(duration);
+      dom.audioTrimEndRange.value = String(end);
+    }
+    if (dom.audioTrimSummary) {
+      dom.audioTrimSummary.textContent = `Đoạn sẽ phát: ${formatLyricsContributionTime(start)} → ${formatLyricsContributionTime(end)} (${formatLyricsContributionTime(end - start)})`;
+    }
+  }
+
+  function updateAudioTrimEditorPlayback() {
+    if (!dom.audioTrimModal || dom.audioTrimModal.classList.contains('hidden')) return;
+    const duration = Math.max(1, Number(audioTrimEditorDurationSec) || Number(getLyricDurationSeconds()) || 1);
+    const currentTime = Math.max(0, Math.min(getCurrentAudioTime(), duration));
+    if (dom.audioTrimPreviewTimeline) {
+      dom.audioTrimPreviewTimeline.max = String(duration);
+      if (!audioTrimPreviewIsScrubbing) dom.audioTrimPreviewTimeline.value = String(currentTime);
+    }
+    if (dom.audioTrimCurrentTime) {
+      const shownTime = audioTrimPreviewIsScrubbing
+        ? Number(dom.audioTrimPreviewTimeline?.value) || 0
+        : currentTime;
+      dom.audioTrimCurrentTime.textContent = formatLyricsContributionTime(shownTime);
+    }
+    if (dom.audioTrimDuration) dom.audioTrimDuration.textContent = formatLyricsContributionTime(duration);
+    if (dom.audioTrimPlayPauseBtn) {
+      dom.audioTrimPlayPauseBtn.textContent = state.isPlaying ? 'Ⅱ Tạm dừng' : '▶ Phát';
+      dom.audioTrimPlayPauseBtn.setAttribute('aria-label', state.isPlaying ? 'Tạm dừng nhạc' : 'Phát nhạc');
+      dom.audioTrimPlayPauseBtn.setAttribute('aria-pressed', String(Boolean(state.isPlaying)));
+    }
+  }
+
+  async function openAudioTrimEditor() {
+    const track = state.currentTrack;
+    if (!track?.id) {
+      showToast('Hãy phát một bài hát trước khi tinh chỉnh audio.');
+      return;
+    }
+
+    const trackId = String(track.id);
+    await ensureSharedAudioTrimLoaded(track);
+    if (state.currentTrack?.id !== trackId) return;
+    audioTrimEditorTrackId = trackId;
+    audioTrimEditorDurationSec = Math.max(1, Number(getLyricDurationSeconds()) || Number(track.durationSec) || parseDurationToSec(track.duration) || 210);
+    const savedTrim = audioTrimStore[trackId];
+    const start = savedTrim ? Number(savedTrim.startSec) || 0 : 0;
+    const end = savedTrim ? Number(savedTrim.endSec) || audioTrimEditorDurationSec : audioTrimEditorDurationSec;
+
+    if (dom.audioTrimTrackLabel) {
+      dom.audioTrimTrackLabel.textContent = `${track.title || 'Bài hát'}${track.artist ? ` • ${track.artist}` : ''}`;
+    }
+    if (dom.audioTrimStartSeconds) dom.audioTrimStartSeconds.value = start.toFixed(1);
+    if (dom.audioTrimEndSeconds) dom.audioTrimEndSeconds.value = end.toFixed(1);
+    if (dom.audioTrimStatus) {
+      dom.audioTrimStatus.textContent = savedTrim
+        ? `Đang dùng mốc đã chia sẻ • cập nhật ${new Date(savedTrim.updatedAt).toLocaleDateString()}`
+        : 'Chưa có điểm cắt dùng chung cho bài này.';
+    }
+    if (dom.audioTrimResetBtn) dom.audioTrimResetBtn.disabled = !savedTrim;
+    if (dom.audioTrimModal) dom.audioTrimModal.classList.remove('hidden');
+    document.body.classList.add('audio-trim-open');
+    refreshAudioTrimTriggerButtons(track);
+    syncAudioTrimEditorBounds();
+    updateAudioTrimEditorPlayback();
+  }
+
+  function closeAudioTrimEditor() {
+    if (!dom.audioTrimModal) return;
+    dom.audioTrimModal.classList.add('hidden');
+    document.body.classList.remove('audio-trim-open');
+    audioTrimEditorTrackId = null;
+    audioTrimPreviewIsScrubbing = false;
+    enforceCurrentTrackAudioTrim();
+  }
+
+  async function saveAudioTrim() {
+    const track = state.currentTrack;
+    const trackId = audioTrimEditorTrackId;
+    if (!track || !trackId || String(track.id) !== trackId) {
+      showToast('Bài hát đã thay đổi. Hãy mở lại phần tinh chỉnh audio.');
+      closeAudioTrimEditor();
+      return;
+    }
+
+    syncAudioTrimEditorBounds();
+    const startSec = Number(dom.audioTrimStartSeconds?.value);
+    const endSec = Number(dom.audioTrimEndSeconds?.value);
+    const durationSec = Math.max(1, Number(audioTrimEditorDurationSec) || 0);
+    if (!Number.isFinite(startSec) || !Number.isFinite(endSec) || startSec < 0 ||
+        endSec - startSec < 1 || endSec > durationSec + 0.1) {
+      showToast('Điểm kết thúc phải sau điểm bắt đầu ít nhất 1 giây.');
+      return;
+    }
+
+    if (dom.audioTrimSaveBtn) dom.audioTrimSaveBtn.disabled = true;
+    if (dom.audioTrimStatus) dom.audioTrimStatus.textContent = 'Đang lưu điểm cắt lên máy chủ dùng chung…';
+    try {
+      const response = await fetch(`/api/audio-trims/${encodeURIComponent(trackId)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: String(track.title || ''),
+          artist: String(track.artist || ''),
+          durationSec,
+          startSec,
+          endSec
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success || !data.trim) throw new Error(data.error || 'Không lưu được điểm cắt.');
+      audioTrimStore[trackId] = data.trim;
+      audioTrimLoadedTrackIds.add(trackId);
+      persistAudioTrimCache();
+      audioTrimLastSeekAt = 0;
+      audioTrimLastSeekTrackId = null;
+      audioTrimHandledEndTrackId = null;
+      if (dom.audioTrimStatus) dom.audioTrimStatus.textContent = 'Đã lưu và chia sẻ mốc cắt cho mọi người.';
+      if (dom.audioTrimResetBtn) dom.audioTrimResetBtn.disabled = false;
+      refreshAudioTrimTriggerButtons(track);
+      showToast('✂️ Đã lưu điểm cắt audio và chia sẻ cho mọi người.');
+    } catch (error) {
+      if (dom.audioTrimStatus) dom.audioTrimStatus.textContent = error.message || 'Chưa lưu được điểm cắt.';
+      showToast(`⚠️ ${error.message || 'Không lưu được điểm cắt audio.'}`);
+    } finally {
+      if (dom.audioTrimSaveBtn) dom.audioTrimSaveBtn.disabled = false;
+    }
+  }
+
+  async function resetAudioTrim() {
+    const trackId = audioTrimEditorTrackId;
+    if (!trackId || !audioTrimStore[trackId]) return;
+    if (dom.audioTrimResetBtn) dom.audioTrimResetBtn.disabled = true;
+    if (dom.audioTrimStatus) dom.audioTrimStatus.textContent = 'Đang xóa điểm cắt dùng chung…';
+    try {
+      const response = await fetch(`/api/audio-trims/${encodeURIComponent(trackId)}`, { method: 'DELETE' });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Không xóa được điểm cắt.');
+      delete audioTrimStore[trackId];
+      audioTrimLoadedTrackIds.add(trackId);
+      persistAudioTrimCache();
+      audioTrimHandledEndTrackId = null;
+      if (dom.audioTrimStartSeconds) dom.audioTrimStartSeconds.value = '0.0';
+      if (dom.audioTrimEndSeconds) dom.audioTrimEndSeconds.value = String(audioTrimEditorDurationSec.toFixed(1));
+      if (dom.audioTrimStatus) dom.audioTrimStatus.textContent = 'Đã xóa điểm cắt chung; bài hát sẽ phát nguyên bản.';
+      refreshAudioTrimTriggerButtons(state.currentTrack);
+      syncAudioTrimEditorBounds();
+      showToast('Đã xóa điểm cắt chung của bài hát.');
+    } catch (error) {
+      if (dom.audioTrimStatus) dom.audioTrimStatus.textContent = error.message || 'Chưa xóa được điểm cắt.';
+      showToast(`⚠️ ${error.message || 'Không xóa được điểm cắt audio.'}`);
+    } finally {
+      if (dom.audioTrimResetBtn) dom.audioTrimResetBtn.disabled = !audioTrimStore[trackId];
     }
   }
 
@@ -2740,17 +3094,14 @@
       dom.lyricsContributionPlayhead.textContent = `Vị trí phát: ${formatLyricsContributionTime(getCurrentAudioTime())}`;
       updateLyricsContributionTimeline();
     }
+    updateAudioTrimEditorPlayback();
+    if (state.isPlaying) enforceCurrentTrackAudioTrim();
     if (state.isPlaying && !state.isScrubbing) {
       if (state.activeEngine === 'audio' || state.currentTrack?.previewUrl) {
         if (dom.audio) {
           const effectiveDur = getEffectiveAudioDuration();
           if (effectiveDur > 0) {
-            const percent = Math.min((dom.audio.currentTime / effectiveDur) * 100, 100);
-            updateProgressUI(percent);
-            if (dom.currentTime) dom.currentTime.textContent = formatTime(dom.audio.currentTime);
-            if (dom.totalDuration) dom.totalDuration.textContent = formatTime(effectiveDur);
-            if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = formatTime(dom.audio.currentTime);
-            if (dom.sheetTotalTime) dom.sheetTotalTime.textContent = formatTime(effectiveDur);
+            updatePlaybackTimeline(dom.audio.currentTime, effectiveDur);
             syncLyricsWithTime(dom.audio.currentTime);
 
             // Tự động đồng bộ thời lượng thực tế chuẩn vào thông tin bài hát
@@ -2771,12 +3122,7 @@
         const cur = ytPlayer.getCurrentTime();
         const dur = ytPlayer.getDuration();
         if (dur && dur > 0) {
-          const percent = (cur / dur) * 100;
-          updateProgressUI(percent);
-          if (dom.currentTime) dom.currentTime.textContent = formatTime(cur);
-          if (dom.totalDuration) dom.totalDuration.textContent = formatTime(dur);
-          if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = formatTime(cur);
-          if (dom.sheetTotalTime) dom.sheetTotalTime.textContent = formatTime(dur);
+          updatePlaybackTimeline(cur, dur);
           syncLyricsWithTime(cur);
 
           // Tự động đồng bộ thời lượng thực tế của Official Music Video với danh sách bài hát
@@ -2800,6 +3146,10 @@
     if (!track || !track.id) return;
 
     state.currentTrack = track;
+    audioTrimLastSeekAt = 0;
+    audioTrimLastSeekTrackId = null;
+    audioTrimHandledEndTrackId = null;
+    ensureSharedAudioTrimLoaded(track);
     activatePlayerBar();
     updateNowPlayingUI(track);
     fetchAndRenderLyrics(track);
@@ -2965,12 +3315,14 @@
     if (state.queue.length === 0) return;
 
     if (state.activeEngine === 'audio' && dom.audio && dom.audio.currentTime > 3) {
-      dom.audio.currentTime = 0;
+      const window = getTrackAudioTrimWindow(state.currentTrack, getEffectiveAudioDuration());
+      seekToSeconds(window.start);
       return;
     }
 
     if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.getCurrentTime === 'function' && ytPlayer.getCurrentTime() > 3) {
-      ytPlayer.seekTo(0, true);
+      const window = getTrackAudioTrimWindow(state.currentTrack, ytPlayer.getDuration());
+      seekToSeconds(window.start);
       return;
     }
 
@@ -3010,29 +3362,18 @@
     const rect = dom.progressContainer.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const percent = Math.max(0, Math.min(1, clickX / rect.width));
-
-    updateProgressUI(percent * 100);
-
-    if (state.activeEngine === 'audio' || state.currentTrack?.previewUrl) {
-      if (dom.audio) {
-        const effDur = getEffectiveAudioDuration();
-        if (effDur > 0) {
-          dom.audio.currentTime = percent * effDur;
-          const t = formatTime(dom.audio.currentTime);
-          if (dom.currentTime) dom.currentTime.textContent = t;
-          if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = t;
-        }
-      }
+    let sourceDuration = 0;
+    if ((state.activeEngine === 'audio' || state.currentTrack?.previewUrl) && dom.audio) {
+      sourceDuration = getEffectiveAudioDuration();
     } else if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.getDuration === 'function') {
-      const dur = ytPlayer.getDuration();
-      if (dur && dur > 0) {
-        const targetTime = percent * dur;
-        ytPlayer.seekTo(targetTime, true);
-        const t = formatTime(targetTime);
-        if (dom.currentTime) dom.currentTime.textContent = t;
-        if (dom.sheetCurrentTime) dom.sheetCurrentTime.textContent = t;
-      }
+      sourceDuration = Number(ytPlayer.getDuration()) || 0;
     }
+    if (sourceDuration <= 0) return;
+
+    const window = getTrackAudioTrimWindow(state.currentTrack, sourceDuration);
+    const targetTime = window.start + percent * window.duration;
+    seekToSeconds(targetTime);
+    updatePlaybackTimeline(targetTime, sourceDuration);
   }
 
   // ==========================================================================
@@ -4545,9 +4886,7 @@
         if (state.activeEngine === 'audio' && !state.isScrubbing) {
           const effectiveDuration = getEffectiveAudioDuration();
           if (effectiveDuration > 0) {
-            const percent = Math.min((dom.audio.currentTime / effectiveDuration) * 100, 100);
-            updateProgressUI(percent);
-            if (dom.currentTime) dom.currentTime.textContent = formatTime(dom.audio.currentTime);
+            updatePlaybackTimeline(dom.audio.currentTime, effectiveDuration);
             updateMediaSessionPosition(dom.audio.currentTime, effectiveDuration);
             syncLyricsWithTime(dom.audio.currentTime);
           }
@@ -4558,8 +4897,7 @@
         if (state.activeEngine === 'audio') {
           const effectiveSec = getEffectiveAudioDuration();
           const formatted = formatTime(effectiveSec);
-          if (dom.totalDuration) dom.totalDuration.textContent = formatted;
-          if (dom.sheetTotalTime) dom.sheetTotalTime.textContent = formatted;
+          updatePlaybackTimeline(dom.audio.currentTime, effectiveSec);
           if (state.currentTrack) {
             state.currentTrack.durationSec = Math.round(effectiveSec);
             state.currentTrack.duration = formatted;
@@ -4572,12 +4910,14 @@
             }
           }
           updateMediaSessionPosition(dom.audio.currentTime, effectiveSec);
+          enforceCurrentTrackAudioTrim(true);
         }
       });
 
       dom.audio.addEventListener('playing', () => {
         setPlaybackVisualState(true);
         state.consecutiveErrors = 0;
+        enforceCurrentTrackAudioTrim();
       });
 
       dom.audio.addEventListener('pause', () => {
@@ -4589,7 +4929,8 @@
       dom.audio.addEventListener('ended', () => {
         if (state.activeEngine !== 'audio') return;
         if (state.loopMode === 'one') {
-          dom.audio.currentTime = 0;
+          const window = getTrackAudioTrimWindow(state.currentTrack, getEffectiveAudioDuration());
+          dom.audio.currentTime = window.isTrimmed ? window.start : 0;
           dom.audio.play().catch(() => {});
         } else {
           playNextTrack();
@@ -4738,8 +5079,71 @@
       e.stopPropagation();
       openLyricsContributionEditor();
     };
+    const openAudioTrimFromButton = (e) => {
+      e.stopPropagation();
+      openAudioTrimEditor();
+    };
     dom.lyricsContributeBtn?.addEventListener('click', openContributionFromButton);
     dom.sheetLyricsContributeBtn?.addEventListener('click', openContributionFromButton);
+    dom.audioTrimBtn?.addEventListener('click', openAudioTrimFromButton);
+    dom.sheetAudioTrimBtn?.addEventListener('click', openAudioTrimFromButton);
+    dom.audioTrimCloseBtn?.addEventListener('click', closeAudioTrimEditor);
+    dom.audioTrimCancelBtn?.addEventListener('click', closeAudioTrimEditor);
+    dom.audioTrimBackdrop?.addEventListener('click', closeAudioTrimEditor);
+    dom.audioTrimSaveBtn?.addEventListener('click', saveAudioTrim);
+    dom.audioTrimResetBtn?.addEventListener('click', resetAudioTrim);
+    dom.audioTrimPlayPauseBtn?.addEventListener('click', togglePlayPause);
+    dom.audioTrimSeekBackBtn?.addEventListener('click', () => {
+      seekToSeconds(Math.max(0, getCurrentAudioTime() - 5));
+      updateAudioTrimEditorPlayback();
+    });
+    dom.audioTrimSeekForwardBtn?.addEventListener('click', () => {
+      seekToSeconds(Math.min(audioTrimEditorDurationSec, getCurrentAudioTime() + 5));
+      updateAudioTrimEditorPlayback();
+    });
+    dom.audioTrimStartMarkBtn?.addEventListener('click', () => {
+      if (!dom.audioTrimStartSeconds || !dom.audioTrimEndSeconds) return;
+      const current = Math.max(0, Math.min(getCurrentAudioTime(), audioTrimEditorDurationSec));
+      dom.audioTrimStartSeconds.value = Math.min(current, Number(dom.audioTrimEndSeconds.value) - 1).toFixed(1);
+      syncAudioTrimEditorBounds('start');
+    });
+    dom.audioTrimEndMarkBtn?.addEventListener('click', () => {
+      if (!dom.audioTrimStartSeconds || !dom.audioTrimEndSeconds) return;
+      const current = Math.max(0, Math.min(getCurrentAudioTime(), audioTrimEditorDurationSec));
+      dom.audioTrimEndSeconds.value = Math.max(current, Number(dom.audioTrimStartSeconds.value) + 1).toFixed(1);
+      syncAudioTrimEditorBounds('end');
+    });
+    dom.audioTrimStartRange?.addEventListener('input', (event) => {
+      if (dom.audioTrimStartSeconds) dom.audioTrimStartSeconds.value = Number(event.target.value).toFixed(1);
+      syncAudioTrimEditorBounds('start');
+    });
+    dom.audioTrimEndRange?.addEventListener('input', (event) => {
+      if (dom.audioTrimEndSeconds) dom.audioTrimEndSeconds.value = Number(event.target.value).toFixed(1);
+      syncAudioTrimEditorBounds('end');
+    });
+    dom.audioTrimStartSeconds?.addEventListener('change', () => syncAudioTrimEditorBounds('start'));
+    dom.audioTrimEndSeconds?.addEventListener('change', () => syncAudioTrimEditorBounds('end'));
+    dom.audioTrimPreviewTimeline?.addEventListener('pointerdown', () => {
+      audioTrimPreviewIsScrubbing = true;
+    });
+    dom.audioTrimPreviewTimeline?.addEventListener('pointerup', () => {
+      audioTrimPreviewIsScrubbing = false;
+    });
+    dom.audioTrimPreviewTimeline?.addEventListener('pointercancel', () => {
+      audioTrimPreviewIsScrubbing = false;
+    });
+    dom.audioTrimPreviewTimeline?.addEventListener('input', (event) => {
+      audioTrimPreviewIsScrubbing = true;
+      if (dom.audioTrimCurrentTime) {
+        dom.audioTrimCurrentTime.textContent = formatLyricsContributionTime(event.target.value);
+      }
+    });
+    dom.audioTrimPreviewTimeline?.addEventListener('change', (event) => {
+      const target = Number(event.target.value);
+      if (Number.isFinite(target)) seekToSeconds(target);
+      audioTrimPreviewIsScrubbing = false;
+      updateAudioTrimEditorPlayback();
+    });
     dom.lyricsContributionCloseBtn?.addEventListener('click', closeLyricsContributionEditor);
     dom.lyricsContributionCancelBtn?.addEventListener('click', closeLyricsContributionEditor);
     dom.lyricsContributionBackdrop?.addEventListener('click', closeLyricsContributionEditor);
@@ -4923,6 +5327,10 @@
 
     // Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
+      if (dom.audioTrimModal && !dom.audioTrimModal.classList.contains('hidden')) {
+        if (e.key === 'Escape') closeAudioTrimEditor();
+        return;
+      }
       if (dom.lyricsContributionModal && !dom.lyricsContributionModal.classList.contains('hidden')) {
         if (e.key === 'Escape') closeLyricsContributionEditor();
         return;
@@ -5066,10 +5474,12 @@
     if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
     if (!duration || isNaN(duration) || duration <= 0) return;
     try {
+      const window = getTrackAudioTrimWindow(state.currentTrack, duration);
+      const displayPosition = Math.max(0, Math.min((currentTime || 0) - window.start, window.duration));
       navigator.mediaSession.setPositionState({
-        duration: Math.max(duration, 0),
+        duration: Math.max(window.duration, 0),
         playbackRate: 1.0,
-        position: Math.min(Math.max(currentTime || 0, 0), duration)
+        position: displayPosition
       });
     } catch (_) {}
   }
@@ -5114,30 +5524,37 @@
         if (details.seekTime === undefined || isNaN(details.seekTime)) return;
         if (state.activeEngine === 'audio' && dom.audio) {
           const effDur = getEffectiveAudioDuration();
-          dom.audio.currentTime = details.seekTime;
-          updateMediaSessionPosition(details.seekTime, effDur);
+          const target = clampPlaybackSeekTime(getTrackAudioTrimWindow(state.currentTrack, effDur).start + details.seekTime, effDur);
+          seekToSeconds(target);
+          updateMediaSessionPosition(target, effDur);
         } else if (state.activeEngine === 'youtube' && ytPlayer && typeof ytPlayer.seekTo === 'function') {
-          ytPlayer.seekTo(details.seekTime, true);
+          const duration = Number(ytPlayer.getDuration()) || getLyricDurationSeconds();
+          const target = clampPlaybackSeekTime(getTrackAudioTrimWindow(state.currentTrack, duration).start + details.seekTime, duration);
+          seekToSeconds(target);
         }
       }],
       ['seekbackward', (details) => {
         const skip = details.seekOffset || 10;
         if (state.activeEngine === 'audio' && dom.audio) {
           const effDur = getEffectiveAudioDuration();
-          dom.audio.currentTime = Math.max(dom.audio.currentTime - skip, 0);
-          updateMediaSessionPosition(dom.audio.currentTime, effDur);
+          const target = clampPlaybackSeekTime(dom.audio.currentTime - skip, effDur);
+          seekToSeconds(target);
+          updateMediaSessionPosition(target, effDur);
         } else if (state.activeEngine === 'youtube' && ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
-          ytPlayer.seekTo(Math.max(ytPlayer.getCurrentTime() - skip, 0), true);
+          const duration = Number(ytPlayer.getDuration()) || getLyricDurationSeconds();
+          seekToSeconds(clampPlaybackSeekTime(ytPlayer.getCurrentTime() - skip, duration));
         }
       }],
       ['seekforward', (details) => {
         const skip = details.seekOffset || 10;
         if (state.activeEngine === 'audio' && dom.audio) {
           const effDur = getEffectiveAudioDuration();
-          dom.audio.currentTime = Math.min(dom.audio.currentTime + skip, effDur);
-          updateMediaSessionPosition(dom.audio.currentTime, effDur);
+          const target = clampPlaybackSeekTime(dom.audio.currentTime + skip, effDur);
+          seekToSeconds(target);
+          updateMediaSessionPosition(target, effDur);
         } else if (state.activeEngine === 'youtube' && ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
-          ytPlayer.seekTo(ytPlayer.getCurrentTime() + skip, true);
+          const duration = Number(ytPlayer.getDuration()) || getLyricDurationSeconds();
+          seekToSeconds(clampPlaybackSeekTime(ytPlayer.getCurrentTime() + skip, duration));
         }
       }],
       ['stop', () => {
@@ -5946,6 +6363,8 @@
     initDropYourMusicEvents();
     loadFavorites();
     loadCommunityTracks();
+    loadSharedAudioTrims();
+    setInterval(loadSharedAudioTrims, 120000);
     initUserAccounts();
     updateBatterySaverUI();
 
