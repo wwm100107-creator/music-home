@@ -9524,3 +9524,39 @@ body.eco-mode-active .nature-overlay {
 body.eco-mode-active .magic-cursor-canvas {
   display: none !important;
 }
+
+.lyrics-contribution-rate-control {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 3px 7px;
+  color: rgba(235, 244, 232, 0.76);
+  white-space: nowrap;
+}
+
+.lyrics-contribution-rate-control label {
+  font-size: 0.72rem;
+}
+
+.lyrics-contribution-rate-control select {
+  min-height: 30px;
+  border: 1px solid rgba(142, 208, 129, 0.42);
+  border-radius: 9px;
+  padding: 4px 8px;
+  color: #e8f6df;
+  background: rgba(12, 31, 20, 0.92);
+  font: 700 0.72rem 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+}
+
+.lyrics-contribution-rate-control select:focus-visible {
+  outline: 2px solid #ffd166;
+  outline-offset: 2px;
+}
+
+.lyrics-contribution-rate-hint {
+  grid-column: 1 / -1;
+  color: #ffd989;
+  font-size: 0.62rem;
+  white-space: normal;
+}

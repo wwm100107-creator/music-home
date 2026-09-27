@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&family=Comfortaa:wght@600;700;800;900&family=Fredoka:wght@500;600;700;800&family=Sniglet:wght@800&family=Quicksand:wght@600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=5.5">
+  <link rel="stylesheet" href="style.css?v=5.6">
 </head>
 <body class="ghibli-app-body">
 
@@ -1176,6 +1176,17 @@
       <section class="lyrics-contribution-player" aria-label="Nghe và tua nhạc khi căn lời">
         <div class="lyrics-contribution-player-heading">
           <strong>Nghe và căn timeline</strong>
+          <div class="lyrics-contribution-rate-control">
+            <label for="lyricsContributionPlaybackRate">Tốc độ</label>
+            <select id="lyricsContributionPlaybackRate" aria-label="Tốc độ phát khi chỉnh lời" title="Giảm tốc độ để căn thời gian từng từ">
+              <option value="0.5">0.5×</option>
+              <option value="0.75">0.75×</option>
+              <option value="1" selected>1×</option>
+              <option value="1.25">1.25×</option>
+              <option value="1.5">1.5×</option>
+            </select>
+            <span id="lyricsContributionPlaybackRateHint" class="lyrics-contribution-rate-hint" aria-live="polite"></span>
+          </div>
           <span class="lyrics-contribution-player-time"><span id="lyricsContributionCurrentTime">00:00.00</span> / <span id="lyricsContributionDuration">00:00.00</span></span>
         </div>
         <input id="lyricsContributionTimeline" class="lyrics-contribution-timeline" type="range" min="0" max="210" value="0" step="0.05" aria-label="Tua đến vị trí trong bài hát" aria-valuetext="00:00.00 / 00:00.00">
@@ -1493,13 +1504,13 @@
 
   <!-- Scripts: YouTube Engine & Ghibli App -->
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script src="app.js?v=5.3"></script>
+  <script src="app.js?v=5.6"></script>
 
   <!-- PWA Offline Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=5.5')
+        navigator.serviceWorker.register('./sw.js?v=5.6')
           .then((reg) => {
             console.log('🍃 [PWA] Service Worker registered:', reg.scope);
             reg.update().catch(() => {});

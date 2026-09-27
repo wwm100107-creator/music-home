@@ -7620,8 +7620,49 @@ body.twilight-mode .bg-playback-chip.disabled {
 }
 
 .lyrics-contribution-player-heading {
+  flex-wrap: wrap;
   color: #d8efcf;
   font-size: 0.78rem;
+}
+
+.lyrics-contribution-rate-control {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 3px 7px;
+  color: rgba(235, 244, 232, 0.76);
+  white-space: nowrap;
+}
+
+.lyrics-contribution-rate-control label {
+  font-size: 0.72rem;
+}
+
+.lyrics-contribution-rate-control select {
+  min-height: 30px;
+  border: 1px solid rgba(142, 208, 129, 0.42);
+  border-radius: 9px;
+  padding: 4px 8px;
+  color: #e8f6df;
+  background: rgba(12, 31, 20, 0.92);
+  font: 700 0.72rem 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+}
+
+.lyrics-contribution-rate-control select:focus-visible {
+  outline: 2px solid #ffd166;
+  outline-offset: 2px;
+}
+
+.lyrics-contribution-rate-control select option:disabled {
+  color: rgba(235, 244, 232, 0.38);
+}
+
+.lyrics-contribution-rate-hint {
+  grid-column: 1 / -1;
+  color: #ffd989;
+  font-size: 0.62rem;
+  white-space: normal;
 }
 
 .lyrics-contribution-player-time {
@@ -7866,7 +7907,10 @@ body.twilight-mode .bg-playback-chip.disabled {
   .lyrics-contribution-window { padding: 15px 12px; border-radius: 17px; }
   .lyrics-contribution-list { max-height: 34vh; }
   .lyrics-contribution-player { margin-bottom: 8px; padding: 9px; }
-  .lyrics-contribution-player-heading { font-size: 0.72rem; }
+  .lyrics-contribution-player-heading { justify-content: flex-start; font-size: 0.72rem; }
+  .lyrics-contribution-player-heading > strong { flex: 1 0 100%; }
+  .lyrics-contribution-rate-control { margin-right: auto; }
+  .lyrics-contribution-player-time { margin-left: auto; }
   .lyrics-contribution-seek,
   .lyrics-contribution-play-pause { min-height: 38px; padding: 7px 10px; }
   .lyrics-contribution-row { grid-template-columns: 22px minmax(80px, 1fr) 74px 68px 28px; gap: 5px; }

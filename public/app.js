@@ -500,6 +500,8 @@
     lyricsContributionTimeline: document.getElementById('lyricsContributionTimeline'),
     lyricsContributionCurrentTime: document.getElementById('lyricsContributionCurrentTime'),
     lyricsContributionDuration: document.getElementById('lyricsContributionDuration'),
+    lyricsContributionPlaybackRate: document.getElementById('lyricsContributionPlaybackRate'),
+    lyricsContributionPlaybackRateHint: document.getElementById('lyricsContributionPlaybackRateHint'),
     lyricsContributionLineCount: document.getElementById('lyricsContributionLineCount'),
     lyricsContributionList: document.getElementById('lyricsContributionList'),
     lyricsContributionPlayhead: document.getElementById('lyricsContributionPlayhead'),
@@ -1480,6 +1482,9 @@
               const dur = ytPlayer.getDuration();
               if (dur) updatePlaybackTimeline(ytPlayer.getCurrentTime(), dur);
               enforceCurrentTrackAudioTrim();
+              if (isLyricsContributionEditorOpen()) {
+                applyLyricsContributionPlaybackRate(lyricsContributionPlaybackRate, { silent: true });
+              }
             } else if (event.data === 2) {
               if (state.activeEngine === 'youtube') {
                 setPlaybackVisualState(false);
@@ -1494,6 +1499,12 @@
                   playNextTrack();
                 }
               }
+            }
+          },
+          onPlaybackRateChange: (event) => {
+            const actualRate = Number(event.data);
+            if (isLyricsContributionEditorOpen() && Number.isFinite(actualRate) && actualRate > 0) {
+              renderLyricsContributionPlaybackRate(actualRate, { remember: false });
             }
           },
           onError: (err) => {
@@ -1534,6 +1545,8 @@
   let lyricsContributionTrackId = null;
   let lyricsContributionWordMode = false;
   let lyricsContributionIsScrubbing = false;
+  let lyricsContributionPlaybackRate = 1;
+  const lyricsContributionPlaybackRates = [0.5, 0.75, 1, 1.25, 1.5];
   let audioTrimStore = (() => {
     try {
       const saved = JSON.parse(localStorage.getItem('ghibli_shared_audio_trims') || '{}');
@@ -1761,6 +1774,107 @@
       dom.lyricsContributionPlayPauseBtn.setAttribute('aria-pressed', String(isPlaying));
       dom.lyricsContributionPlayPauseBtn.classList.toggle('is-playing', isPlaying);
     }
+  }
+
+  function isLyricsContributionEditorOpen() {
+    return Boolean(dom.lyricsContributionModal && !dom.lyricsContributionModal.classList.contains('hidden'));
+  }
+
+  function getLyricsContributionAvailablePlaybackRates() {
+    if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.getAvailablePlaybackRates === 'function') {
+      try {
+        const availableRates = ytPlayer.getAvailablePlaybackRates()
+        if (!Array.isArray(availableRates)) return lyricsContributionPlaybackRates;
+        const normalizedRates = availableRates
+          .map(Number)
+          .filter(rate => Number.isFinite(rate) && rate > 0);
+        if (normalizedRates.length) return normalizedRates;
+      } catch (_) {}
+    }
+    return lyricsContributionPlaybackRates;
+  }
+
+  function renderLyricsContributionPlaybackRate(rate = lyricsContributionPlaybackRate, { remember = true } = {}) {
+    const select = dom.lyricsContributionPlaybackRate;
+    if (!select) return;
+
+    const availableRates = getLyricsContributionAvailablePlaybackRates();
+    const normalizedRate = availableRates.includes(rate)
+      ? rate
+      : (availableRates.includes(1) ? 1 : (availableRates[0] || 1));
+    if (remember) lyricsContributionPlaybackRate = normalizedRate;
+    Array.from(select.options).forEach(option => {
+      option.disabled = !availableRates.includes(Number(option.value));
+    });
+    select.value = String(normalizedRate);
+
+    if (dom.lyricsContributionPlaybackRateHint) {
+      const onlyNormalSpeed = state.activeEngine === 'youtube'
+        && availableRates.filter(availableRate => lyricsContributionPlaybackRates.includes(availableRate)).length <= 1;
+      dom.lyricsContributionPlaybackRateHint.textContent = onlyNormalSpeed
+        ? 'Trong các mức chỉnh lời, video chỉ hỗ trợ 1×.'
+        : '';
+    }
+  }
+
+  function syncLyricsContributionPlaybackRateFromEngine() {
+    let currentRate = lyricsContributionPlaybackRate;
+    if (state.activeEngine === 'audio' && dom.audio) {
+      currentRate = Number(dom.audio.playbackRate) || 1;
+    } else if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.getPlaybackRate === 'function') {
+      try {
+        currentRate = Number(ytPlayer.getPlaybackRate()) || 1;
+      } catch (_) {}
+    }
+    renderLyricsContributionPlaybackRate(currentRate);
+  }
+
+  function applyLyricsContributionPlaybackRate(rate, { silent = false } = {}) {
+    const requestedRate = Number(rate);
+    if (!Number.isFinite(requestedRate) || requestedRate <= 0) return;
+
+    if (state.activeEngine === 'audio' && dom.audio) {
+      try {
+        dom.audio.playbackRate = requestedRate;
+        lyricsContributionPlaybackRate = Number(dom.audio.playbackRate) || 1;
+        renderLyricsContributionPlaybackRate(lyricsContributionPlaybackRate);
+      } catch (_) {
+        renderLyricsContributionPlaybackRate(Number(dom.audio.playbackRate) || 1);
+        if (!silent) showToast('Trình duyệt này không hỗ trợ tốc độ phát đã chọn.');
+      }
+      return;
+    }
+
+    if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.setPlaybackRate === 'function') {
+      const availableRates = getLyricsContributionAvailablePlaybackRates();
+      if (!availableRates.includes(requestedRate)) {
+        syncLyricsContributionPlaybackRateFromEngine();
+        if (!silent) showToast('Video này không hỗ trợ tốc độ đã chọn.');
+        return;
+      }
+      try {
+        ytPlayer.setPlaybackRate(requestedRate);
+        lyricsContributionPlaybackRate = requestedRate;
+        renderLyricsContributionPlaybackRate(requestedRate);
+      } catch (_) {
+        syncLyricsContributionPlaybackRateFromEngine();
+        if (!silent) showToast('Chưa thể thay đổi tốc độ phát của video này.');
+      }
+      return;
+    }
+
+    lyricsContributionPlaybackRate = requestedRate;
+    renderLyricsContributionPlaybackRate(requestedRate);
+  }
+
+  function resetLyricsContributionPlaybackRate() {
+    lyricsContributionPlaybackRate = 1;
+    if (state.activeEngine === 'audio' && dom.audio) {
+      try { dom.audio.playbackRate = 1; } catch (_) {}
+    } else if (state.activeEngine === 'youtube' && ytPlayer && isYtReady && typeof ytPlayer.setPlaybackRate === 'function') {
+      try { ytPlayer.setPlaybackRate(1); } catch (_) {}
+    }
+    renderLyricsContributionPlaybackRate(1);
   }
 
   function seekLyricsContributionBy(deltaSeconds) {
@@ -2543,6 +2657,7 @@
     renderLyricsContributionRows(initialLines);
     dom.lyricsContributionModal.classList.remove('hidden');
     document.body.classList.add('lyrics-contribution-open');
+    syncLyricsContributionPlaybackRateFromEngine();
     if (dom.lyricsContributionPlayhead) {
       dom.lyricsContributionPlayhead.textContent = `Vị trí phát: ${formatLyricsContributionTime(getCurrentAudioTime())}`;
     }
@@ -2555,6 +2670,7 @@
     dom.lyricsContributionModal.classList.add('hidden');
     document.body.classList.remove('lyrics-contribution-open');
     lyricsContributionTrackId = null;
+    resetLyricsContributionPlaybackRate();
   }
 
   function buildLyricsContributionRows() {
@@ -4901,6 +5017,9 @@
 
       dom.audio.addEventListener('loadedmetadata', () => {
         if (state.activeEngine === 'audio') {
+          if (isLyricsContributionEditorOpen()) {
+            applyLyricsContributionPlaybackRate(lyricsContributionPlaybackRate, { silent: true });
+          }
           const effectiveSec = getEffectiveAudioDuration();
           const formatted = formatTime(effectiveSec);
           updatePlaybackTimeline(dom.audio.currentTime, effectiveSec);
@@ -4923,6 +5042,9 @@
       dom.audio.addEventListener('playing', () => {
         setPlaybackVisualState(true);
         state.consecutiveErrors = 0;
+        if (isLyricsContributionEditorOpen()) {
+          applyLyricsContributionPlaybackRate(lyricsContributionPlaybackRate, { silent: true });
+        }
         enforceCurrentTrackAudioTrim();
       });
 
@@ -5153,6 +5275,9 @@
     dom.lyricsContributionCloseBtn?.addEventListener('click', closeLyricsContributionEditor);
     dom.lyricsContributionCancelBtn?.addEventListener('click', closeLyricsContributionEditor);
     dom.lyricsContributionBackdrop?.addEventListener('click', closeLyricsContributionEditor);
+    dom.lyricsContributionPlaybackRate?.addEventListener('change', (event) => {
+      applyLyricsContributionPlaybackRate(Number(event.target.value));
+    });
     dom.lyricsContributionPlayPauseBtn?.addEventListener('click', () => {
       togglePlayPause();
       updateLyricsContributionTimeline();
