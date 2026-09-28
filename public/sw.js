@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const CACHE_NAME = 'antigravity-ghibli-v5.25-radio-cropped-collage';
+const CACHE_NAME = 'antigravity-ghibli-v5.26-radio-natural-center';
 
 // Danh sách các tài nguyên tĩnh cốt lõi cần lưu trữ offline
 const STATIC_ASSETS = [
