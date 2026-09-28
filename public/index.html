@@ -331,7 +331,7 @@
 
         <section class="discover-section" aria-labelledby="discoverRadioTitle">
           <div class="discover-section-heading">
-            <div><h2 id="discoverRadioTitle">Radio phổ biến</h2><p id="discoverRadioCaption">Đang kết hợp bảng xếp hạng khu vực, nghệ sĩ liên quan và gu nghe của bạn.</p></div>
+            <div><h2 id="discoverRadioTitle">Radio phổ biến</h2><p id="discoverRadioCaption">Chỉ lấy nghệ sĩ trong bảng xếp hạng khu vực đã chọn.</p></div>
           </div>
           <div class="discover-horizontal-row discover-radio-row" id="discoverRadioRow" aria-label="Radio nghệ sĩ phổ biến"></div>
         </section>
@@ -383,7 +383,7 @@
         </section>
 
         <section class="discover-section discover-for-you-section" aria-labelledby="discoverForYouTitle">
-          <div class="discover-section-heading"><div><h2 id="discoverForYouTitle">Dành riêng cho bạn</h2><p id="discoverForYouCaption">Gợi ý từ bảng xếp hạng và gu nghe của bạn</p></div></div>
+          <div class="discover-section-heading"><div><h2 id="discoverForYouTitle">Dành riêng cho bạn</h2><p id="discoverForYouCaption">Bài trong bảng xếp hạng khu vực, sắp xếp theo gu nghe của bạn</p></div></div>
           <div class="discover-horizontal-row discover-track-row" id="discoverForYouRow" aria-label="Bài hát được gợi ý cho bạn"></div>
         </section>
 
@@ -1537,13 +1537,13 @@
 
   <!-- Scripts: YouTube Engine & Ghibli App -->
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script src="app.js?v=5.28"></script>
+  <script src="app.js?v=5.29"></script>
 
   <!-- PWA Offline Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=5.10')
+        navigator.serviceWorker.register('./sw.js?v=5.11')
           .then((reg) => {
             console.log('🍃 [PWA] Service Worker registered:', reg.scope);
             reg.update().catch(() => {});

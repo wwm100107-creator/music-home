@@ -174,7 +174,6 @@
     selectedCountry: 'VN',
     activeGenre: 'all',
     trendingTracks: [],
-    globalTrendingTracks: [],
     selectedCountryName: 'Vietnam',
     recentTracks: (() => {
       try {
@@ -197,7 +196,6 @@
       }
     })(),
     recentListeningRelatedTracks: [],
-    tasteDiscoveryTracks: [],
     searchResults: [],
     favorites: [],
     regionalAlbums: [],
@@ -3783,10 +3781,6 @@
         state.selectedCountry = data.countryCode || 'VN';
         state.selectedCountryName = data.countryName || state.selectedCountry;
         state.trendingTracks = data.results || data.tracks || [];
-        if (state.selectedCountry === 'GLOBAL' && curTimeframe === 'daily') {
-          state.globalTrendingTracks = state.trendingTracks;
-        }
-
         // Đồng bộ Dropdown quốc gia
         if (dom.countrySelectDropdown) {
           dom.countrySelectDropdown.value = state.selectedCountry;
@@ -4187,7 +4181,8 @@
       const ageDays = track._lastListenedAt ? Math.max(0, (now - track._lastListenedAt) / 86400000) : 30;
       add(track, 100 - Math.min(35, ageDays * 1.5) - index * 2, 'recent-listen');
     });
-    (state.recentListeningRelatedTracks || []).forEach((track, index) => {
+    const regionalTrackIds = new Set((state.trendingTracks || []).map(track => String(track.id || '')).filter(Boolean));
+    (state.recentListeningRelatedTracks || []).filter(track => regionalTrackIds.has(String(track.id || ''))).forEach((track, index) => {
       const artistAffinity = Math.max(0, ...getRecommendationArtistKeys(track).map(key => profile.recentArtistScores.get(key) || 0));
       add(track, 77 + Math.min(18, artistAffinity * 4) - index * 0.08, 'recently-related');
     });
@@ -4197,10 +4192,10 @@
       (state.favorites || []).forEach((track, index) => add(track, 70 - index * 0.4, 'favorite-start'));
     }
 
-    // Charts seed this section only for a genuinely cold-start profile.
+    // The selected region's chart is the only chart source for this section.
     const hasTasteSignals = profile.listenedTracks.length > 0 || profile.favoriteArtists.size > 0;
     if (!hasTasteSignals) {
-      [...(state.trendingTracks || []), ...(state.globalTrendingTracks || [])].forEach((track, index) => {
+      (state.trendingTracks || []).forEach((track, index) => {
         const rank = Math.max(1, Number(track.rank) || index + 1);
         add(track, 52 / Math.sqrt(rank), 'cold-start-chart');
       });
@@ -4225,7 +4220,7 @@
     const favoriteGenreAffinity = Math.max(0, ...genres.map(genre => profile.favoriteGenreScores.get(genre) || 0));
     const playedAt = profile.lastPlayedAt.get(id) || 0;
     const ageDays = playedAt ? Math.max(0, (Date.now() - playedAt) / 86400000) : 365;
-    const chartTrack = source === 'cold-start-chart' && [...(state.trendingTracks || []), ...(state.globalTrendingTracks || [])]
+    const chartTrack = source === 'regional-chart' && (state.trendingTracks || [])
       .find(item => String(item.id) === id);
     const chartRank = Math.max(1, Number(chartTrack?.rank) || 50);
     const repeatedPlays = profile.trackPlayCounts.get(id) || 0;
@@ -4240,10 +4235,7 @@
     score += Math.min(22, recentGenreAffinity * 8);
     score += Math.min(12, longTermGenreAffinity * 3.5);
     score += Math.min(8, favoriteGenreAffinity * 2.5);
-    if (source === 'cold-start-chart') score += Math.min(8, 8 / Math.sqrt(chartRank));
-    if (source === 'taste-discovery') score += 7;
-    if (source === 'taste-discovery' && track._recommendationSeed &&
-        !artists.includes(normalizeDiscoverArtist(track._recommendationSeed))) score += 5;
+    if (source === 'regional-chart') score += Math.min(8, 8 / Math.sqrt(chartRank));
     score += Math.min(7, discoveryIntent * 4);               // Explicit radio exploration, weak intent
     if (playedAt && ageDays <= 10) score -= 28 * (1 - ageDays / 14); // Avoid immediate repetition
     else if (repeatedPlays >= 3) score += 7;
@@ -4254,8 +4246,7 @@
   }
 
   const recommendationSearchCache = {
-    recent: { key: '', at: 0, promise: null },
-    taste: { key: '', at: 0, promise: null }
+    recent: { key: '', at: 0, promise: null }
   };
 
   function getRecentArtistSearchSeeds(profile, limit = 1) {
@@ -4274,38 +4265,6 @@
       });
     });
     return seeds;
-  }
-
-  function getStableTasteSearchSeeds(profile, limit = 2) {
-    const recentKeys = new Set(getRecentArtistSearchSeeds(profile, 1).map(normalizeDiscoverArtist));
-    const seedEntries = [];
-    profile.favoriteArtistNames.forEach(name => seedEntries.push({ name, score: 100, source: 'favorite' }));
-
-    const replayArtists = new Map();
-    profile.listenedTracks.forEach(track => {
-      if ((profile.trackPlayCounts.get(String(track.id)) || 0) < 2) return;
-      getDiscoverArtistNames(track).forEach(name => {
-        const key = normalizeDiscoverArtist(name);
-        if (!key) return;
-        const score = (profile.trackPlayCounts.get(String(track.id)) || 0) + (profile.longTermArtistScores.get(key) || 0);
-        const existing = replayArtists.get(key);
-        if (!existing || score > existing.score) replayArtists.set(key, { name, score, source: 'replay' });
-      });
-    });
-    seedEntries.push(...replayArtists.values());
-    [...profile.discoveryArtistScores.entries()].forEach(([name, score]) => seedEntries.push({ name, score: score * 0.6, source: 'discovery' }));
-    profile.longTermArtistScores.forEach((score, name) => seedEntries.push({ name, score: score * 0.35, source: 'long-term' }));
-
-    const unique = new Map();
-    seedEntries.forEach(entry => {
-      const key = normalizeDiscoverArtist(entry.name);
-      if (!key) return;
-      const current = unique.get(key);
-      if (!current || entry.score > current.score) unique.set(key, entry);
-    });
-    const ranked = [...unique.values()].sort((a, b) => b.score - a.score);
-    const distinctFromRecent = ranked.filter(entry => !recentKeys.has(normalizeDiscoverArtist(entry.name)));
-    return (distinctFromRecent.length ? distinctFromRecent : ranked).slice(0, limit);
   }
 
   async function fetchRecommendationSource(seeds, source, cache, setTracks, rerender) {
@@ -4349,13 +4308,8 @@
   async function refreshPersonalizedCandidates() {
     const profile = getRecommendationTasteProfile();
     const recentSeeds = getRecentArtistSearchSeeds(profile);
-    const stableTasteSeeds = getStableTasteSearchSeeds(profile);
-    await Promise.all([
-      fetchRecommendationSource(recentSeeds, 'recently-related', recommendationSearchCache.recent,
-        tracks => { state.recentListeningRelatedTracks = tracks; }, renderDiscoverRecentList),
-      fetchRecommendationSource(stableTasteSeeds.map(seed => seed.name), 'taste-discovery', recommendationSearchCache.taste,
-        tracks => { state.tasteDiscoveryTracks = tracks; }, renderDiscoverForYouRow)
-    ]);
+    await fetchRecommendationSource(recentSeeds, 'recently-related', recommendationSearchCache.recent,
+      tracks => { state.recentListeningRelatedTracks = tracks; }, renderDiscoverRecentList);
   }
 
   const RADIO_RECOMMENDATION_WEIGHTS = Object.freeze({
@@ -4532,24 +4486,19 @@
     };
 
     const regionalTracks = state.trendingTracks || [];
-    const globalTracks = state.globalTrendingTracks || [];
     const recentListenTracks = profile.listenedTracks.filter(track => {
       const ageDays = track._lastListenedAt ? Math.max(0, (Date.now() - track._lastListenedAt) / 86400000) : 365;
       return ageDays <= 90;
     }).sort((a, b) => b._lastListenedAt - a._lastListenedAt);
-    const sourceGroups = [
-      { name: 'regional', tracks: regionalTracks },
-      { name: 'global', tracks: globalTracks },
-      { name: 'listener', tracks: recentListenTracks },
-      { name: 'favorite', tracks: state.favorites || [] }
-    ];
+    // Recommendation candidates must come from the selected region's chart.
+    // Listening history still affects ranking, but never adds out-of-region artists.
+    const sourceGroups = [{ name: 'regional', tracks: regionalTracks }];
 
     sourceGroups.forEach(({ name, tracks }) => tracks.forEach((track, index) => addTrack(track, name, index)));
 
     // Co-artist credits and close chart placements form relationship edges; sequential listens add an opt-in, local co-listening signal.
     [
-      { tracks: regionalTracks, strength: 0.24 },
-      { tracks: globalTracks, strength: 0.17 }
+      { tracks: regionalTracks, strength: 0.24 }
     ].forEach(({ tracks, strength }) => {
       for (let index = 0; index < tracks.length; index++) {
         const current = tracks[index];
@@ -4588,7 +4537,7 @@
       ...profile.recentArtistScores.keys(),
       ...profile.longTermArtistScores.keys()
     ]);
-    const trendingAnchorKeys = new Set([...regionalTracks.slice(0, 12), ...globalTracks.slice(0, 8)].flatMap(getRadioArtistNames).map(normalizeDiscoverArtist));
+    const trendingAnchorKeys = new Set(regionalTracks.slice(0, 12).flatMap(getRadioArtistNames).map(normalizeDiscoverArtist));
     const similarityAnchors = userAnchorKeys.size ? userAnchorKeys : trendingAnchorKeys;
 
     const ranked = [...new Set(candidates.values())].map(candidate => {
@@ -4923,7 +4872,7 @@
     const finalSelected = selected.filter((_, index) => finalCardData.includes(cardData[index]));
     logRadioRecommendationDiagnostics(pipeline, finalSelected, finalCardData);
     if (dom.discoverRadioCaption) {
-      dom.discoverRadioCaption.textContent = 'Bảng xếp hạng YouTube Music theo khu vực kết hợp gu nghe của bạn.';
+      dom.discoverRadioCaption.textContent = 'Chỉ nghệ sĩ trong bảng xếp hạng khu vực đã chọn, sắp xếp theo gu nghe của bạn.';
     }
     dom.discoverRadioRow.removeAttribute('aria-busy');
     dom.discoverRadioRow.innerHTML = '';
@@ -4958,7 +4907,10 @@
           renderDiscoverRadioRow();
         }, { once: true });
       });
-      card.addEventListener('click', () => startDiscoverRadio(primary.name));
+      card.addEventListener('click', () => startDiscoverRadio(
+        primary,
+        supports.map(item => item.candidate)
+      ));
       const cardShell = document.createElement('div');
       cardShell.className = 'discover-radio-card-shell';
       cardShell.appendChild(card);
@@ -5028,9 +4980,6 @@
   function renderDiscoverChartCards() {
     if (!dom.discoverChartRow) return;
     const currentRegionTracks = state.trendingTracks || [];
-    const globalTracks = state.selectedCountry === 'GLOBAL' && state.currentTimeframe === 'daily'
-      ? currentRegionTracks
-      : state.globalTrendingTracks;
     const regionLabel = state.selectedCountryName || state.selectedCountry || 'Khu vực';
     const timeframeLabel = state.currentTimeframe === 'weekly' ? 'tuần này' : 'hôm nay';
     const charts = [];
@@ -5042,15 +4991,6 @@
         tone: 'local'
       });
     }
-    if (globalTracks.length && state.selectedCountry !== 'GLOBAL') {
-      charts.push({
-        title: 'Top 50 • Global',
-        detail: 'Thứ hạng YouTube Music toàn cầu hôm nay',
-        tracks: globalTracks,
-        tone: 'global'
-      });
-    }
-
     dom.discoverChartRow.innerHTML = '';
     charts.forEach(chart => {
       const topTrack = chart.tracks[0];
@@ -5215,7 +5155,7 @@
           portraitImage.replaceWith(monogram);
         }, { once: true });
       }
-      card.addEventListener('click', () => startDiscoverRadio(artist.name));
+      card.addEventListener('click', () => startDiscoverRadio(artist));
       dom.discoverArtistRow.appendChild(card);
     });
   }
@@ -5231,21 +5171,11 @@
       const id = String(track.id);
       if (profile.likedSongIds.has(id) || startListeningIds.has(id)) return;
       const existing = candidateMap.get(id);
-      if (!existing || source === 'taste-discovery') candidateMap.set(id, { track, source });
+      if (!existing) candidateMap.set(id, { track, source });
     };
 
-    // This pool is seeded from saves, replays, long-term taste and explicit artist exploration.
-    (state.tasteDiscoveryTracks || []).forEach(track => addCandidate(track, 'taste-discovery'));
-    profile.listenedTracks.forEach(track => {
-      const ageDays = Math.max(0, (Date.now() - Number(track._lastListenedAt || 0)) / 86400000);
-      if (ageDays > 10 || (profile.trackPlayCounts.get(String(track.id)) || 0) >= 3) addCandidate(track, 'listening-history');
-    });
-
-    // Charts are a cold-start provider only; they never pad an established personal profile.
-    const hasTasteSignals = profile.favoriteArtists.size > 0 || profile.listenedTracks.length > 0 || profile.discoveryArtistScores.size > 0;
-    if (!hasTasteSignals) {
-      [...(state.trendingTracks || []), ...(state.globalTrendingTracks || [])].forEach(track => addCandidate(track, 'cold-start-chart'));
-    }
+    // Personal taste ranks tracks from the selected country's chart only.
+    (state.trendingTracks || []).forEach(track => addCandidate(track, 'regional-chart'));
     const candidates = [...candidateMap.values()].map(({ track, source }) => ({
       track,
       score: scorePersonalRecommendation(track, source, profile, exposure),
@@ -5285,10 +5215,10 @@
     });
     if (dom.discoverForYouCaption) {
       const hasTasteSignals = profile.favoriteArtists.size || profile.listenedTracks.length || profile.discoveryArtistScores.size;
-      const basis = hasTasteSignals
-        ? 'Dựa trên bài đã lưu, lượt nghe lặp lại và gu nghe lâu dài của bạn.'
-        : `Đang khám phá nhạc từ ${state.selectedCountryName || 'khu vực của bạn'}; lưu bài yêu thích hoặc nghe nhạc để cá nhân hóa.`;
-      dom.discoverForYouCaption.textContent = basis;
+      const region = state.selectedCountryName || 'khu vực của bạn';
+      dom.discoverForYouCaption.textContent = hasTasteSignals
+        ? `Bài trong bảng xếp hạng ${region}, sắp xếp theo gu nghe của bạn.`
+        : `Đang khám phá nhạc trong bảng xếp hạng ${region}.`;
     }
   }
 
@@ -5447,31 +5377,59 @@
     renderDiscoverForYouRow();
   }
 
-  async function startDiscoverRadio(artistName) {
+  function startDiscoverRadio(primaryCandidate, relatedCandidates = []) {
+    const candidates = [primaryCandidate, ...relatedCandidates].filter(Boolean);
+    const artistName = typeof primaryCandidate === 'string'
+      ? primaryCandidate
+      : String(primaryCandidate?.name || 'nghệ sĩ');
+    const candidateTrackIds = new Set(candidates.flatMap(candidate =>
+      (candidate.tracks || []).map(entry => String(entry?.track?.id || entry?.id || '')).filter(Boolean)
+    ));
+    const artistKeys = new Set(candidates.map(candidate => normalizeDiscoverArtist(
+      typeof candidate === 'string' ? candidate : candidate.name
+    )).filter(Boolean));
+    const seenTrackIds = new Set();
+    const regionalTracks = state.trendingTracks || [];
+    const matchingTracks = regionalTracks.filter(track => {
+      const id = String(track?.id || '');
+      if (!id || seenTrackIds.has(id)) return false;
+      const selectedOnCard = candidateTrackIds.has(id);
+      const matchesArtist = artistKeys.size && getRadioArtistNames(track)
+        .some(name => artistKeys.has(normalizeDiscoverArtist(name)));
+      if (!selectedOnCard && !matchesArtist) return false;
+      seenTrackIds.add(id);
+      return true;
+    });
+    const radioTracks = matchingTracks.slice(0, 25);
+
+    if (!radioTracks.length) {
+      showToast(`Tab ${state.selectedCountryName || 'khu vực này'} hiện chưa có bài phù hợp để tạo danh sách.`);
+      return;
+    }
+
+    state.queue = radioTracks;
+    state.queueIndex = 0;
+
+    let playbackError = null;
     try {
-      recordDiscoverArtistIntent(artistName);
-      showToast(`Đang tạo radio quanh ${artistName}...`);
-      const response = await fetch(`/api/search?q=${encodeURIComponent(`${artistName} popular songs`)}`);
-      const data = await response.json();
-      const results = Array.isArray(data.results) ? data.results : [];
-      const normalizedArtist = normalizeDiscoverArtist(artistName);
-      const matchingTracks = results.filter(track => getDiscoverArtistNames(track)
-        .some(name => normalizeDiscoverArtist(name) === normalizedArtist));
-      const radioTracks = matchingTracks
-        .filter((track, index, tracks) => track?.id && tracks.findIndex(candidate => candidate.id === track.id) === index)
-        .slice(0, 25);
-      if (!radioTracks.length) {
-        showToast(`Chưa tìm được bài hát cho radio ${artistName}.`);
-        return;
-      }
-      state.queue = radioTracks;
-      state.queueIndex = 0;
-      renderQueueDrawer();
       playTrack(radioTracks[0], false);
     } catch (error) {
-      console.warn('[Discover radio error]:', error);
-      showToast('Chưa tạo được radio lúc này. Hãy thử lại sau nhé.');
+      playbackError = error;
+      console.warn('[Discover radio playback error]:', error);
     }
+
+    renderQueueDrawer();
+    if (dom.playlistDrawer) dom.playlistDrawer.classList.remove('hidden');
+
+    try {
+      recordDiscoverArtistIntent(artistName);
+    } catch (historyError) {
+      console.warn('[Discover radio history warning]:', historyError);
+    }
+
+    showToast(playbackError
+      ? `Đã tạo danh sách ${radioTracks.length} bài; chưa phát được bài đầu tiên.`
+      : `Đã tạo danh sách ${radioTracks.length} bài cho ${artistName}.`);
   }
 
   function playDiscoverChart(tracks, chartTitle) {
@@ -5481,28 +5439,6 @@
     renderQueueDrawer();
     playTrack(state.queue[0], false);
     showToast(`Đang phát ${chartTitle} theo thứ hạng bảng nhạc.`);
-  }
-
-  async function loadDiscoverGlobalChart() {
-    if (state.selectedCountry === 'GLOBAL' && state.currentTimeframe === 'daily' && state.trendingTracks.length) {
-      state.globalTrendingTracks = state.trendingTracks;
-      renderDiscoverChartCards();
-      renderDiscoverRecentList();
-      renderDiscoverForYouRow();
-      return;
-    }
-    try {
-      const response = await fetch('/api/trending?country=GLOBAL&timeframe=daily');
-      const data = await response.json();
-      if (data?.success) {
-        state.globalTrendingTracks = data.results || data.tracks || [];
-        renderDiscoverChartCards();
-        renderDiscoverRecentList();
-        renderDiscoverForYouRow();
-      }
-    } catch (error) {
-      console.warn('[Global discovery chart error]:', error);
-    }
   }
 
   // ==========================================================================
@@ -8183,7 +8119,6 @@
 
     // Tự động tải danh sách thịnh hành theo Geo-IP (Việt Nam 🇻🇳)
     loadTrendingMusic();
-    loadDiscoverGlobalChart();
     loadAlbumsByRegion(state.selectedCountry);
     refreshDiscoverSections();
   }
