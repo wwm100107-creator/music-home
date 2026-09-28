@@ -250,6 +250,7 @@ class BoundedCache {
 const searchCache = new BoundedCache(300, 30 * 60 * 1000);
 const streamCache = new BoundedCache(300, 45 * 60 * 1000);
 const trendingCache = new BoundedCache(50, 60 * 60 * 1000);
+const artistArtworkCache = new BoundedCache(500, 24 * 60 * 60 * 1000);
 const albumCache = new BoundedCache(80, 60 * 60 * 1000);
 const lyricsCache = new BoundedCache(300, 60 * 60 * 1000);
 const LRCLIB_HEADERS = {
@@ -862,6 +863,38 @@ function extractArtistThumbnail(item) {
   return artist?.thumbnails ? extractThumbnail(artist.thumbnails) : '';
 }
 
+function isTrustedYouTubeArtworkUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    if (url.protocol !== 'https:') return false;
+    const host = url.hostname.toLowerCase();
+    return ['ytimg.com', 'ggpht.com', 'googleusercontent.com'].some(domain =>
+      host === domain || host.endsWith(`.${domain}`)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function getYouTubeMusicArtistResultName(item) {
+  const value = item?.name || item?.flex_columns?.[0]?.title?.toString?.() || item?.title?.toString?.();
+  return typeof value === 'string' ? value.trim() : String(value || '').trim();
+}
+
+function getYouTubeMusicArtistResultThumbnail(item) {
+  const thumbnails = item?.thumbnail?.contents || item?.thumbnails?.contents || item?.thumbnails;
+  const bestThumbnail = Array.isArray(thumbnails)
+    ? [...thumbnails].sort((left, right) =>
+      (Number(right?.width) || 0) * (Number(right?.height) || 0) -
+      (Number(left?.width) || 0) * (Number(left?.height) || 0)
+    )[0]
+    : null;
+  const url = typeof bestThumbnail?.url === 'string'
+    ? upgradeThumbnailUrl(bestThumbnail.url)
+    : '';
+  return isTrustedYouTubeArtworkUrl(url) ? url : '';
+}
+
 // ============================================================================
 // 7.1. SPAM / AI CONTENT FARM / NONSTOP MIXTAPE FILTER
 // ============================================================================
@@ -1448,6 +1481,74 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
       cached: false
     };
     res.status(503).json(unavailablePayload);
+  }
+});
+
+// 10.4.1. YouTube Music artist portraits for Radio cards
+apiRouter.post('/artist-artwork/resolve', rateLimit({ maxRequests: 12, windowMs: 60000, endpointName: 'artist-artwork' }), async (req, res) => {
+  const incomingArtists = req.body?.artists;
+  if (!Array.isArray(incomingArtists) || incomingArtists.length === 0) {
+    return res.status(400).json({ success: false, error: 'artists must be a non-empty array.' });
+  }
+  if (incomingArtists.length > 48) {
+    return res.status(400).json({ success: false, error: 'At most 48 artists can be resolved per request.' });
+  }
+
+  const requestedArtists = new Map();
+  incomingArtists.forEach(value => {
+    if (typeof value !== 'string') return;
+    const name = value.replace(/\s+/g, ' ').trim().slice(0, 80);
+    const key = normalizeForComparison(name);
+    if (key.length >= 2 && !requestedArtists.has(key)) requestedArtists.set(key, name);
+  });
+
+  if (!requestedArtists.size) {
+    return res.status(400).json({ success: false, error: 'No valid artist names were provided.' });
+  }
+
+  try {
+    const resolved = new Map();
+    const pending = [];
+    for (const [key, name] of requestedArtists) {
+      const cached = artistArtworkCache.get(key);
+      if (cached !== null) resolved.set(key, cached);
+      else pending.push({ key, name });
+    }
+
+    if (pending.length) {
+      const ytSearch = await getSearchClient();
+      let cursor = 0;
+      const workerCount = Math.min(4, pending.length);
+      await Promise.all(Array.from({ length: workerCount }, async () => {
+        while (cursor < pending.length) {
+          const current = pending[cursor++];
+          try {
+            const searchResult = await ytSearch.music.search(current.name, { type: 'artist' });
+            const rows = searchResult?.artists?.contents || [];
+            const exactArtist = rows.find(row =>
+              normalizeForComparison(getYouTubeMusicArtistResultName(row)) === current.key
+            );
+            const thumbnail = exactArtist ? getYouTubeMusicArtistResultThumbnail(exactArtist) : '';
+            resolved.set(current.key, thumbnail);
+            artistArtworkCache.set(current.key, thumbnail, thumbnail ? undefined : 10 * 60 * 1000);
+          } catch (error) {
+            console.warn(`[Radio Artist Artwork Warning] ${current.name}:`, error.message);
+            resolved.set(current.key, '');
+          }
+        }
+      }));
+    }
+
+    res.json({
+      success: true,
+      artists: [...requestedArtists].map(([key, name]) => ({
+        name,
+        artistThumbnail: resolved.get(key) || ''
+      }))
+    });
+  } catch (error) {
+    console.warn('[Radio Artist Artwork Source Unavailable]:', error.message);
+    res.status(503).json({ success: false, error: 'YouTube Music artist images are temporarily unavailable.' });
   }
 });
 

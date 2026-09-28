@@ -4734,6 +4734,79 @@
     return companions;
   }
 
+  const radioArtistArtworkCache = new Map();
+  const radioArtistArtworkPending = new Set();
+  const radioArtistArtworkAttemptAt = new Map();
+
+  function applyRadioArtistArtwork(key, thumbnail) {
+    if (!dom.discoverRadioRow || !isYoutubeArtworkUrl(thumbnail)) return;
+    const placeholders = [...dom.discoverRadioRow.querySelectorAll('.discover-radio-monogram[data-radio-artist-key]')]
+      .filter(node => node.dataset.radioArtistKey === key);
+    placeholders.forEach(placeholder => {
+      const image = document.createElement('img');
+      image.className = placeholder.className.replace(/\s*discover-radio-monogram\b/, '');
+      image.alt = '';
+      image.loading = 'lazy';
+      image.dataset.radioArtistKey = key;
+      image.setAttribute('aria-hidden', 'true');
+      image.addEventListener('error', () => {
+        radioArtistArtworkCache.set(key, '');
+        const fallback = document.createElement('span');
+        fallback.className = `${image.className} discover-radio-monogram`;
+        fallback.textContent = placeholder.textContent;
+        fallback.dataset.radioArtistKey = key;
+        image.replaceWith(fallback);
+      }, { once: true });
+      image.src = thumbnail;
+      placeholder.replaceWith(image);
+    });
+  }
+
+  function requestRadioArtistArtwork(candidates) {
+    const now = Date.now();
+    const requested = new Map();
+    (candidates || []).forEach(candidate => {
+      const key = candidate?.key || normalizeDiscoverArtist(candidate?.name);
+      if (!key || getRadioCandidateThumbnail(candidate) || radioArtistArtworkPending.has(key)) return;
+      if (radioArtistArtworkCache.has(key) && now - (radioArtistArtworkAttemptAt.get(key) || 0) < 10 * 60 * 1000) return;
+      if (now - (radioArtistArtworkAttemptAt.get(key) || 0) < 5 * 60 * 1000) return;
+      radioArtistArtworkCache.delete(key);
+      requested.set(key, String(candidate?.name || '').trim());
+    });
+
+    const batch = [...requested].filter(([, name]) => name).slice(0, 48);
+    if (!batch.length) return;
+    batch.forEach(([key]) => {
+      radioArtistArtworkPending.add(key);
+      radioArtistArtworkAttemptAt.set(key, now);
+    });
+
+    fetch('/api/artist-artwork/resolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ artists: batch.map(([, name]) => name) })
+    })
+      .then(async response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then(payload => {
+        if (!payload?.success || !Array.isArray(payload.artists)) return;
+        const results = new Map(payload.artists.map(item => [
+          normalizeDiscoverArtist(item?.name),
+          isYoutubeArtworkUrl(item?.artistThumbnail) ? String(item.artistThumbnail) : ''
+        ]));
+        batch.forEach(([key]) => {
+          if (!results.has(key)) return;
+          const thumbnail = results.get(key);
+          radioArtistArtworkCache.set(key, thumbnail);
+          if (thumbnail) applyRadioArtistArtwork(key, thumbnail);
+        });
+      })
+      .catch(() => {})
+      .finally(() => batch.forEach(([key]) => radioArtistArtworkPending.delete(key)));
+  }
+
   function getRadioCandidateArtworkData(candidate) {
     const artistKey = candidate?.key || normalizeDiscoverArtist(candidate?.name);
     const metadataTrack = (candidate?.tracks || []).find(item => {
@@ -4755,7 +4828,8 @@
   function getRadioCandidateThumbnail(candidate) {
     const artworkData = getRadioCandidateArtworkData(candidate);
     const resolved = getResolvedDiscoverArtwork('artist', artworkData);
-    const thumbnail = resolved?.artistThumbnail || resolved?.thumbnail || '';
+    const artistKey = candidate?.key || normalizeDiscoverArtist(candidate?.name);
+    const thumbnail = resolved?.artistThumbnail || resolved?.thumbnail || radioArtistArtworkCache.get(artistKey) || '';
     return thumbnail ? upgradeThumbnailUrl(thumbnail) : '';
   }
 
@@ -4857,8 +4931,10 @@
       dom.discoverRadioCaption.textContent = 'Bảng xếp hạng YouTube Music theo khu vực kết hợp gu nghe của bạn.';
     }
     dom.discoverRadioRow.innerHTML = '';
+    const artworkCandidates = [];
     finalCardData.forEach(({ primary, supports }, index) => {
       const faces = [supports[0]?.candidate, primary, supports[1]?.candidate].filter(Boolean);
+      artworkCandidates.push(...faces);
       const companions = supports.map(item => item.candidate.name);
       const card = document.createElement('button');
       card.type = 'button';
@@ -4873,7 +4949,7 @@
               const faceClass = `discover-radio-face discover-radio-face-${imageIndex + 1}`;
               return imageUrl
                 ? `<img class="${faceClass}" src="${escapeHtml(imageUrl)}" alt="" loading="lazy">`
-                : `<span class="${faceClass} discover-radio-monogram">${escapeHtml(getRadioArtistInitials(artist))}</span>`;
+                : `<span class="${faceClass} discover-radio-monogram" data-radio-artist-key="${escapeHtml(artist.key || normalizeDiscoverArtist(artist.name))}">${escapeHtml(getRadioArtistInitials(artist))}</span>`;
             }).join('')}
           </span>
           <strong>${escapeHtml(primary.name)}</strong>
@@ -4894,6 +4970,7 @@
       cardShell.appendChild(card);
       dom.discoverRadioRow.appendChild(cardShell);
     });
+    requestRadioArtistArtwork(artworkCandidates);
   }
 
   function renderDiscoverRecentList() {
