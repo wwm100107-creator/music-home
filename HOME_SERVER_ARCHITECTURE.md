@@ -73,14 +73,6 @@
   - Nếu có commit mới: tự động `git pull`, kiểm tra và cài đặt `npm install` nếu `package.json` thay đổi, sau đó tự khởi động lại `server.js` trong 1 giây.
   - Tích hợp Watchdog tự động phục hồi nếu `server.js` bị dừng ngầm.
 
-### 3.3. Khóa API cho Radio phổ biến
-* Mục Radio phổ biến có thể lấy cụm nghệ sĩ tương tự từ Last.fm bằng `LASTFM_API_KEY`.
-* Trên Termux, lưu key vào `~/music-home/.env` (tệp này đã được `.gitignore` bỏ qua):
-  ```env
-  LASTFM_API_KEY=your_lastfm_api_key
-  ```
-* Tạo key tại [Last.fm API](https://www.last.fm/api/account/create). Khởi động lại `server.js` sau khi lưu; `auto-sync.sh` sẽ giữ nguyên `.env` khi kéo cập nhật từ GitHub.
-
 ---
 
 ## 4. Các Lệnh Vận hành trên Máy chủ Android (Termux Cheat Sheet)

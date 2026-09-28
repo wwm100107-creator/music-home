@@ -46,23 +46,10 @@ Trình phát nhạc trên trình duyệt lấy cảm hứng từ khung cảnh th
 5. **Chọn bài lặp Hạt Dẻ**: Bấm phím `L` hoặc nút Loop cho đến khi hiện biểu tượng hạt dẻ `🌰`, sau đó tích vào các bài hát bạn muốn lặp.
 
 ### Nguồn cho mục “Radio phổ biến”
-- Nghệ sĩ chính được lấy từ bảng xếp hạng theo khu vực; cụm nghệ sĩ liên quan lấy từ Last.fm `artist.getSimilar`; lượt nghe và bài yêu thích trên thiết bị giúp cá nhân hóa thứ tự.
-- Để bật dữ liệu nghệ sĩ tương tự, tạo API key tại [Last.fm API](https://www.last.fm/api/account/create), rồi điền vào `.env` ở thư mục gốc:
-  ```env
-  LASTFM_API_KEY=your_lastfm_api_key
-  ```
-- Trên máy chủ Termux, tạo/sửa `~/music-home/.env` một lần. Tệp `.env` đã được Git bỏ qua nên auto-sync không ghi đè và key không bị đẩy lên GitHub. Khởi động lại `server.js` sau khi thêm key.
-- Khi chưa có key, mục này vẫn dùng bảng xếp hạng và gu nghe cục bộ; các nghệ sĩ liên quan từ Last.fm sẽ chưa xuất hiện. Mỗi thẻ có liên kết nguồn “Powered by AudioScrobbler”.
+- Nghệ sĩ được xếp hạng từ bảng nhạc YouTube Music theo khu vực, lượt nghe và bài yêu thích trên thiết bị. Không cần API key bên ngoài.
 
 ### Nguồn ảnh nghệ sĩ và album
-- Các nguồn nhạc hiện có (YouTube Music/YouTube, iTunes dự phòng và dữ liệu nghệ sĩ liên quan từ Last.fm) tiếp tục quyết định bài hát, nghệ sĩ và thứ hạng. `ArtworkResolver` chỉ tìm ảnh sau khi hệ thống đã chọn mục nhạc; ảnh không ảnh hưởng đề xuất. Nếu thiếu ảnh, mục nhạc vẫn giữ nguyên và thẻ nghệ sĩ hiện chữ cái đại diện.
-- `ArtworkResolver` ưu tiên thumbnail YouTube Music. Nếu thiếu ảnh, nó tìm MusicBrainz ID theo tên nghệ sĩ hoặc tên album + nghệ sĩ; ảnh bìa album được tìm trong Cover Art Archive rồi mới thử Fanart.tv. Fanart.tv cần MusicBrainz ID, không tìm trực tiếp theo tên.
-- Để bật Fanart.tv, tạo API key rồi thêm các biến này vào `.env`. `FANART_CLIENT_KEY` là tùy chọn:
-  ```env
-  FANART_API_KEY=your_fanart_api_key
-  FANART_CLIENT_KEY=
-  ```
-- Fanart.tv trả về URL ảnh gốc; giao diện dùng biến thể `/bigpreview/` (tối đa 400 px) để tải ảnh thẻ nhẹ hơn. Không có key hoặc không tìm thấy ảnh thì dùng thumbnail nguồn, sau đó mới dùng ảnh nền trung tính.
+- Ảnh bìa bài hát/album và ảnh nghệ sĩ chỉ dùng thumbnail do YouTube hoặc YouTube Music cung cấp. Nếu không có ảnh nghệ sĩ phù hợp, thẻ dùng chữ viết tắt; ảnh không ảnh hưởng thứ hạng đề xuất.
 - Mục **Album và đĩa đơn phổ biến** gom các bản phát hành có ID từ bảng nhạc khu vực hiện tại, tính độ nổi bật, loại bản trùng và giới hạn một bản phát hành mỗi nghệ sĩ trước khi hiển thị.
 
 ---

@@ -6,7 +6,6 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'url';
 import { Innertube, ClientType, UniversalCache, Platform } from 'youtubei.js';
 import { parse as parseYaml } from 'yaml';
-import ArtworkResolver from './artwork-resolver.js';
 
 // Setup high-performance JavaScript evaluator for Innertube deciphering
 if (Platform && Platform.shim) {
@@ -251,7 +250,6 @@ class BoundedCache {
 const searchCache = new BoundedCache(300, 30 * 60 * 1000);
 const streamCache = new BoundedCache(300, 45 * 60 * 1000);
 const trendingCache = new BoundedCache(50, 60 * 60 * 1000);
-const radioRelatedCache = new BoundedCache(250, 12 * 60 * 60 * 1000);
 const albumCache = new BoundedCache(80, 60 * 60 * 1000);
 const lyricsCache = new BoundedCache(300, 60 * 60 * 1000);
 const LRCLIB_HEADERS = {
@@ -1450,149 +1448,6 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
       cached: false
     };
     res.status(503).json(unavailablePayload);
-  }
-});
-
-function getPrivateEnvValue(name) {
-  const environmentValue = String(process.env[name] || '').trim();
-  if (environmentValue) return environmentValue;
-
-  const escapedName = String(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  try {
-    const envContents = fs.readFileSync(path.join(__dirname, '.env'), 'utf8');
-    const line = envContents.split(/\r?\n/).find(item => new RegExp(`^\\s*${escapedName}\\s*=`).test(item));
-    if (!line) return '';
-    let value = line.slice(line.indexOf('=') + 1).trim().replace(/\s+#.*$/, '');
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
-    return value.trim();
-  } catch {
-    return '';
-  }
-}
-
-function getLastFmApiKey() {
-  return getPrivateEnvValue('LASTFM_API_KEY');
-}
-
-const artworkResolver = new ArtworkResolver({
-  getFanartApiKey: () => getPrivateEnvValue('FANART_API_KEY'),
-  getFanartClientKey: () => getPrivateEnvValue('FANART_CLIENT_KEY')
-});
-
-/**
- * @route POST /api/artwork/resolve
- * @body items - Array of 1-24 artist/release records
- * @returns 200 Resolved artwork records, in request order
- * @returns 400 Invalid or empty artwork batch
- * @returns 502 Artwork providers are temporarily unavailable
- */
-apiRouter.post('/artwork/resolve', rateLimit({ maxRequests: 40, windowMs: 60000, endpointName: 'artwork-resolve' }), async (req, res) => {
-  const items = req.body?.items;
-  if (!Array.isArray(items) || items.length < 1 || items.length > 24 ||
-      items.some(item => !item || !['artist', 'release'].includes(item.kind))) {
-    return res.status(400).json({ success: false, error: 'Artwork batch must contain 1 to 24 artist or release items.' });
-  }
-
-  const safeItems = items.map(item => {
-    const source = String(item.source || 'unknown').slice(0, 40);
-    const normalized = normalizeMusicMetadata(item, source);
-    return {
-      ...normalized,
-      kind: item.kind,
-      artist: String(item.artist || normalized.primaryArtist).slice(0, 120),
-      primaryArtist: String(item.primaryArtist || item.artist || normalized.primaryArtist).slice(0, 120),
-      title: String(item.title || '').slice(0, 180),
-      artistId: String(item.artistId || '').slice(0, 64),
-      releaseId: String(item.releaseId || '').slice(0, 64),
-      thumbnail: item.kind === 'artist' ? '' : String(item.thumbnail || '').slice(0, 2000),
-      artistThumbnail: String(item.artistThumbnail || '').slice(0, 2000),
-      sourceThumbnail: String(item.sourceThumbnail || '').slice(0, 2000)
-    };
-  });
-
-  try {
-    const results = await Promise.all(safeItems.map(item => artworkResolver.resolve(item)));
-    res.json({ success: true, results });
-  } catch (error) {
-    console.warn('[Artwork Resolver Warning]:', error?.message || error);
-    res.status(502).json({ success: false, error: 'Artwork providers are temporarily unavailable.' });
-  }
-});
-
-// 10.4. Related artists for popular radio clusters (Last.fm similarity data)
-apiRouter.get('/radio-related', rateLimit({ maxRequests: 20, windowMs: 60000, endpointName: 'radio-related' }), async (req, res) => {
-  const artist = String(req.query.artist || '').trim().replace(/\s+/g, ' ');
-  if (!artist || artist.length > 100 || /[\u0000-\u001f\u007f]/.test(artist)) {
-    return res.status(400).json({ error: 'Invalid artist name' });
-  }
-
-  const apiKey = getLastFmApiKey();
-  if (!apiKey) {
-    return res.json({ success: true, configured: false, provider: 'Last.fm', results: [] });
-  }
-
-  const cacheKey = artist.toLocaleLowerCase('en-US');
-  const cached = radioRelatedCache.get(cacheKey);
-  if (cached) return res.json({ ...cached, cached: true });
-
-  try {
-    const params = new URLSearchParams({
-      method: 'artist.getsimilar',
-      artist,
-      autocorrect: '1',
-      limit: '18',
-      api_key: apiKey,
-      format: 'json'
-    });
-    const response = await fetch(`https://ws.audioscrobbler.com/2.0/?${params}`, {
-      headers: { 'User-Agent': 'MusicHome/1.0 (https://github.com/wwm100107-creator/music-home)' },
-      signal: AbortSignal.timeout(8000)
-    });
-    const responseText = await response.text();
-    let data = null;
-    try {
-      data = JSON.parse(responseText);
-    } catch {
-      // Keep provider diagnostics useful without logging an HTML error page or request URL.
-    }
-
-    if (!response.ok) {
-      const errorCode = Number.isFinite(Number(data?.error)) ? ` (error ${data.error})` : '';
-      const errorMessage = String(data?.message || '')
-        .split(apiKey).join('[redacted]')
-        .replace(/[\r\n\t]+/g, ' ')
-        .slice(0, 240);
-      const detail = errorMessage ? `: ${errorMessage}` : ' (no JSON error details)';
-      throw Object.assign(new Error(`Last.fm responded with ${response.status}${errorCode}${detail}`), { status: response.status });
-    }
-    if (!data) throw new Error('Last.fm returned a non-JSON response');
-    if (data?.error) throw Object.assign(new Error(String(data.message || 'Last.fm request failed')), { status: 502 });
-    const rawArtists = data?.similarartists?.artist;
-    const similarArtists = Array.isArray(rawArtists) ? rawArtists : (rawArtists ? [rawArtists] : []);
-    const results = similarArtists.flatMap((item, index) => {
-      const name = String(item?.name || '').trim();
-      if (!name || name.length > 100) return [];
-      const image = Array.isArray(item?.image)
-        ? item.image.map(entry => String(entry?.['#text'] || '').trim()).filter(Boolean).at(-1) || ''
-        : '';
-      const match = Math.min(1, Math.max(0, Number(item?.match) || 0));
-      return [{
-        name,
-        match,
-        rank: index + 1,
-        mbid: String(item?.mbid || ''),
-        url: String(item?.url || ''),
-        image: image.replace(/^http:\/\//i, 'https://')
-      }];
-    });
-    const payload = { success: true, configured: true, provider: 'Last.fm', results };
-    radioRelatedCache.set(cacheKey, payload);
-    return res.json(payload);
-  } catch (error) {
-    console.warn('[Radio Related Warning]:', error?.message || error);
-    return res.status(503).json({ success: false, configured: true, provider: 'Last.fm', error: 'Related artists are temporarily unavailable', results: [] });
   }
 });
 

@@ -175,9 +175,6 @@
     activeGenre: 'all',
     trendingTracks: [],
     globalTrendingTracks: [],
-    radioArtistDiscoveryTracks: [],
-    lastFmRadioConfigured: null,
-    lastFmRadioUnavailable: false,
     selectedCountryName: 'Vietnam',
     recentTracks: (() => {
       try {
@@ -4371,64 +4368,37 @@
     regionalRelevance: 0.05,
     discoveryValue: 0.05
   });
-  const RADIO_SIMILARITY_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-  const radioArtistDiscoveryCache = new Map();
-  const discoverArtworkCache = new Map();
-  const discoverArtworkPending = new Set();
   let lastRadioDiagnosticsSnapshot = '';
 
-  function getDiscoverArtworkKey(kind, item = {}) {
-    if (kind === 'artist') {
-      const artistId = String(item.artistId || item.mbid || item._radioMbid || '').trim();
-      return `artist:${artistId || normalizeDiscoverArtist(item.artist || item.primaryArtist || item.name)}`;
+  function isYoutubeArtworkUrl(value) {
+    try {
+      const url = new URL(String(value || '').trim());
+      if (url.protocol !== 'https:') return false;
+      const host = url.hostname.toLocaleLowerCase();
+      return ['ytimg.com', 'ggpht.com', 'googleusercontent.com'].some(domain =>
+        host === domain || host.endsWith('.' + domain)
+      );
+    } catch {
+      return false;
     }
-    const stableId = String(item.releaseId || item.albumId || item.id || '').trim();
-    return `release:${stableId || `${normalizeDiscoverArtist(item.title)}|${normalizeDiscoverArtist(item.artist || item.primaryArtist)}`}`;
   }
 
-  function getResolvedDiscoverArtwork(kind, item) {
-    const cached = discoverArtworkCache.get(getDiscoverArtworkKey(kind, item));
-    if (!cached || cached.expiresAt <= Date.now()) return null;
-    return cached.value;
-  }
-
-  function requestDiscoverArtwork(kind, items, onResolved) {
-    const unique = new Map();
-    (items || []).forEach(item => {
-      if (!item) return;
-      const key = getDiscoverArtworkKey(kind, item);
-      const cached = discoverArtworkCache.get(key);
-      if (!key.endsWith(':') && (!cached || cached.expiresAt <= Date.now()) && !discoverArtworkPending.has(key)) {
-        unique.set(key, { ...item, kind });
-      }
-    });
-    const requests = [...unique.entries()];
-    if (!requests.length) return;
-
-    // Keep batches small so the MusicBrainz throttle can return partial artwork promptly.
-    for (let offset = 0; offset < requests.length; offset += 8) {
-      const batch = requests.slice(offset, offset + 8);
-      batch.forEach(([key]) => discoverArtworkPending.add(key));
-      fetch('/api/artwork/resolve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: batch.map(([, item]) => item) })
-      }).then(async response => {
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok || !Array.isArray(payload.results)) throw new Error(payload.error || 'Artwork lookup failed');
-        payload.results.forEach((result, index) => {
-          const [key] = batch[index] || [];
-          if (!key || !result) return;
-          discoverArtworkCache.set(key, {
-            value: result,
-            expiresAt: Date.now() + (result.thumbnail || result.artistThumbnail ? 24 * 60 * 60 * 1000 : 5 * 60 * 1000)
-          });
-        });
-        onResolved?.();
-      }).catch(error => {
-        console.warn(`[Artwork Resolver] ${kind} lookup unavailable:`, error?.message || error);
-      }).finally(() => batch.forEach(([key]) => discoverArtworkPending.delete(key)));
-    }
+  function getResolvedDiscoverArtwork(kind, item = {}) {
+    const candidates = kind === 'artist'
+      ? [item.artistThumbnail, item.sourceThumbnail]
+      : [item.albumThumbnail, item.thumbnail, item.sourceThumbnail];
+    const thumbnail = candidates.map(value => String(value || '').trim()).find(isYoutubeArtworkUrl) || '';
+    const source = String(item.source || '').toLocaleLowerCase();
+    return {
+      kind,
+      title: String(item.title || ''),
+      artistId: String(item.artistId || ''),
+      releaseId: String(item.releaseId || ''),
+      albumId: String(item.albumId || item.id || ''),
+      thumbnail: kind === 'artist' ? '' : thumbnail,
+      artistThumbnail: kind === 'artist' ? thumbnail : '',
+      artworkSource: thumbnail ? (source.includes('youtube-music') ? 'youtube-music' : 'youtube') : 'neutral-fallback'
+    };
   }
 
   function splitRadioArtistCredits(value) {
@@ -4460,95 +4430,6 @@
 
   function getRadioTrackGenres(track) {
     return getRecommendationTrackGenres(track);
-  }
-
-  function refreshRadioArtistDiscoveryTracks() {
-    const country = state.selectedCountry || 'VN';
-    const profile = getRecommendationTasteProfile();
-    const addSeed = (items, artist) => {
-      const name = String(artist || '').trim();
-      const key = normalizeDiscoverArtist(name);
-      if (!name || !key || items.some(seed => seed.key === key)) return;
-      items.push({ artist: name, key });
-    };
-    const regionalSeeds = [];
-    const globalSeeds = [];
-    const personalSeeds = [];
-    (state.trendingTracks || []).slice(0, 30).forEach(track => addSeed(regionalSeeds, getRadioArtistNames(track)[0]));
-    (state.globalTrendingTracks || []).slice(0, 20).forEach(track => addSeed(globalSeeds, getRadioArtistNames(track)[0]));
-    (profile.favoriteArtistNames || []).forEach(artist => addSeed(personalSeeds, artist));
-    profile.listenedTracks.slice().sort((a, b) => (b._lastListenedAt || 0) - (a._lastListenedAt || 0))
-      .forEach(track => addSeed(personalSeeds, getRadioArtistNames(track)[0]));
-
-    // Charts keep this shelf regional; saved and recently played artists add
-    // a small personal signal without letting listening history dominate it.
-    const selectedSeeds = [];
-    [...regionalSeeds.slice(0, 5), ...personalSeeds.slice(0, 2), ...globalSeeds.slice(0, 8), ...regionalSeeds.slice(5, 8)]
-      .forEach(seed => addSeed(selectedSeeds, seed.artist));
-    selectedSeeds.splice(8);
-    if (!selectedSeeds.length) return;
-
-    const cacheKey = `${country}|${selectedSeeds.map(seed => seed.key).join('|')}`;
-    const cached = radioArtistDiscoveryCache.get(cacheKey);
-    if (cached?.promise) return cached.promise;
-    if (cached && Date.now() - cached.loadedAt < RADIO_SIMILARITY_CACHE_TTL_MS) {
-      state.radioArtistDiscoveryTracks = cached.tracks;
-      state.lastFmRadioConfigured = cached.configured;
-      state.lastFmRadioUnavailable = cached.unavailable;
-      return;
-    }
-
-    const entry = { loadedAt: 0, tracks: [], configured: null, unavailable: false, promise: null };
-    radioArtistDiscoveryCache.set(cacheKey, entry);
-    while (radioArtistDiscoveryCache.size > 6) {
-      radioArtistDiscoveryCache.delete(radioArtistDiscoveryCache.keys().next().value);
-    }
-
-    entry.promise = Promise.allSettled(selectedSeeds.map(async seed => {
-      const params = new URLSearchParams({ artist: seed.artist });
-      const response = await fetch(`/api/radio-related?${params.toString()}`);
-      const data = await response.json().catch(() => ({}));
-      if (typeof data.configured === 'boolean') entry.configured = data.configured;
-      if (!response.ok || data.success === false) {
-        entry.unavailable = true;
-        return [];
-      }
-      return (Array.isArray(data.results) ? data.results : []).map((similarArtist, index) => {
-        const name = String(similarArtist?.name || '').trim();
-        const key = normalizeDiscoverArtist(name);
-        const similarity = Number(similarArtist?.match);
-        if (!name || !key || key === seed.key || !Number.isFinite(similarity) || similarity <= 0) return null;
-        const safeProfileUrl = /^https:\/\/www\.last\.fm\/music\//i.test(similarArtist.url || '')
-          ? similarArtist.url
-          : `https://www.last.fm/music/${encodeURIComponent(name)}`;
-        return {
-          id: `lastfm-artist:${seed.key}:${similarArtist.mbid || key}`,
-          title: `Radio • ${name}`,
-          artist: name,
-          artists: [name],
-          thumbnail: String(similarArtist.image || ''),
-          _radioMbid: String(similarArtist.mbid || ''),
-          rank: Number(similarArtist.rank) || index + 1,
-          _radioRelatedSeed: seed.artist,
-          _radioSimilarity: Math.min(1, similarity),
-          _radioProfileUrl: safeProfileUrl
-        };
-      }).filter(Boolean);
-    })).then(results => {
-      entry.tracks = uniqueTracksById(results.flatMap(result => result.status === 'fulfilled' ? result.value : []));
-      entry.loadedAt = Date.now();
-      if (state.selectedCountry === country) {
-        state.radioArtistDiscoveryTracks = entry.tracks;
-        state.lastFmRadioConfigured = entry.configured;
-        state.lastFmRadioUnavailable = entry.unavailable;
-        renderDiscoverRadioRow();
-      }
-    }).catch(error => {
-      console.warn('[Radio Phổ Biến] Related-artist discovery source unavailable:', error?.message || error);
-    }).finally(() => {
-      entry.promise = null;
-    });
-    return entry.promise;
   }
 
   function radioGenreSimilarity(left, right) {
@@ -4607,7 +4488,7 @@
       names.forEach((name, artistIndex) => {
         const key = normalizeDiscoverArtist(name);
         if (!key || key.length < 2 || ['unknown artist', 'various artists', 'artist'].includes(key)) return;
-        const artistId = String(track.artistId || track._radioMbid || '').trim().toLocaleLowerCase();
+        const artistId = String(track.artistId || '').trim().toLocaleLowerCase();
         const identityKey = artistId || key;
         const candidate = candidates.get(identityKey) || candidates.get(key) || {
           key,
@@ -4626,17 +4507,11 @@
           relevanceScore: 0,
           chartTrackCount: 0
         };
-        if (source === 'relatedDiscovery' && track._radioProfileUrl) {
-          candidate.lastFmUrl = String(track._radioProfileUrl);
-        }
-        if (!candidate.artistId && (track.artistId || track._radioMbid)) {
-          candidate.artistId = String(track.artistId || track._radioMbid);
+        if (!candidate.artistId && track.artistId) {
+          candidate.artistId = String(track.artistId);
         }
         const artistCreditPenalty = 1 / (artistIndex + 1);
-        const sourceMatch = source === 'relatedDiscovery'
-          ? Math.max(0.15, Math.min(1, Number(track._radioSimilarity) || 0))
-          : 1;
-        candidate.sourceScores[source] = Math.max(candidate.sourceScores[source] || 0, rankSignal * sourceMatch * artistCreditPenalty);
+        candidate.sourceScores[source] = Math.max(candidate.sourceScores[source] || 0, rankSignal * artistCreditPenalty);
         if (source === 'regional') candidate.regionalRanks.push(rank);
         if (source === 'global') candidate.globalRanks.push(rank);
         if (source === 'album' && year) candidate.albumYears.push(year);
@@ -4654,18 +4529,10 @@
       if (names.length > 1) {
         names.forEach((name, nameIndex) => names.slice(nameIndex + 1).forEach(otherName => addRelationship(name, otherName, 0.9)));
       }
-      if (source === 'relatedDiscovery' && track._radioRelatedSeed) {
-        const similarity = Number(track._radioSimilarity);
-        const relationshipScore = Number.isFinite(similarity) && similarity > 0
-          ? Math.min(0.95, Math.max(0.08, similarity))
-          : 0.32;
-        names.forEach(name => addRelationship(track._radioRelatedSeed, name, relationshipScore));
-      }
     };
 
     const regionalTracks = state.trendingTracks || [];
     const globalTracks = state.globalTrendingTracks || [];
-    const relatedArtistTracks = state.radioArtistDiscoveryTracks || [];
     const recentListenTracks = profile.listenedTracks.filter(track => {
       const ageDays = track._lastListenedAt ? Math.max(0, (Date.now() - track._lastListenedAt) / 86400000) : 365;
       return ageDays <= 90;
@@ -4673,7 +4540,6 @@
     const sourceGroups = [
       { name: 'regional', tracks: regionalTracks },
       { name: 'global', tracks: globalTracks },
-      { name: 'relatedDiscovery', tracks: relatedArtistTracks },
       { name: 'listener', tracks: recentListenTracks },
       { name: 'favorite', tracks: state.favorites || [] }
     ];
@@ -4732,14 +4598,12 @@
       const globalRank = Math.min(...candidate.globalRanks, Infinity);
       const regionalSignal = Number.isFinite(regionalRank) ? 1 / Math.pow(regionalRank, 0.58) : 0;
       const globalSignal = Number.isFinite(globalRank) ? 1 / Math.pow(globalRank, 0.58) : 0;
-      const relatedSignal = candidate.sourceScores.relatedDiscovery || 0;
       const latestAlbumYear = Math.max(0, ...candidate.albumYears);
       const freshness = latestAlbumYear
         ? Math.exp(-Math.max(0, currentYear - latestAlbumYear) / 5)
-        : (regionalSignal || globalSignal ? 0.72 : (relatedSignal ? 0.66 : 0.42));
+        : (regionalSignal || globalSignal ? 0.72 : 0.42);
       const recentPopularity = Math.min(1, Math.max(
         regionalSignal * 0.58 + globalSignal * 0.18,
-        relatedSignal * 0.7,
         candidate.sourceScores.listener ? Math.exp(-Math.max(0, (Date.now() - (candidate.tracks.find(item => item.source === 'listener')?.track._lastListenedAt || 0)) / 86400000) / 30) * 0.45 : 0
       ));
       const recentArtist = profile.recentArtistScores.get(candidate.key) || 0;
@@ -4759,14 +4623,14 @@
           ? Math.min(1, ((profile.recentGenreScores.get(genre) || 0) + (profile.favoriteGenreScores.get(genre) || 0) * 1.4) / maximumGenreScore)
           : (favoriteGenreKeys.has(genre) ? 1 : 0.35)))
         : 0.35;
-      const regionalRelevance = regionalSignal ? 1 : (globalSignal ? 0.32 : (relatedSignal ? 0.68 : 0.28));
+      const regionalRelevance = regionalSignal ? 1 : (globalSignal ? 0.32 : 0.28);
       const exposureCount = exposure.get(candidate.key) || 0;
       const discoveryValue = Math.max(0, Math.min(1,
         0.45 * (1 - Math.min(1, exposureCount / 4)) +
         0.35 * freshness +
         0.2 * (candidate.chartTrackCount <= 1 ? 1 : 1 / Math.sqrt(candidate.chartTrackCount))
       ));
-      const trendScore = Math.min(1, Math.max(regionalSignal, globalSignal * 0.82, relatedSignal * 0.68));
+      const trendScore = Math.min(1, Math.max(regionalSignal, globalSignal * 0.82));
       const scoreParts = {
         trendScore,
         recentPopularity,
@@ -4780,7 +4644,7 @@
       candidate.scoreParts = scoreParts;
       candidate.relevanceScore = Object.entries(RADIO_RECOMMENDATION_WEIGHTS)
         .reduce((score, [key, weight]) => score + scoreParts[key] * weight, 0);
-      candidate.isExploration = !regionalSignal && (globalSignal > 0 || relatedSignal > 0);
+      candidate.isExploration = !regionalSignal && globalSignal > 0;
       return candidate;
     }).filter(candidate => candidate.name && candidate.relevanceScore > 0);
 
@@ -4877,23 +4741,13 @@
       const primaryArtist = normalizeDiscoverArtist(item.track.primaryArtist || item.track.artist || item.track.artists?.[0]);
       return primaryArtist === artistKey;
     });
-    // Last.fm's artist.getSimilar image belongs to the related artist itself and
-    // is stored as `thumbnail`; it is safe to use only for relatedDiscovery rows
-    // whose artist credit matches this candidate. Never treat a song cover as a
-    // portrait for regional chart tracks.
-    const relatedArtistTrack = (candidate?.tracks || []).find(item => {
-      if (item.source !== 'relatedDiscovery' || !item.track?.thumbnail) return false;
-      const imageUrl = String(item.track.thumbnail).trim();
-      if (!/^https:\/\//i.test(imageUrl) || /2a96cbd8b46e442fc41c2b86b821562f/i.test(imageUrl)) return false;
-      return getRadioArtistNames(item.track).some(name => normalizeDiscoverArtist(name) === artistKey);
-    });
     return {
       kind: 'artist',
       artist: candidate?.name || '',
       primaryArtist: candidate?.name || '',
-      artistId: relatedArtistTrack?.track?._radioMbid || candidate?.artistId || '',
-      artistThumbnail: metadataTrack?.track?.artistThumbnail || relatedArtistTrack?.track?.thumbnail || '',
-      source: relatedArtistTrack && !metadataTrack ? 'lastfm' : 'youtube-music',
+      artistId: candidate?.artistId || '',
+      artistThumbnail: metadataTrack?.track?.artistThumbnail || '',
+      source: metadataTrack?.track?.source || 'youtube-music',
       sourceThumbnail: ''
     };
   }
@@ -4921,7 +4775,7 @@
   function logRadioRecommendationDiagnostics(pipeline, selected, cardData) {
     const artworkSnapshot = cardData.map(card => {
       const faces = [card.supports[0]?.candidate, card.primary, card.supports[1]?.candidate].filter(Boolean);
-      return faces.map(candidate => getResolvedDiscoverArtwork('artist', getRadioCandidateArtworkData(candidate))?.artworkSource || 'pending').join(',');
+      return faces.map(candidate => getResolvedDiscoverArtwork('artist', getRadioCandidateArtworkData(candidate)).artworkSource).join(',');
     }).join('|');
     const diagnosticSnapshot = `${pipeline.snapshot}|${artworkSnapshot}`;
     if (diagnosticSnapshot === lastRadioDiagnosticsSnapshot) return;
@@ -4948,9 +4802,9 @@
         rankingScore: Number(selection.finalScore.toFixed(3)),
         artistId: selection.candidate.artistId || '',
         albumId: '',
-        artworkSource: getResolvedDiscoverArtwork('artist', getRadioCandidateArtworkData(selection.candidate))?.artworkSource || 'pending',
+        artworkSource: getResolvedDiscoverArtwork('artist', getRadioCandidateArtworkData(selection.candidate)).artworkSource,
         supportingArtworkSources: card.supports.map(item =>
-          getResolvedDiscoverArtwork('artist', getRadioCandidateArtworkData(item.candidate))?.artworkSource || 'pending'
+          getResolvedDiscoverArtwork('artist', getRadioCandidateArtworkData(item.candidate)).artworkSource
         ),
         primaryArtist: selection.candidate.name,
         genre: selection.candidate.genres[0] || 'chưa phân loại',
@@ -4998,19 +4852,9 @@
     const clusteredCardData = cardData.filter(card => card.supports.length > 0);
     const finalCardData = clusteredCardData.length >= 8 ? clusteredCardData : cardData;
     const finalSelected = selected.filter((_, index) => finalCardData.includes(cardData[index]));
-    const artworkRequests = finalCardData.flatMap(({ primary, supports }) =>
-      [primary, ...supports.map(item => item.candidate)].map(getRadioCandidateArtworkData)
-    );
-
     logRadioRecommendationDiagnostics(pipeline, finalSelected, finalCardData);
     if (dom.discoverRadioCaption) {
-      dom.discoverRadioCaption.textContent = state.lastFmRadioConfigured === false
-        ? 'Bảng xếp hạng khu vực và gu nghe của bạn · thêm LASTFM_API_KEY để mở rộng nghệ sĩ liên quan.'
-        : (state.lastFmRadioUnavailable
-          ? 'Last.fm đang tạm lỗi; hiện dùng bảng xếp hạng khu vực và gu nghe của bạn.'
-          : (state.lastFmRadioConfigured === true
-          ? 'Bảng xếp hạng khu vực kết hợp nghệ sĩ tương tự và gu nghe của bạn.'
-          : 'Đang kết hợp bảng xếp hạng khu vực, nghệ sĩ liên quan và gu nghe của bạn.'));
+      dom.discoverRadioCaption.textContent = 'Bảng xếp hạng YouTube Music theo khu vực kết hợp gu nghe của bạn.';
     }
     dom.discoverRadioRow.innerHTML = '';
     finalCardData.forEach(({ primary, supports }, index) => {
@@ -5048,18 +4892,8 @@
       const cardShell = document.createElement('div');
       cardShell.className = 'discover-radio-card-shell';
       cardShell.appendChild(card);
-      if (state.lastFmRadioConfigured === true) {
-        const sourceLink = document.createElement('a');
-        sourceLink.className = 'discover-radio-attribution';
-        sourceLink.href = primary.lastFmUrl || `https://www.last.fm/music/${encodeURIComponent(primary.name)}`;
-        sourceLink.target = '_blank';
-        sourceLink.rel = 'noopener noreferrer';
-        sourceLink.textContent = 'Powered by AudioScrobbler';
-        cardShell.appendChild(sourceLink);
-      }
       dom.discoverRadioRow.appendChild(cardShell);
     });
-    requestDiscoverArtwork('artist', artworkRequests, renderDiscoverRadioRow);
   }
 
   function renderDiscoverRecentList() {
@@ -5186,7 +5020,7 @@
     albums.forEach(album => {
       const artworkData = artworkRequests.find(item => String(item.albumId || item.id) === String(album.albumId || album.id));
       const artwork = getResolvedDiscoverArtwork('release', artworkData || album);
-      const imageUrl = artwork?.thumbnail || album.thumbnail || 'wood_2.jpg';
+      const imageUrl = artwork?.thumbnail || 'wood_2.jpg';
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'discover-album-card';
@@ -5207,7 +5041,6 @@
       });
       dom.discoverAlbumRow.appendChild(card);
     });
-    requestDiscoverArtwork('release', artworkRequests, renderDiscoverAlbumRow);
   }
 
   function renderDiscoverArtistRow() {
@@ -5241,7 +5074,7 @@
         rankingScore: Number(artist.adjustedScore.toFixed(3)),
         artistId: artwork?.artistId || artworkData.artistId || '',
         albumId: '',
-        artworkSource: artwork?.artworkSource || 'pending'
+        artworkSource: artwork.artworkSource
       };
     })));
     if (dom.discoverArtistsTitle) {
@@ -5282,7 +5115,6 @@
       card.addEventListener('click', () => startDiscoverRadio(artist.name));
       dom.discoverArtistRow.appendChild(card);
     });
-    requestDiscoverArtwork('artist', artworkRequests, renderDiscoverArtistRow);
   }
 
   function renderDiscoverForYouRow() {
@@ -5359,7 +5191,6 @@
 
   function refreshDiscoverSections() {
     renderDiscoverRadioRow();
-    refreshRadioArtistDiscoveryTracks();
     renderDiscoverRecentList();
     renderDiscoverChartCards();
     renderDiscoverAlbumRow();
