@@ -7805,15 +7805,16 @@ body.twilight-mode .discover-radio-attribution { color: rgba(235, 244, 232, 0.55
   width: 100%;
   aspect-ratio: 1 / 0.94;
   overflow: hidden;
+  --discover-radio-art-outline: #d8e7bb;
   border: 1px solid rgba(32, 67, 48, 0.18);
   border-radius: 12px;
   background: #d8e7bb;
 }
 
-.discover-radio-tone-1 .discover-radio-art { background: #afd9ce; }
-.discover-radio-tone-2 .discover-radio-art { background: #f1ce8e; }
-.discover-radio-tone-3 .discover-radio-art { background: #c9c6e4; }
-.discover-radio-tone-4 .discover-radio-art { background: #e2b9a2; }
+.discover-radio-tone-1 .discover-radio-art { --discover-radio-art-outline: #afd9ce; background: #afd9ce; }
+.discover-radio-tone-2 .discover-radio-art { --discover-radio-art-outline: #f1ce8e; background: #f1ce8e; }
+.discover-radio-tone-3 .discover-radio-art { --discover-radio-art-outline: #c9c6e4; background: #c9c6e4; }
+.discover-radio-tone-4 .discover-radio-art { --discover-radio-art-outline: #e2b9a2; background: #e2b9a2; }
 
 .discover-radio-mark {
   position: absolute;
@@ -7860,6 +7861,7 @@ body.twilight-mode .discover-radio-attribution { color: rgba(235, 244, 232, 0.55
   left: 24%;
   z-index: 2;
   width: 52%;
+  border: 5px solid var(--discover-radio-art-outline);
 }
 .discover-radio-face-3 { right: -5%; z-index: 1; }
 
