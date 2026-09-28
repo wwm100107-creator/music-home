@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const CACHE_NAME = 'antigravity-ghibli-v5.22-youtube-music-artist-artwork';
+const CACHE_NAME = 'antigravity-ghibli-v5.23-radio-three-artist-collage';
 
 // Danh sách các tài nguyên tĩnh cốt lõi cần lưu trữ offline
 const STATIC_ASSETS = [

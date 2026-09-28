@@ -4717,19 +4717,39 @@
   }
 
   function getRadioSupportingArtists(primary, ranked, relationships, supportUseCounts, recentSupportKeys) {
-    const related = ranked.filter(candidate => candidate.key !== primary.key)
+    const candidates = ranked.filter(candidate => candidate.key !== primary.key)
       .map(candidate => ({
         candidate,
         similarity: radioArtistSimilarity(primary, candidate, relationships)
-      }))
-      .filter(item => item.similarity >= 0.035 && (supportUseCounts.get(item.candidate.key) || 0) < 1)
-      .sort((a, b) => {
-        const repeatPenaltyA = recentSupportKeys.includes(a.candidate.key) ? 0.24 : 0;
-        const repeatPenaltyB = recentSupportKeys.includes(b.candidate.key) ? 0.24 : 0;
-        return (b.similarity * 0.78 + b.candidate.relevanceScore * 0.22 - repeatPenaltyB) -
-          (a.similarity * 0.78 + a.candidate.relevanceScore * 0.22 - repeatPenaltyA);
-      });
-    const companions = related.filter(item => !recentSupportKeys.includes(item.candidate.key)).slice(0, 2);
+      }));
+    const companions = [];
+    const companionKeys = new Set();
+    const scoreCandidate = item => {
+      const uses = supportUseCounts.get(item.candidate.key) || 0;
+      const recentPenalty = recentSupportKeys.includes(item.candidate.key) ? 0.24 : 0;
+      return item.similarity * 0.78 + item.candidate.relevanceScore * 0.22 - Math.min(0.36, uses * 0.12) - recentPenalty;
+    };
+    const selectFrom = (pool, { maxUses = Infinity, avoidRecent = false } = {}) => {
+      const choices = pool
+        .filter(item => !companionKeys.has(item.candidate.key))
+        .filter(item => (supportUseCounts.get(item.candidate.key) || 0) < maxUses)
+        .filter(item => !avoidRecent || !recentSupportKeys.includes(item.candidate.key))
+        .sort((a, b) => scoreCandidate(b) - scoreCandidate(a) || a.candidate.name.localeCompare(b.candidate.name));
+      for (const item of choices) {
+        if (companions.length >= 2) break;
+        companions.push(item);
+        companionKeys.add(item.candidate.key);
+      }
+    };
+
+    const related = candidates.filter(item => item.similarity >= 0.035);
+    // Prefer strong, not recently repeated links, then refill from current chart artists
+    // so every radio card can show a full three-artist collage.
+    selectFrom(related, { maxUses: 1, avoidRecent: true });
+    selectFrom(related, { maxUses: 2, avoidRecent: true });
+    selectFrom(candidates.filter(item => item.candidate.chartTrackCount > 0), { maxUses: 2, avoidRecent: true });
+    selectFrom(candidates, { maxUses: 3, avoidRecent: true });
+    selectFrom(candidates, { maxUses: Infinity });
     companions.forEach(item => supportUseCounts.set(item.candidate.key, (supportUseCounts.get(item.candidate.key) || 0) + 1));
     return companions;
   }
