@@ -7828,18 +7828,19 @@ body.twilight-mode .discover-radio-attribution { color: rgba(235, 244, 232, 0.55
 
 .discover-radio-collage {
   position: absolute;
-  inset: 15% 3% 27%;
+  inset: 12% 0 23%;
 }
 
 .discover-radio-face {
   position: absolute;
-  top: 18%;
-  width: 37%;
+  top: 30%;
+  width: 34%;
   aspect-ratio: 1;
-  border: 3px solid rgba(244, 239, 212, 0.9);
+  box-sizing: border-box;
+  border: 2px solid rgba(255, 248, 225, 0.96);
   border-radius: 50%;
   object-fit: cover;
-  box-shadow: 0 5px 13px rgba(29, 48, 35, 0.18);
+  box-shadow: 0 7px 17px rgba(29, 48, 35, 0.23);
 }
 
 .discover-radio-monogram {
@@ -7853,9 +7854,16 @@ body.twilight-mode .discover-radio-attribution { color: rgba(235, 244, 232, 0.55
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
-.discover-radio-face-1 { left: 0; transform: scale(0.76); }
-.discover-radio-face-2 { left: 31%; z-index: 1; width: 43%; }
-.discover-radio-face-3 { right: 0; transform: scale(0.76); }
+.discover-radio-face-1 { left: -2%; z-index: 1; transform: scale(0.9); }
+.discover-radio-face-2 {
+  top: 15%;
+  left: 25%;
+  z-index: 2;
+  width: 49%;
+  border-width: 3px;
+  box-shadow: 0 11px 24px rgba(29, 48, 35, 0.28);
+}
+.discover-radio-face-3 { right: -2%; z-index: 1; transform: scale(0.9); }
 
 .discover-radio-art > strong {
   position: absolute;
