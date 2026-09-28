@@ -7781,6 +7781,14 @@ body.twilight-mode .bg-playback-chip.disabled {
   gap: 3px;
 }
 
+.discover-radio-status {
+  padding: 10px 2px;
+  color: rgba(50, 60, 49, 0.72);
+  font-size: 0.84rem;
+}
+
+body.twilight-mode .discover-radio-status { color: rgba(235, 244, 232, 0.72); }
+
 .discover-radio-card {
   width: 100%;
   gap: 8px;
@@ -7842,17 +7850,6 @@ body.twilight-mode .discover-radio-attribution { color: rgba(235, 244, 232, 0.55
   border-radius: 50%;
   object-fit: cover;
   box-shadow: none;
-}
-
-.discover-radio-monogram {
-  display: grid;
-  place-items: center;
-  background: radial-gradient(circle at 34% 26%, #f5e8b4, #8db997 76%);
-  color: #183522;
-  font-size: clamp(1rem, 2.5vw, 1.55rem);
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .discover-radio-face-1 { left: -5%; z-index: 1; }

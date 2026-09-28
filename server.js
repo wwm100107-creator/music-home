@@ -881,6 +881,11 @@ function getYouTubeMusicArtistResultName(item) {
   return typeof value === 'string' ? value.trim() : String(value || '').trim();
 }
 
+function getYouTubeChannelResultName(item) {
+  const value = item?.author?.name || item?.name || item?.title?.toString?.();
+  return typeof value === 'string' ? value.trim() : String(value || '').trim();
+}
+
 function getYouTubeMusicArtistResultThumbnail(item) {
   const thumbnails = item?.thumbnail?.contents || item?.thumbnails?.contents || item?.thumbnails;
   const bestThumbnail = Array.isArray(thumbnails)
@@ -893,6 +898,28 @@ function getYouTubeMusicArtistResultThumbnail(item) {
     ? upgradeThumbnailUrl(bestThumbnail.url)
     : '';
   return isTrustedYouTubeArtworkUrl(url) ? url : '';
+}
+
+function isMatchingOfficialArtistChannel(item, artistKey) {
+  const channelName = normalizeForComparison(getYouTubeChannelResultName(item));
+  const author = item?.author;
+  const isVerified = Boolean(author?.is_verified_artist || author?.is_verified);
+  if (channelName === `${artistKey} topic`) return true;
+
+  const officialNames = new Set([
+    artistKey,
+    `${artistKey} official`,
+    `${artistKey} official channel`,
+    `${artistKey} official artist channel`,
+    `${artistKey} vevo`,
+    `${artistKey}vevo`
+  ]);
+  return isVerified && officialNames.has(channelName);
+}
+
+function getYouTubeChannelArtistThumbnail(item) {
+  const thumbnails = item?.author?.thumbnails || item?.thumbnails;
+  return getYouTubeMusicArtistResultThumbnail({ thumbnails });
 }
 
 // ============================================================================
@@ -1484,7 +1511,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
   }
 });
 
-// 10.4.1. YouTube Music artist portraits for Radio cards
+// 10.4.1. YouTube Music and verified YouTube artist-channel portraits for Radio cards
 apiRouter.post('/artist-artwork/resolve', rateLimit({ maxRequests: 12, windowMs: 60000, endpointName: 'artist-artwork' }), async (req, res) => {
   const incomingArtists = req.body?.artists;
   if (!Array.isArray(incomingArtists) || incomingArtists.length === 0) {
@@ -1522,19 +1549,34 @@ apiRouter.post('/artist-artwork/resolve', rateLimit({ maxRequests: 12, windowMs:
       await Promise.all(Array.from({ length: workerCount }, async () => {
         while (cursor < pending.length) {
           const current = pending[cursor++];
+          let thumbnail = '';
           try {
             const searchResult = await ytSearch.music.search(current.name, { type: 'artist' });
             const rows = searchResult?.artists?.contents || [];
             const exactArtist = rows.find(row =>
               normalizeForComparison(getYouTubeMusicArtistResultName(row)) === current.key
             );
-            const thumbnail = exactArtist ? getYouTubeMusicArtistResultThumbnail(exactArtist) : '';
-            resolved.set(current.key, thumbnail);
-            artistArtworkCache.set(current.key, thumbnail, thumbnail ? undefined : 10 * 60 * 1000);
+            thumbnail = exactArtist ? getYouTubeMusicArtistResultThumbnail(exactArtist) : '';
           } catch (error) {
-            console.warn(`[Radio Artist Artwork Warning] ${current.name}:`, error.message);
-            resolved.set(current.key, '');
+            console.warn(`[Radio Artist Artwork YouTube Music Warning] ${current.name}:`, error.message);
           }
+
+          if (!thumbnail) {
+            for (const query of [current.name, `${current.name} Official`, `${current.name} Topic`]) {
+              try {
+                const channelSearch = await ytSearch.search(query, { type: 'channel' });
+                const channels = channelSearch?.channels?.contents || channelSearch?.results || [];
+                const matchingChannel = channels.find(channel => isMatchingOfficialArtistChannel(channel, current.key));
+                thumbnail = matchingChannel ? getYouTubeChannelArtistThumbnail(matchingChannel) : '';
+                if (thumbnail) break;
+              } catch (error) {
+                console.warn(`[Radio Artist Artwork YouTube Channel Warning] ${current.name}:`, error.message);
+              }
+            }
+          }
+
+          resolved.set(current.key, thumbnail);
+          artistArtworkCache.set(current.key, thumbnail, thumbnail ? undefined : 10 * 60 * 1000);
         }
       }));
     }

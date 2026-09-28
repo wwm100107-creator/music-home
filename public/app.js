@@ -4757,37 +4757,16 @@
   const radioArtistArtworkCache = new Map();
   const radioArtistArtworkPending = new Set();
   const radioArtistArtworkAttemptAt = new Map();
+  const radioArtistArtworkFailed = new Set();
+  const radioArtistArtworkRequests = new Set();
+  let radioArtworkRenderGeneration = 0;
 
-  function applyRadioArtistArtwork(key, thumbnail) {
-    if (!dom.discoverRadioRow || !isYoutubeArtworkUrl(thumbnail)) return;
-    const placeholders = [...dom.discoverRadioRow.querySelectorAll('.discover-radio-monogram[data-radio-artist-key]')]
-      .filter(node => node.dataset.radioArtistKey === key);
-    placeholders.forEach(placeholder => {
-      const image = document.createElement('img');
-      image.className = placeholder.className.replace(/\s*discover-radio-monogram\b/, '');
-      image.alt = '';
-      image.loading = 'lazy';
-      image.dataset.radioArtistKey = key;
-      image.setAttribute('aria-hidden', 'true');
-      image.addEventListener('error', () => {
-        radioArtistArtworkCache.set(key, '');
-        const fallback = document.createElement('span');
-        fallback.className = `${image.className} discover-radio-monogram`;
-        fallback.textContent = placeholder.textContent;
-        fallback.dataset.radioArtistKey = key;
-        image.replaceWith(fallback);
-      }, { once: true });
-      image.src = thumbnail;
-      placeholder.replaceWith(image);
-    });
-  }
-
-  function requestRadioArtistArtwork(candidates) {
+  async function requestRadioArtistArtwork(candidates) {
     const now = Date.now();
     const requested = new Map();
     (candidates || []).forEach(candidate => {
       const key = candidate?.key || normalizeDiscoverArtist(candidate?.name);
-      if (!key || getRadioCandidateThumbnail(candidate) || radioArtistArtworkPending.has(key)) return;
+      if (!key || radioArtistArtworkFailed.has(key) || getRadioCandidateThumbnail(candidate) || radioArtistArtworkPending.has(key)) return;
       if (radioArtistArtworkCache.has(key) && now - (radioArtistArtworkAttemptAt.get(key) || 0) < 10 * 60 * 1000) return;
       if (now - (radioArtistArtworkAttemptAt.get(key) || 0) < 5 * 60 * 1000) return;
       radioArtistArtworkCache.delete(key);
@@ -4801,30 +4780,40 @@
       radioArtistArtworkAttemptAt.set(key, now);
     });
 
-    fetch('/api/artist-artwork/resolve', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ artists: batch.map(([, name]) => name) })
-    })
-      .then(async response => {
+    if (!batch.length) {
+      await Promise.all([...radioArtistArtworkRequests]);
+      return;
+    }
+
+    const request = (async () => {
+      try {
+        const response = await fetch('/api/artist-artwork/resolve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ artists: batch.map(([, name]) => name) })
+        });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-      })
-      .then(payload => {
+        const payload = await response.json();
         if (!payload?.success || !Array.isArray(payload.artists)) return;
         const results = new Map(payload.artists.map(item => [
           normalizeDiscoverArtist(item?.name),
           isYoutubeArtworkUrl(item?.artistThumbnail) ? String(item.artistThumbnail) : ''
         ]));
         batch.forEach(([key]) => {
-          if (!results.has(key)) return;
-          const thumbnail = results.get(key);
-          radioArtistArtworkCache.set(key, thumbnail);
-          if (thumbnail) applyRadioArtistArtwork(key, thumbnail);
+          if (results.has(key)) radioArtistArtworkCache.set(key, results.get(key));
         });
-      })
-      .catch(() => {})
-      .finally(() => batch.forEach(([key]) => radioArtistArtworkPending.delete(key)));
+      } catch (_) {
+        // Keep the existing image-backed candidates visible when lookup is unavailable.
+      } finally {
+        batch.forEach(([key]) => radioArtistArtworkPending.delete(key));
+      }
+    })();
+    radioArtistArtworkRequests.add(request);
+    try {
+      await request;
+    } finally {
+      radioArtistArtworkRequests.delete(request);
+    }
   }
 
   function getRadioCandidateArtworkData(candidate) {
@@ -4849,21 +4838,9 @@
     const artworkData = getRadioCandidateArtworkData(candidate);
     const resolved = getResolvedDiscoverArtwork('artist', artworkData);
     const artistKey = candidate?.key || normalizeDiscoverArtist(candidate?.name);
+    if (radioArtistArtworkFailed.has(artistKey)) return '';
     const thumbnail = resolved?.artistThumbnail || resolved?.thumbnail || radioArtistArtworkCache.get(artistKey) || '';
     return thumbnail ? upgradeThumbnailUrl(thumbnail) : '';
-  }
-
-  function getRadioArtistInitials(candidate) {
-    const words = String(candidate?.name || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/\b(feat|ft|with)\b.*$/i, '')
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
-    if (!words.length) return '♪';
-    if (words.length > 1) return `${Array.from(words[0])[0]}${Array.from(words[1])[0]}`.toLocaleUpperCase();
-    return Array.from(words[0]).slice(0, 2).join('').toLocaleUpperCase();
   }
 
   function logRadioRecommendationDiagnostics(pipeline, selected, cardData) {
@@ -4927,15 +4904,13 @@
     }));
   }
 
-  function renderDiscoverRadioRow() {
-    if (!dom.discoverRadioRow) return;
-    const pipeline = buildRadioRecommendationCandidates();
-    const selected = selectDiverseRadioArtists(pipeline.ranked, pipeline.relationships, pipeline.snapshot);
+  function renderDiscoverRadioCards(pipeline, artistsWithArtwork) {
+    const selected = selectDiverseRadioArtists(artistsWithArtwork, pipeline.relationships, pipeline.snapshot);
     const supportUseCounts = new Map();
     const recentSupportKeys = [];
     const cardData = selected.map(selection => {
       const primary = selection.candidate;
-      const supports = getRadioSupportingArtists(primary, pipeline.ranked, pipeline.relationships,
+      const supports = getRadioSupportingArtists(primary, artistsWithArtwork, pipeline.relationships,
         supportUseCounts, recentSupportKeys);
       supports.forEach(item => {
         recentSupportKeys.push(item.candidate.key);
@@ -4950,11 +4925,11 @@
     if (dom.discoverRadioCaption) {
       dom.discoverRadioCaption.textContent = 'Bảng xếp hạng YouTube Music theo khu vực kết hợp gu nghe của bạn.';
     }
+    dom.discoverRadioRow.removeAttribute('aria-busy');
     dom.discoverRadioRow.innerHTML = '';
-    const artworkCandidates = [];
     finalCardData.forEach(({ primary, supports }, index) => {
-      const faces = [supports[0]?.candidate, primary, supports[1]?.candidate].filter(Boolean);
-      artworkCandidates.push(...faces);
+      const faces = [supports[0]?.candidate, primary, supports[1]?.candidate]
+        .filter(candidate => candidate && getRadioCandidateThumbnail(candidate));
       const companions = supports.map(item => item.candidate.name);
       const card = document.createElement('button');
       card.type = 'button';
@@ -4967,21 +4942,20 @@
             ${faces.map((artist, imageIndex) => {
               const imageUrl = getRadioCandidateThumbnail(artist);
               const faceClass = `discover-radio-face discover-radio-face-${imageIndex + 1}`;
-              return imageUrl
-                ? `<img class="${faceClass}" src="${escapeHtml(imageUrl)}" alt="" loading="lazy">`
-                : `<span class="${faceClass} discover-radio-monogram" data-radio-artist-key="${escapeHtml(artist.key || normalizeDiscoverArtist(artist.name))}">${escapeHtml(getRadioArtistInitials(artist))}</span>`;
+              return `<img class="${faceClass}" data-radio-artist-key="${escapeHtml(artist.key || normalizeDiscoverArtist(artist.name))}" src="${escapeHtml(imageUrl)}" alt="" loading="lazy">`;
             }).join('')}
           </span>
           <strong>${escapeHtml(primary.name)}</strong>
         </span>
         <span class="discover-card-copy">Cùng xu hướng: ${escapeHtml(companions.join(', ') || primary.genres.slice(0, 2).join(', ') || 'nhạc mới trong khu vực')}</span>
       `;
-      card.querySelectorAll('.discover-radio-face img').forEach((image, imageIndex) => {
+      card.querySelectorAll('img.discover-radio-face').forEach(image => {
         image.addEventListener('error', () => {
-          const monogram = document.createElement('span');
-          monogram.className = `${image.className} discover-radio-monogram`;
-          monogram.textContent = getRadioArtistInitials(faces[imageIndex]);
-          image.replaceWith(monogram);
+          const key = image.dataset.radioArtistKey;
+          if (!key) return;
+          radioArtistArtworkFailed.add(key);
+          radioArtistArtworkCache.set(key, '');
+          renderDiscoverRadioRow();
         }, { once: true });
       });
       card.addEventListener('click', () => startDiscoverRadio(primary.name));
@@ -4990,7 +4964,39 @@
       cardShell.appendChild(card);
       dom.discoverRadioRow.appendChild(cardShell);
     });
-    requestRadioArtistArtwork(artworkCandidates);
+  }
+
+  async function renderDiscoverRadioRow() {
+    if (!dom.discoverRadioRow) return;
+    const generation = ++radioArtworkRenderGeneration;
+    const pipeline = buildRadioRecommendationCandidates();
+    const targetArtworkCount = Math.min(36, pipeline.ranked.length);
+    const scanLimit = Math.min(192, pipeline.ranked.length);
+    let artistsWithArtwork = pipeline.ranked.filter(candidate => getRadioCandidateThumbnail(candidate));
+
+    if (artistsWithArtwork.length) {
+      renderDiscoverRadioCards(pipeline, artistsWithArtwork);
+    } else {
+      dom.discoverRadioRow.setAttribute('aria-busy', 'true');
+      dom.discoverRadioRow.innerHTML = '<span class="discover-radio-status" role="status">Đang tìm nghệ sĩ có ảnh phù hợp…</span>';
+    }
+
+    for (let offset = 0; offset < scanLimit && artistsWithArtwork.length < targetArtworkCount; offset += 48) {
+      if (generation !== radioArtworkRenderGeneration) return;
+      await requestRadioArtistArtwork(pipeline.ranked.slice(offset, offset + 48));
+      if (generation !== radioArtworkRenderGeneration) return;
+      artistsWithArtwork = pipeline.ranked.filter(candidate => getRadioCandidateThumbnail(candidate));
+      if (artistsWithArtwork.length) renderDiscoverRadioCards(pipeline, artistsWithArtwork);
+    }
+
+    if (generation !== radioArtworkRenderGeneration) return;
+    artistsWithArtwork = pipeline.ranked.filter(candidate => getRadioCandidateThumbnail(candidate));
+    if (artistsWithArtwork.length) {
+      renderDiscoverRadioCards(pipeline, artistsWithArtwork);
+    } else {
+      dom.discoverRadioRow.removeAttribute('aria-busy');
+      dom.discoverRadioRow.innerHTML = '<span class="discover-radio-status" role="status">Chưa tìm được ảnh nghệ sĩ phù hợp trên YouTube Music hoặc YouTube.</span>';
+    }
   }
 
   function renderDiscoverRecentList() {
