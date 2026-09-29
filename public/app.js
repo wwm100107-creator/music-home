@@ -4380,18 +4380,19 @@
       if (titlePrefix) credit = titlePrefix[1].trim();
     }
 
+    const hasFeaturingCredit = /\b(?:feat\.?|ft\.?)\b|\bwith\b/i.test(credit);
     const standardCredits = credit
       .split(/\s*(?:,|&|\+|\bx\b|\bfeat\.?\b|\bft\.?\b|\bwith\b)\s*/i)
       .map(name => name.trim().replace(/^[\s\d.,:;|()[\]{}]+|[\s.,:;|()[\]{}]+$/g, ''))
       .filter(name => name && !/^(feat\.?|ft\.?)$/i.test(name));
 
-    // Chart metadata occasionally puts a song title and its performer in one credit,
-    // such as “Trễ Giờ Cơm - Quang Hùng MasterD”. Keep the full credit for exact
-    // artist verification, while also checking both sides independently.
-    return standardCredits.flatMap(name => {
-      const hyphenParts = name.split(/\s+[-–—]\s+/).map(part => part.trim()).filter(Boolean);
-      return hyphenParts.length > 1 ? [name, ...hyphenParts] : [name];
-    });
+    // A featured credit already defines artist boundaries. Some chart entries append
+    // the song title after a dash (for example, “Wren Evans ft. itsnk - YEU”); never
+    // turn that trailing title into an additional artist candidate.
+    return standardCredits.map((name, index) => {
+      if (!hasFeaturingCredit || index === 0) return name;
+      return name.split(/\s+[-–—]\s+/)[0].trim();
+    }).filter(Boolean);
   }
 
   function isUsableRadioArtist(name, track) {

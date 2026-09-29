@@ -174,7 +174,6 @@
     selectedCountry: 'VN',
     activeGenre: 'all',
     trendingTracks: [],
-    globalTrendingTracks: [],
     selectedCountryName: 'Vietnam',
     recentTracks: (() => {
       try {
@@ -197,7 +196,6 @@
       }
     })(),
     recentListeningRelatedTracks: [],
-    tasteDiscoveryTracks: [],
     searchResults: [],
     favorites: [],
     regionalAlbums: [],
@@ -280,6 +278,7 @@
     woodSliderSwitch: document.getElementById('woodSliderSwitch'),
     sidebarNavItems: document.querySelectorAll('.sidebar-nav-item'),
     tabViews: document.querySelectorAll('.tab-view-section'),
+    mainContent: document.getElementById('mainContent'),
 
     // Home view
     homeQuickSearchInput: document.getElementById('homeQuickSearchInput'),
@@ -297,6 +296,15 @@
     trendingTracksGrid: document.getElementById('trendingTracksGrid'),
     discoverRadioRow: document.getElementById('discoverRadioRow'),
     discoverRadioCaption: document.getElementById('discoverRadioCaption'),
+    discoverRadioDetail: document.getElementById('discoverRadioDetail'),
+    radioDetailBackBtn: document.getElementById('radioDetailBackBtn'),
+    radioDetailArtwork: document.getElementById('radioDetailArtwork'),
+    radioDetailTitle: document.getElementById('radioDetailTitle'),
+    radioDetailSupport: document.getElementById('radioDetailSupport'),
+    radioDetailRegion: document.getElementById('radioDetailRegion'),
+    radioDetailPlayBtn: document.getElementById('radioDetailPlayBtn'),
+    radioDetailCount: document.getElementById('radioDetailCount'),
+    radioDetailTracks: document.getElementById('radioDetailTracks'),
     discoverRecentCaption: document.getElementById('discoverRecentCaption'),
     discoverRecentList: document.getElementById('discoverRecentList'),
     discoverChartRow: document.getElementById('discoverChartRow'),
@@ -422,7 +430,7 @@
     playerAmbientAura: document.getElementById('playerAmbientAura'),
     playerMiniVinyl: document.getElementById('playerMiniVinyl'),
     natureWaveformEq: document.getElementById('natureWaveformEq'),
-    kodamaBeatBuddy: document.getElementById('kodamaBeatBuddy'),
+    playerSignatureParticles: document.getElementById('playerSignatureParticles'),
 
     // Mobile Bottom Navigation Bar (< 768px)
     mobileBottomNav: document.getElementById('mobileBottomNav'),
@@ -1282,16 +1290,13 @@
       dom.sheetProgressWrap.addEventListener('touchmove', handleSheetScrub, { passive: true });
     }
 
-    // Kodama buddy greeting easter egg
-    if (dom.kodamaBeatBuddy) {
-      dom.kodamaBeatBuddy.addEventListener('click', (e) => {
+    // Reassemble the particle signature when it is tapped.
+    if (dom.playerSignatureParticles) {
+      dom.playerSignatureParticles.addEventListener('click', (e) => {
         e.stopPropagation();
         triggerHaptic(12);
-        dom.kodamaBeatBuddy.style.transform = 'scale(1.35) rotate(18deg)';
-        showToast('🌱 Chú Kodama khẽ lắc đầu lách cách chào bạn!');
-        setTimeout(() => {
-          dom.kodamaBeatBuddy.style.transform = '';
-        }, 400);
+        window.HomeMusicSignature?.replay();
+        showToast('Chữ ký đang được ráp lại từ những hạt.');
       });
     }
   }
@@ -1323,6 +1328,7 @@
   }
 
   function switchTab(tabKey) {
+    closeDiscoverRadioDetail(false, false);
     dom.tabViews.forEach(view => {
       if (view.dataset.tab === tabKey) {
         view.classList.remove('hidden');
@@ -1441,7 +1447,7 @@
     state.isPlaying = !!isPlaying;
     updateMediaSessionPlaybackState(isPlaying);
 
-    // Dynamic 33 RPM mini vinyl spin, ambient aura, botanical EQ, and Kodama wobble
+    // Dynamic 33 RPM mini vinyl spin, ambient aura, and botanical EQ
     if (dom.bottomPlayer) {
       dom.bottomPlayer.classList.toggle('is-playing', isPlaying);
     }
@@ -3783,10 +3789,6 @@
         state.selectedCountry = data.countryCode || 'VN';
         state.selectedCountryName = data.countryName || state.selectedCountry;
         state.trendingTracks = data.results || data.tracks || [];
-        if (state.selectedCountry === 'GLOBAL' && curTimeframe === 'daily') {
-          state.globalTrendingTracks = state.trendingTracks;
-        }
-
         // Đồng bộ Dropdown quốc gia
         if (dom.countrySelectDropdown) {
           dom.countrySelectDropdown.value = state.selectedCountry;
@@ -3910,6 +3912,11 @@
       .toLocaleLowerCase()
       .replace(/[^a-z0-9]+/g, ' ')
       .trim();
+  }
+
+  function isExcludedRecommendationTrack(track) {
+    const title = normalizeDiscoverArtist(track?.title);
+    return /(?:^|\s)(?:remix(?:ed|es)?|remake(?:s)?|covers?)(?=$|\s)/.test(title);
   }
 
   function getDiscoverArtistNames(track) {
@@ -4173,7 +4180,7 @@
     const profile = getRecommendationTasteProfile();
     const candidateScores = new Map();
     const add = (track, score, source) => {
-      if (!track?.id) return;
+      if (!track?.id || isExcludedRecommendationTrack(track)) return;
       const id = String(track.id);
       const existing = candidateScores.get(id);
       if (!existing || score > existing.score) candidateScores.set(id, { track, score, source });
@@ -4187,7 +4194,8 @@
       const ageDays = track._lastListenedAt ? Math.max(0, (now - track._lastListenedAt) / 86400000) : 30;
       add(track, 100 - Math.min(35, ageDays * 1.5) - index * 2, 'recent-listen');
     });
-    (state.recentListeningRelatedTracks || []).forEach((track, index) => {
+    const regionalTrackIds = new Set((state.trendingTracks || []).map(track => String(track.id || '')).filter(Boolean));
+    (state.recentListeningRelatedTracks || []).filter(track => regionalTrackIds.has(String(track.id || ''))).forEach((track, index) => {
       const artistAffinity = Math.max(0, ...getRecommendationArtistKeys(track).map(key => profile.recentArtistScores.get(key) || 0));
       add(track, 77 + Math.min(18, artistAffinity * 4) - index * 0.08, 'recently-related');
     });
@@ -4197,10 +4205,10 @@
       (state.favorites || []).forEach((track, index) => add(track, 70 - index * 0.4, 'favorite-start'));
     }
 
-    // Charts seed this section only for a genuinely cold-start profile.
+    // The selected region's chart is the only chart source for this section.
     const hasTasteSignals = profile.listenedTracks.length > 0 || profile.favoriteArtists.size > 0;
     if (!hasTasteSignals) {
-      [...(state.trendingTracks || []), ...(state.globalTrendingTracks || [])].forEach((track, index) => {
+      (state.trendingTracks || []).forEach((track, index) => {
         const rank = Math.max(1, Number(track.rank) || index + 1);
         add(track, 52 / Math.sqrt(rank), 'cold-start-chart');
       });
@@ -4225,7 +4233,7 @@
     const favoriteGenreAffinity = Math.max(0, ...genres.map(genre => profile.favoriteGenreScores.get(genre) || 0));
     const playedAt = profile.lastPlayedAt.get(id) || 0;
     const ageDays = playedAt ? Math.max(0, (Date.now() - playedAt) / 86400000) : 365;
-    const chartTrack = source === 'cold-start-chart' && [...(state.trendingTracks || []), ...(state.globalTrendingTracks || [])]
+    const chartTrack = source === 'regional-chart' && (state.trendingTracks || [])
       .find(item => String(item.id) === id);
     const chartRank = Math.max(1, Number(chartTrack?.rank) || 50);
     const repeatedPlays = profile.trackPlayCounts.get(id) || 0;
@@ -4240,10 +4248,7 @@
     score += Math.min(22, recentGenreAffinity * 8);
     score += Math.min(12, longTermGenreAffinity * 3.5);
     score += Math.min(8, favoriteGenreAffinity * 2.5);
-    if (source === 'cold-start-chart') score += Math.min(8, 8 / Math.sqrt(chartRank));
-    if (source === 'taste-discovery') score += 7;
-    if (source === 'taste-discovery' && track._recommendationSeed &&
-        !artists.includes(normalizeDiscoverArtist(track._recommendationSeed))) score += 5;
+    if (source === 'regional-chart') score += Math.min(8, 8 / Math.sqrt(chartRank));
     score += Math.min(7, discoveryIntent * 4);               // Explicit radio exploration, weak intent
     if (playedAt && ageDays <= 10) score -= 28 * (1 - ageDays / 14); // Avoid immediate repetition
     else if (repeatedPlays >= 3) score += 7;
@@ -4254,8 +4259,7 @@
   }
 
   const recommendationSearchCache = {
-    recent: { key: '', at: 0, promise: null },
-    taste: { key: '', at: 0, promise: null }
+    recent: { key: '', at: 0, promise: null }
   };
 
   function getRecentArtistSearchSeeds(profile, limit = 1) {
@@ -4274,38 +4278,6 @@
       });
     });
     return seeds;
-  }
-
-  function getStableTasteSearchSeeds(profile, limit = 2) {
-    const recentKeys = new Set(getRecentArtistSearchSeeds(profile, 1).map(normalizeDiscoverArtist));
-    const seedEntries = [];
-    profile.favoriteArtistNames.forEach(name => seedEntries.push({ name, score: 100, source: 'favorite' }));
-
-    const replayArtists = new Map();
-    profile.listenedTracks.forEach(track => {
-      if ((profile.trackPlayCounts.get(String(track.id)) || 0) < 2) return;
-      getDiscoverArtistNames(track).forEach(name => {
-        const key = normalizeDiscoverArtist(name);
-        if (!key) return;
-        const score = (profile.trackPlayCounts.get(String(track.id)) || 0) + (profile.longTermArtistScores.get(key) || 0);
-        const existing = replayArtists.get(key);
-        if (!existing || score > existing.score) replayArtists.set(key, { name, score, source: 'replay' });
-      });
-    });
-    seedEntries.push(...replayArtists.values());
-    [...profile.discoveryArtistScores.entries()].forEach(([name, score]) => seedEntries.push({ name, score: score * 0.6, source: 'discovery' }));
-    profile.longTermArtistScores.forEach((score, name) => seedEntries.push({ name, score: score * 0.35, source: 'long-term' }));
-
-    const unique = new Map();
-    seedEntries.forEach(entry => {
-      const key = normalizeDiscoverArtist(entry.name);
-      if (!key) return;
-      const current = unique.get(key);
-      if (!current || entry.score > current.score) unique.set(key, entry);
-    });
-    const ranked = [...unique.values()].sort((a, b) => b.score - a.score);
-    const distinctFromRecent = ranked.filter(entry => !recentKeys.has(normalizeDiscoverArtist(entry.name)));
-    return (distinctFromRecent.length ? distinctFromRecent : ranked).slice(0, limit);
   }
 
   async function fetchRecommendationSource(seeds, source, cache, setTracks, rerender) {
@@ -4328,7 +4300,7 @@
         const response = await fetch(`/api/search?q=${encodeURIComponent(`${seed} similar songs`)}`);
         if (!response.ok) return [];
         const data = await response.json();
-        return (Array.isArray(data.results) ? data.results : []).map(track => ({
+        return (Array.isArray(data.results) ? data.results : []).filter(track => !isExcludedRecommendationTrack(track)).map(track => ({
           ...track,
           _recommendationSource: source,
           _recommendationSeed: seed
@@ -4349,13 +4321,8 @@
   async function refreshPersonalizedCandidates() {
     const profile = getRecommendationTasteProfile();
     const recentSeeds = getRecentArtistSearchSeeds(profile);
-    const stableTasteSeeds = getStableTasteSearchSeeds(profile);
-    await Promise.all([
-      fetchRecommendationSource(recentSeeds, 'recently-related', recommendationSearchCache.recent,
-        tracks => { state.recentListeningRelatedTracks = tracks; }, renderDiscoverRecentList),
-      fetchRecommendationSource(stableTasteSeeds.map(seed => seed.name), 'taste-discovery', recommendationSearchCache.taste,
-        tracks => { state.tasteDiscoveryTracks = tracks; }, renderDiscoverForYouRow)
-    ]);
+    await fetchRecommendationSource(recentSeeds, 'recently-related', recommendationSearchCache.recent,
+      tracks => { state.recentListeningRelatedTracks = tracks; }, renderDiscoverRecentList);
   }
 
   const RADIO_RECOMMENDATION_WEIGHTS = Object.freeze({
@@ -4401,11 +4368,31 @@
     };
   }
 
-  function splitRadioArtistCredits(value) {
-    return String(value?.name || value?.text || value || '')
+  function splitRadioArtistCredits(value, track = null) {
+    const rawCredit = String(value?.name || value?.text || value || '').trim();
+    if (!rawCredit) return [];
+
+    let credit = rawCredit.replace(/\s*[([]\s*(?:khách mời|guest(?:s)?|featuring)\b[^)\]]*[)\]]/gi, '');
+    const title = String(track?.title || '').trim();
+    if (title) {
+      const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const titlePrefix = credit.match(new RegExp(`^${escapedTitle}\\s*[-–—|:]\\s*(.+)$`, 'i'));
+      if (titlePrefix) credit = titlePrefix[1].trim();
+    }
+
+    const hasFeaturingCredit = /\b(?:feat\.?|ft\.?)\b|\bwith\b/i.test(credit);
+    const standardCredits = credit
       .split(/\s*(?:,|&|\+|\bx\b|\bfeat\.?\b|\bft\.?\b|\bwith\b)\s*/i)
       .map(name => name.trim().replace(/^[\s\d.,:;|()[\]{}]+|[\s.,:;|()[\]{}]+$/g, ''))
       .filter(name => name && !/^(feat\.?|ft\.?)$/i.test(name));
+
+    // A featured credit already defines artist boundaries. Some chart entries append
+    // the song title after a dash (for example, “Wren Evans ft. itsnk - YEU”); never
+    // turn that trailing title into an additional artist candidate.
+    return standardCredits.map((name, index) => {
+      if (!hasFeaturingCredit || index === 0) return name;
+      return name.split(/\s+[-–—]\s+/)[0].trim();
+    }).filter(Boolean);
   }
 
   function isUsableRadioArtist(name, track) {
@@ -4420,7 +4407,7 @@
   function getRadioArtistNames(track) {
     const credits = Array.isArray(track?.artists) && track.artists.length ? track.artists : [track?.artist];
     const seen = new Set();
-    return credits.flatMap(splitRadioArtistCredits).filter(name => {
+    return credits.flatMap(credit => splitRadioArtistCredits(credit, track)).filter(name => {
       const key = normalizeDiscoverArtist(name);
       if (!isUsableRadioArtist(name, track) || seen.has(key)) return false;
       seen.add(key);
@@ -4471,7 +4458,7 @@
     };
 
     const addTrack = (track, source, index, sourceMeta = {}) => {
-      if (!track) return;
+      if (!track || isExcludedRecommendationTrack(track)) return;
       const names = getRadioArtistNames(track);
       if (!names.length) return;
       const rank = Math.max(1, Number(track.rank) || index + 1);
@@ -4532,24 +4519,19 @@
     };
 
     const regionalTracks = state.trendingTracks || [];
-    const globalTracks = state.globalTrendingTracks || [];
     const recentListenTracks = profile.listenedTracks.filter(track => {
       const ageDays = track._lastListenedAt ? Math.max(0, (Date.now() - track._lastListenedAt) / 86400000) : 365;
       return ageDays <= 90;
     }).sort((a, b) => b._lastListenedAt - a._lastListenedAt);
-    const sourceGroups = [
-      { name: 'regional', tracks: regionalTracks },
-      { name: 'global', tracks: globalTracks },
-      { name: 'listener', tracks: recentListenTracks },
-      { name: 'favorite', tracks: state.favorites || [] }
-    ];
+    // Recommendation candidates must come from the selected region's chart.
+    // Listening history still affects ranking, but never adds out-of-region artists.
+    const sourceGroups = [{ name: 'regional', tracks: regionalTracks }];
 
     sourceGroups.forEach(({ name, tracks }) => tracks.forEach((track, index) => addTrack(track, name, index)));
 
     // Co-artist credits and close chart placements form relationship edges; sequential listens add an opt-in, local co-listening signal.
     [
-      { tracks: regionalTracks, strength: 0.24 },
-      { tracks: globalTracks, strength: 0.17 }
+      { tracks: regionalTracks, strength: 0.24 }
     ].forEach(({ tracks, strength }) => {
       for (let index = 0; index < tracks.length; index++) {
         const current = tracks[index];
@@ -4588,7 +4570,7 @@
       ...profile.recentArtistScores.keys(),
       ...profile.longTermArtistScores.keys()
     ]);
-    const trendingAnchorKeys = new Set([...regionalTracks.slice(0, 12), ...globalTracks.slice(0, 8)].flatMap(getRadioArtistNames).map(normalizeDiscoverArtist));
+    const trendingAnchorKeys = new Set(regionalTracks.slice(0, 12).flatMap(getRadioArtistNames).map(normalizeDiscoverArtist));
     const similarityAnchors = userAnchorKeys.size ? userAnchorKeys : trendingAnchorKeys;
 
     const ranked = [...new Set(candidates.values())].map(candidate => {
@@ -4717,45 +4699,130 @@
   }
 
   function getRadioSupportingArtists(primary, ranked, relationships, supportUseCounts, recentSupportKeys) {
-    const related = ranked.filter(candidate => candidate.key !== primary.key)
+    const candidates = ranked.filter(candidate => candidate.key !== primary.key)
       .map(candidate => ({
         candidate,
         similarity: radioArtistSimilarity(primary, candidate, relationships)
-      }))
-      .filter(item => item.similarity >= 0.035 && (supportUseCounts.get(item.candidate.key) || 0) < 1)
-      .sort((a, b) => {
-        const repeatPenaltyA = recentSupportKeys.includes(a.candidate.key) ? 0.24 : 0;
-        const repeatPenaltyB = recentSupportKeys.includes(b.candidate.key) ? 0.24 : 0;
-        return (b.similarity * 0.78 + b.candidate.relevanceScore * 0.22 - repeatPenaltyB) -
-          (a.similarity * 0.78 + a.candidate.relevanceScore * 0.22 - repeatPenaltyA);
-      });
-    const companions = related.filter(item => !recentSupportKeys.includes(item.candidate.key)).slice(0, 2);
+      }));
+    const companions = [];
+    const companionKeys = new Set();
+    const scoreCandidate = item => {
+      const uses = supportUseCounts.get(item.candidate.key) || 0;
+      const recentPenalty = recentSupportKeys.includes(item.candidate.key) ? 0.24 : 0;
+      return item.similarity * 0.78 + item.candidate.relevanceScore * 0.22 - Math.min(0.36, uses * 0.12) - recentPenalty;
+    };
+    const selectFrom = (pool, { maxUses = Infinity, avoidRecent = false } = {}) => {
+      const choices = pool
+        .filter(item => !companionKeys.has(item.candidate.key))
+        .filter(item => (supportUseCounts.get(item.candidate.key) || 0) < maxUses)
+        .filter(item => !avoidRecent || !recentSupportKeys.includes(item.candidate.key))
+        .sort((a, b) => scoreCandidate(b) - scoreCandidate(a) || a.candidate.name.localeCompare(b.candidate.name));
+      for (const item of choices) {
+        if (companions.length >= 2) break;
+        companions.push(item);
+        companionKeys.add(item.candidate.key);
+      }
+    };
+
+    const related = candidates.filter(item => item.similarity >= 0.035);
+    // Prefer strong, not recently repeated links, then refill from current chart artists
+    // so every radio card can show a full three-artist collage.
+    selectFrom(related, { maxUses: 1, avoidRecent: true });
+    selectFrom(related, { maxUses: 2, avoidRecent: true });
+    selectFrom(candidates.filter(item => item.candidate.chartTrackCount > 0), { maxUses: 2, avoidRecent: true });
+    selectFrom(candidates, { maxUses: 3, avoidRecent: true });
+    selectFrom(candidates, { maxUses: Infinity });
     companions.forEach(item => supportUseCounts.set(item.candidate.key, (supportUseCounts.get(item.candidate.key) || 0) + 1));
     return companions;
   }
 
+  const radioArtistArtworkCache = new Map();
+  const radioArtistVerificationCache = new Map();
+  const radioArtistArtworkPending = new Set();
+  const radioArtistArtworkAttemptAt = new Map();
+  const radioArtistArtworkFailed = new Set();
+  const radioArtistArtworkRequests = new Set();
+  let radioArtworkRenderGeneration = 0;
+  let discoverRadioOpenRequestId = 0;
+  let activeDiscoverRadioDetail = null;
+  let discoverRadioReturnFocus = null;
+
+  async function requestRadioArtistArtwork(candidates) {
+    const now = Date.now();
+    const requested = new Map();
+    (candidates || []).forEach(candidate => {
+      const key = candidate?.key || normalizeDiscoverArtist(candidate?.name);
+      const verification = radioArtistVerificationCache.get(key);
+      const verificationTtl = verification?.verifiedArtist ? 24 * 60 * 60 * 1000 : 10 * 60 * 1000;
+      if (!key || (verification && now - verification.checkedAt < verificationTtl) || radioArtistArtworkPending.has(key)) return;
+      if (now - (radioArtistArtworkAttemptAt.get(key) || 0) < 5 * 60 * 1000) return;
+      requested.set(key, String(candidate?.name || '').trim());
+    });
+
+    const batch = [...requested].filter(([, name]) => name).slice(0, 48);
+    if (!batch.length) {
+      await Promise.all([...radioArtistArtworkRequests]);
+      return (candidates || []).every(candidate => radioArtistVerificationCache.has(candidate?.key || normalizeDiscoverArtist(candidate?.name)));
+    }
+    batch.forEach(([key]) => {
+      radioArtistArtworkPending.add(key);
+      radioArtistArtworkAttemptAt.set(key, now);
+    });
+
+    const request = (async () => {
+      try {
+        const response = await fetch('/api/artist-artwork/resolve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ artists: batch.map(([, name]) => name) })
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        if (!payload?.success || !Array.isArray(payload.artists)) return;
+        const results = new Map(payload.artists.map(item => [normalizeDiscoverArtist(item?.name), item]));
+        batch.forEach(([key]) => {
+          const result = results.get(key);
+          if (!result) return;
+          const verifiedArtist = result.verifiedArtist === true;
+          const artistThumbnail = isYoutubeArtworkUrl(result.artistThumbnail) ? String(result.artistThumbnail) : '';
+          radioArtistVerificationCache.set(key, { verifiedArtist, checkedAt: Date.now() });
+          radioArtistArtworkCache.set(key, artistThumbnail);
+          if (artistThumbnail) radioArtistArtworkFailed.delete(key);
+          else radioArtistArtworkFailed.add(key);
+        });
+      } catch (_) {
+        batch.forEach(([key]) => radioArtistArtworkAttemptAt.delete(key));
+        return false;
+      } finally {
+        batch.forEach(([key]) => radioArtistArtworkPending.delete(key));
+      }
+      return batch.every(([key]) => radioArtistVerificationCache.has(key));
+    })();
+    radioArtistArtworkRequests.add(request);
+    try {
+      return await request;
+    } finally {
+      radioArtistArtworkRequests.delete(request);
+    }
+  }
+
   function getRadioCandidateArtworkData(candidate) {
     const artistKey = candidate?.key || normalizeDiscoverArtist(candidate?.name);
-    const metadataTrack = (candidate?.tracks || []).find(item => {
-      if (!item.track?.artistThumbnail) return false;
-      const primaryArtist = normalizeDiscoverArtist(item.track.primaryArtist || item.track.artist || item.track.artists?.[0]);
-      return primaryArtist === artistKey;
-    });
     return {
       kind: 'artist',
       artist: candidate?.name || '',
       primaryArtist: candidate?.name || '',
       artistId: candidate?.artistId || '',
-      artistThumbnail: metadataTrack?.track?.artistThumbnail || '',
-      source: metadataTrack?.track?.source || 'youtube-music',
+      artistThumbnail: radioArtistArtworkCache.get(artistKey) || '',
+      source: 'youtube-music',
       sourceThumbnail: ''
     };
   }
 
   function getRadioCandidateThumbnail(candidate) {
-    const artworkData = getRadioCandidateArtworkData(candidate);
-    const resolved = getResolvedDiscoverArtwork('artist', artworkData);
-    const thumbnail = resolved?.artistThumbnail || resolved?.thumbnail || '';
+    const artistKey = candidate?.key || normalizeDiscoverArtist(candidate?.name);
+    if (!radioArtistVerificationCache.get(artistKey)?.verifiedArtist || radioArtistArtworkFailed.has(artistKey)) return '';
+    const thumbnail = radioArtistArtworkCache.get(artistKey) || '';
     return thumbnail ? upgradeThumbnailUrl(thumbnail) : '';
   }
 
@@ -4833,9 +4900,7 @@
     }));
   }
 
-  function renderDiscoverRadioRow() {
-    if (!dom.discoverRadioRow) return;
-    const pipeline = buildRadioRecommendationCandidates();
+  function renderDiscoverRadioCards(pipeline) {
     const selected = selectDiverseRadioArtists(pipeline.ranked, pipeline.relationships, pipeline.snapshot);
     const supportUseCounts = new Map();
     const recentSupportKeys = [];
@@ -4854,16 +4919,18 @@
     const finalSelected = selected.filter((_, index) => finalCardData.includes(cardData[index]));
     logRadioRecommendationDiagnostics(pipeline, finalSelected, finalCardData);
     if (dom.discoverRadioCaption) {
-      dom.discoverRadioCaption.textContent = 'Bảng xếp hạng YouTube Music theo khu vực kết hợp gu nghe của bạn.';
+      dom.discoverRadioCaption.textContent = 'Chỉ nghệ sĩ trong bảng xếp hạng khu vực đã chọn, sắp xếp theo gu nghe của bạn.';
     }
+    dom.discoverRadioRow.removeAttribute('aria-busy');
     dom.discoverRadioRow.innerHTML = '';
     finalCardData.forEach(({ primary, supports }, index) => {
-      const faces = [supports[0]?.candidate, primary, supports[1]?.candidate].filter(Boolean);
+      const faces = [supports[0]?.candidate, primary, supports[1]?.candidate]
+        .filter(Boolean);
       const companions = supports.map(item => item.candidate.name);
       const card = document.createElement('button');
       card.type = 'button';
       card.className = `discover-radio-card discover-radio-tone-${index % 5}`;
-      card.setAttribute('aria-label', `Phát radio phổ biến của ${primary.name}`);
+      card.setAttribute('aria-label', `Mở radio của ${primary.name}`);
       card.innerHTML = `
         <span class="discover-radio-art" aria-hidden="true">
           <span class="discover-radio-mark">RADIO</span>
@@ -4872,7 +4939,7 @@
               const imageUrl = getRadioCandidateThumbnail(artist);
               const faceClass = `discover-radio-face discover-radio-face-${imageIndex + 1}`;
               return imageUrl
-                ? `<img class="${faceClass}" src="${escapeHtml(imageUrl)}" alt="" loading="lazy">`
+                ? `<img class="${faceClass}" data-radio-artist-key="${escapeHtml(artist.key || normalizeDiscoverArtist(artist.name))}" src="${escapeHtml(imageUrl)}" alt="" loading="lazy">`
                 : `<span class="${faceClass} discover-radio-monogram">${escapeHtml(getRadioArtistInitials(artist))}</span>`;
             }).join('')}
           </span>
@@ -4880,20 +4947,74 @@
         </span>
         <span class="discover-card-copy">Cùng xu hướng: ${escapeHtml(companions.join(', ') || primary.genres.slice(0, 2).join(', ') || 'nhạc mới trong khu vực')}</span>
       `;
-      card.querySelectorAll('.discover-radio-face img').forEach((image, imageIndex) => {
+      card.querySelectorAll('img.discover-radio-face').forEach(image => {
         image.addEventListener('error', () => {
+          const key = image.dataset.radioArtistKey;
+          if (!key) return;
+          radioArtistArtworkFailed.add(key);
+          radioArtistArtworkCache.set(key, '');
+          const artist = faces.find(candidate => (candidate.key || normalizeDiscoverArtist(candidate.name)) === key);
           const monogram = document.createElement('span');
           monogram.className = `${image.className} discover-radio-monogram`;
-          monogram.textContent = getRadioArtistInitials(faces[imageIndex]);
+          monogram.textContent = getRadioArtistInitials(artist);
           image.replaceWith(monogram);
         }, { once: true });
       });
-      card.addEventListener('click', () => startDiscoverRadio(primary.name));
+      card.addEventListener('click', () => openDiscoverRadioDetail(
+        primary,
+        supports.map(item => item.candidate),
+        card
+      ));
       const cardShell = document.createElement('div');
       cardShell.className = 'discover-radio-card-shell';
       cardShell.appendChild(card);
       dom.discoverRadioRow.appendChild(cardShell);
     });
+  }
+
+  async function renderDiscoverRadioRow() {
+    if (!dom.discoverRadioRow) return;
+    const generation = ++radioArtworkRenderGeneration;
+    const pipeline = buildRadioRecommendationCandidates();
+    if (!pipeline.ranked.length) {
+      dom.discoverRadioRow.removeAttribute('aria-busy');
+      dom.discoverRadioRow.innerHTML = `<span class="discover-radio-status" role="status">${state.trendingTracks?.length
+        ? 'Chưa có tên nghệ sĩ phù hợp trong bảng xếp hạng khu vực.'
+        : 'Đang tải nghệ sĩ trong bảng xếp hạng khu vực…'}</span>`;
+      return;
+    }
+
+    dom.discoverRadioRow.setAttribute('aria-busy', 'true');
+    dom.discoverRadioRow.innerHTML = '<span class="discover-radio-status" role="status">Đang xác minh hồ sơ nghệ sĩ…</span>';
+    const scanLimit = Math.min(192, pipeline.ranked.length);
+    let verifiedCandidates = pipeline.ranked.filter(candidate => radioArtistVerificationCache.get(candidate.key)?.verifiedArtist);
+
+    for (let offset = 0; offset < scanLimit && verifiedCandidates.length < 12; offset += 48) {
+      if (generation !== radioArtworkRenderGeneration) return;
+      const candidates = pipeline.ranked.slice(offset, offset + 48);
+      const resolved = await requestRadioArtistArtwork(candidates);
+      if (generation !== radioArtworkRenderGeneration) return;
+      if (!resolved) {
+        dom.discoverRadioRow.removeAttribute('aria-busy');
+        dom.discoverRadioRow.innerHTML = '<button class="discover-radio-status discover-radio-retry" type="button">Chưa xác minh được nghệ sĩ. Chạm để thử lại.</button>';
+        dom.discoverRadioRow.querySelector('.discover-radio-retry')?.addEventListener('click', () => {
+          candidates.forEach(candidate => radioArtistArtworkAttemptAt.delete(candidate.key));
+          renderDiscoverRadioRow();
+        });
+        return;
+      }
+      verifiedCandidates = pipeline.ranked.filter(candidate => radioArtistVerificationCache.get(candidate.key)?.verifiedArtist);
+    }
+
+    if (generation !== radioArtworkRenderGeneration) return;
+    const verifiedPipeline = { ...pipeline, ranked: verifiedCandidates };
+    if (!verifiedCandidates.length) {
+      dom.discoverRadioRow.removeAttribute('aria-busy');
+      dom.discoverRadioRow.innerHTML = '<span class="discover-radio-status" role="status">Chưa tìm thấy hồ sơ nghệ sĩ khớp trong bảng khu vực này.</span>';
+      return;
+    }
+
+    renderDiscoverRadioCards(verifiedPipeline);
   }
 
   function renderDiscoverRecentList() {
@@ -4925,9 +5046,6 @@
   function renderDiscoverChartCards() {
     if (!dom.discoverChartRow) return;
     const currentRegionTracks = state.trendingTracks || [];
-    const globalTracks = state.selectedCountry === 'GLOBAL' && state.currentTimeframe === 'daily'
-      ? currentRegionTracks
-      : state.globalTrendingTracks;
     const regionLabel = state.selectedCountryName || state.selectedCountry || 'Khu vực';
     const timeframeLabel = state.currentTimeframe === 'weekly' ? 'tuần này' : 'hôm nay';
     const charts = [];
@@ -4939,15 +5057,6 @@
         tone: 'local'
       });
     }
-    if (globalTracks.length && state.selectedCountry !== 'GLOBAL') {
-      charts.push({
-        title: 'Top 50 • Global',
-        detail: 'Thứ hạng YouTube Music toàn cầu hôm nay',
-        tracks: globalTracks,
-        tone: 'global'
-      });
-    }
-
     dom.discoverChartRow.innerHTML = '';
     charts.forEach(chart => {
       const topTrack = chart.tracks[0];
@@ -5112,7 +5221,7 @@
           portraitImage.replaceWith(monogram);
         }, { once: true });
       }
-      card.addEventListener('click', () => startDiscoverRadio(artist.name));
+      card.addEventListener('click', () => startDiscoverRadio(artist));
       dom.discoverArtistRow.appendChild(card);
     });
   }
@@ -5124,25 +5233,15 @@
     const candidateMap = new Map();
     const startListeningIds = new Set(getStartListeningCandidates().slice(0, 5).map(track => String(track.id)));
     const addCandidate = (track, source) => {
-      if (!track?.id) return;
+      if (!track?.id || isExcludedRecommendationTrack(track)) return;
       const id = String(track.id);
       if (profile.likedSongIds.has(id) || startListeningIds.has(id)) return;
       const existing = candidateMap.get(id);
-      if (!existing || source === 'taste-discovery') candidateMap.set(id, { track, source });
+      if (!existing) candidateMap.set(id, { track, source });
     };
 
-    // This pool is seeded from saves, replays, long-term taste and explicit artist exploration.
-    (state.tasteDiscoveryTracks || []).forEach(track => addCandidate(track, 'taste-discovery'));
-    profile.listenedTracks.forEach(track => {
-      const ageDays = Math.max(0, (Date.now() - Number(track._lastListenedAt || 0)) / 86400000);
-      if (ageDays > 10 || (profile.trackPlayCounts.get(String(track.id)) || 0) >= 3) addCandidate(track, 'listening-history');
-    });
-
-    // Charts are a cold-start provider only; they never pad an established personal profile.
-    const hasTasteSignals = profile.favoriteArtists.size > 0 || profile.listenedTracks.length > 0 || profile.discoveryArtistScores.size > 0;
-    if (!hasTasteSignals) {
-      [...(state.trendingTracks || []), ...(state.globalTrendingTracks || [])].forEach(track => addCandidate(track, 'cold-start-chart'));
-    }
+    // Personal taste ranks tracks from the selected country's chart only.
+    (state.trendingTracks || []).forEach(track => addCandidate(track, 'regional-chart'));
     const candidates = [...candidateMap.values()].map(({ track, source }) => ({
       track,
       score: scorePersonalRecommendation(track, source, profile, exposure),
@@ -5150,14 +5249,14 @@
     })).sort((a, b) => b.score - a.score);
     const recommendations = diversifyRankedCandidates(candidates, 8, 2);
 
-    console.info('[Discovery items]', JSON.stringify(recommendations.map(({ track, score, source }) => ({
+    console.info('[Discovery items]', JSON.stringify(recommendations.map(track => ({
       section: 'Dành riêng cho bạn',
       title: track.title || '',
       artist: track.primaryArtist || track.artist || '',
       album: track.album || '',
-      source: track.source || source,
-      recommendationSource: source,
-      rankingScore: Number(score.toFixed(3)),
+      source: track.source || 'youtube-music',
+      recommendationSource: 'regional-chart',
+      rankingScore: Number(scorePersonalRecommendation(track, 'regional-chart', profile, exposure).toFixed(3)),
       artistId: track.artistId || '',
       albumId: track.albumId || track.releaseId || '',
       artworkSource: track.thumbnail && !String(track.thumbnail).endsWith('wood_2.jpg')
@@ -5166,8 +5265,7 @@
     }))));
 
     dom.discoverForYouRow.innerHTML = '';
-    recommendations.forEach(recommendation => {
-      const { track } = recommendation;
+    recommendations.forEach(track => {
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'discover-track-card';
@@ -5182,10 +5280,10 @@
     });
     if (dom.discoverForYouCaption) {
       const hasTasteSignals = profile.favoriteArtists.size || profile.listenedTracks.length || profile.discoveryArtistScores.size;
-      const basis = hasTasteSignals
-        ? 'Dựa trên bài đã lưu, lượt nghe lặp lại và gu nghe lâu dài của bạn.'
-        : `Đang khám phá nhạc từ ${state.selectedCountryName || 'khu vực của bạn'}; lưu bài yêu thích hoặc nghe nhạc để cá nhân hóa.`;
-      dom.discoverForYouCaption.textContent = basis;
+      const region = state.selectedCountryName || 'khu vực của bạn';
+      dom.discoverForYouCaption.textContent = hasTasteSignals
+        ? `Bài trong bảng xếp hạng ${region}, sắp xếp theo gu nghe của bạn.`
+        : `Đang khám phá nhạc trong bảng xếp hạng ${region}.`;
     }
   }
 
@@ -5344,62 +5442,308 @@
     renderDiscoverForYouRow();
   }
 
-  async function startDiscoverRadio(artistName) {
+  async function getDiscoverRadioTracks(primaryCandidate, relatedCandidates = [], options = {}) {
+    const candidates = [primaryCandidate, ...relatedCandidates].filter(Boolean);
+    const artistName = typeof primaryCandidate === 'string'
+      ? primaryCandidate
+      : String(primaryCandidate?.name || 'nghệ sĩ');
+    const countryAtStart = state.selectedCountry;
+    const candidateTrackIds = new Set(candidates.flatMap(candidate =>
+      (candidate.tracks || []).map(entry => String(entry?.track?.id || entry?.id || '')).filter(Boolean)
+    ));
+    const artistKeys = new Set(candidates.map(candidate => normalizeDiscoverArtist(
+      typeof candidate === 'string' ? candidate : candidate.name
+    )).filter(Boolean));
+    const seenTrackIds = new Set();
+    const regionalTracks = (state.trendingTracks || []).filter(track => !isExcludedRecommendationTrack(track));
+    const matchingTracks = regionalTracks.filter(track => {
+      const id = String(track?.id || '');
+      if (!id || seenTrackIds.has(id)) return false;
+      const selectedOnCard = candidateTrackIds.has(id);
+      const matchesArtist = artistKeys.size && getRadioArtistNames(track)
+        .some(name => artistKeys.has(normalizeDiscoverArtist(name)));
+      if (!selectedOnCard && !matchesArtist) return false;
+      seenTrackIds.add(id);
+      return true;
+    });
+
+    const shouldSearchArtistTracks = artistKeys.size > 0 && matchingTracks.length < 50;
+    if (shouldSearchArtistTracks && !options.silent) {
+      showToast(`Đang tìm thêm bài của ${artistName} và các nghệ sĩ cùng xu hướng...`);
+    }
+    const searchedTrackGroups = !shouldSearchArtistTracks
+      ? []
+      : await Promise.all([...artistKeys].map(async artistKey => {
+        const matchingCandidate = candidates.find(candidate => normalizeDiscoverArtist(
+          typeof candidate === 'string' ? candidate : candidate.name
+        ) === artistKey);
+        const searchName = typeof matchingCandidate === 'string'
+          ? matchingCandidate
+          : String(matchingCandidate?.name || '');
+        if (!searchName) return [];
+
+        try {
+          const response = await fetch(`/api/search?q=${encodeURIComponent(searchName)}`);
+          if (!response.ok) return [];
+          const data = await response.json();
+          return (Array.isArray(data.results) ? data.results : Array.isArray(data.tracks) ? data.tracks : [])
+            .filter(track => track?.source !== 'itunes-preview' && !isExcludedRecommendationTrack(track) && getRadioArtistNames(track).some(name =>
+              normalizeDiscoverArtist(name) === artistKey));
+        } catch (error) {
+          console.warn(`[Discover radio search warning] ${searchName}:`, error);
+          return [];
+        }
+      }));
+
+    if (state.selectedCountry !== countryAtStart) {
+      if (!options.silent) showToast('Khu vực đã thay đổi. Hãy chọn radio lại để lấy đúng nhạc theo vùng mới.');
+      return null;
+    }
+
+    const radioTracks = [];
+    const seenRadioTrackIds = new Set();
+    const seenRadioTitles = new Set();
+    [...matchingTracks, ...searchedTrackGroups.flat()].forEach(track => {
+      if (isExcludedRecommendationTrack(track)) return;
+      if (radioTracks.length >= 50) return;
+      const id = String(track?.id || track?.videoId || '').trim();
+      const originalId = String(track?.originalVideoId || '').trim();
+      const titleKey = `${normalizeDiscoverArtist(track?.title)}|${getRadioArtistNames(track)
+        .map(normalizeDiscoverArtist).sort().join('|')}`;
+      if (!id || seenRadioTrackIds.has(id) || (originalId && seenRadioTrackIds.has(originalId)) ||
+        (titleKey !== '|' && seenRadioTitles.has(titleKey))) return;
+      seenRadioTrackIds.add(id);
+      if (originalId) seenRadioTrackIds.add(originalId);
+      if (titleKey !== '|') seenRadioTitles.add(titleKey);
+      radioTracks.push(track);
+    });
+
+    if (!radioTracks.length) {
+      if (!options.silent) showToast(`Tab ${state.selectedCountryName || 'khu vực này'} hiện chưa có bài phù hợp để tạo danh sách.`);
+      return [];
+    }
+
+    return radioTracks;
+  }
+
+  async function startDiscoverRadio(primaryCandidate, relatedCandidates = []) {
+    const artistName = typeof primaryCandidate === 'string'
+      ? primaryCandidate
+      : String(primaryCandidate?.name || 'nghệ sĩ');
+    const radioTracks = await getDiscoverRadioTracks(primaryCandidate, relatedCandidates);
+    if (!radioTracks?.length) return;
+
+    state.queue = radioTracks;
+    state.queueIndex = 0;
+
+    let playbackError = null;
     try {
-      recordDiscoverArtistIntent(artistName);
-      showToast(`Đang tạo radio quanh ${artistName}...`);
-      const response = await fetch(`/api/search?q=${encodeURIComponent(`${artistName} popular songs`)}`);
-      const data = await response.json();
-      const results = Array.isArray(data.results) ? data.results : [];
-      const normalizedArtist = normalizeDiscoverArtist(artistName);
-      const matchingTracks = results.filter(track => getDiscoverArtistNames(track)
-        .some(name => normalizeDiscoverArtist(name) === normalizedArtist));
-      const radioTracks = matchingTracks
-        .filter((track, index, tracks) => track?.id && tracks.findIndex(candidate => candidate.id === track.id) === index)
-        .slice(0, 25);
-      if (!radioTracks.length) {
-        showToast(`Chưa tìm được bài hát cho radio ${artistName}.`);
-        return;
-      }
-      state.queue = radioTracks;
-      state.queueIndex = 0;
-      renderQueueDrawer();
       playTrack(radioTracks[0], false);
     } catch (error) {
-      console.warn('[Discover radio error]:', error);
-      showToast('Chưa tạo được radio lúc này. Hãy thử lại sau nhé.');
+      playbackError = error;
+      console.warn('[Discover radio playback error]:', error);
+    }
+
+    renderQueueDrawer();
+    if (dom.playlistDrawer) dom.playlistDrawer.classList.remove('hidden');
+
+    try {
+      recordDiscoverArtistIntent(artistName);
+    } catch (historyError) {
+      console.warn('[Discover radio history warning]:', historyError);
+    }
+
+    showToast(playbackError
+      ? `Đã tạo danh sách ${radioTracks.length} bài; chưa phát được bài đầu tiên.`
+      : `Đã tạo danh sách ${radioTracks.length} bài cho ${artistName}.`);
+  }
+
+  function closeDiscoverRadioDetail(restoreHome = true, restoreFocus = true) {
+    if (!dom.discoverRadioDetail || dom.discoverRadioDetail.classList.contains('hidden')) return;
+    discoverRadioOpenRequestId += 1;
+    dom.discoverRadioDetail.classList.add('hidden');
+    if (restoreHome) {
+      const homeView = document.getElementById('viewHome');
+      homeView?.classList.remove('hidden');
+      homeView?.classList.add('active');
+      if (dom.mainContent && Number.isFinite(activeDiscoverRadioDetail?.previousScrollTop)) {
+        dom.mainContent.scrollTop = activeDiscoverRadioDetail.previousScrollTop;
+      }
+    }
+    const focusTarget = discoverRadioReturnFocus;
+    activeDiscoverRadioDetail = null;
+    discoverRadioReturnFocus = null;
+    if (restoreFocus && focusTarget?.isConnected) focusTarget.focus({ preventScroll: true });
+  }
+
+  function buildDiscoverRadioArtwork(primary, relatedCandidates) {
+    if (!dom.radioDetailArtwork) return;
+    const faces = relatedCandidates.length
+      ? [relatedCandidates[0], primary, relatedCandidates[1]].filter(Boolean)
+      : [primary];
+    dom.radioDetailArtwork.innerHTML = faces.map((artist, index) => {
+      const thumbnail = getRadioCandidateThumbnail(artist);
+      const faceIndex = relatedCandidates.length ? index + 1 : 2;
+      const faceClass = `radio-detail-face radio-detail-face-${faceIndex}`;
+      const artistKey = artist.key || normalizeDiscoverArtist(artist.name);
+      return thumbnail
+        ? `<img class="${faceClass}" data-radio-artist-key="${escapeHtml(artistKey)}" src="${escapeHtml(thumbnail)}" alt="" loading="eager" decoding="async">`
+        : `<span class="${faceClass} radio-detail-monogram" data-radio-artist-key="${escapeHtml(artistKey)}">${escapeHtml(getRadioArtistInitials(artist))}</span>`;
+    }).join('');
+    dom.radioDetailArtwork.querySelectorAll('img').forEach(image => {
+      image.addEventListener('error', () => {
+        const artist = faces.find(candidate => (candidate.key || normalizeDiscoverArtist(candidate.name)) === image.dataset.radioArtistKey);
+        const monogram = document.createElement('span');
+        monogram.className = `${image.className} radio-detail-monogram`;
+        monogram.dataset.radioArtistKey = image.dataset.radioArtistKey;
+        monogram.textContent = getRadioArtistInitials(artist);
+        image.replaceWith(monogram);
+      }, { once: true });
+    });
+  }
+
+  function renderDiscoverRadioDetailTracks(tracks) {
+    if (!dom.radioDetailTracks) return;
+    dom.radioDetailTracks.innerHTML = '';
+    if (dom.radioDetailCount) dom.radioDetailCount.textContent = `${tracks.length} ${tracks.length === 1 ? 'bài' : 'bài hát'}`;
+
+    tracks.forEach((track, index) => {
+      const row = document.createElement('button');
+      const title = String(track?.title || 'Bài hát chưa có tên');
+      const artist = String(track?.artist || getRadioArtistNames(track).join(', ') || 'Nghệ sĩ chưa rõ');
+      const thumbnail = track?.thumbnail ? upgradeThumbnailUrl(track.thumbnail) : '';
+      row.type = 'button';
+      row.className = 'radio-detail-track-row';
+      row.dataset.trackIndex = String(index);
+      row.setAttribute('aria-label', `Phát ${title}, ${artist}`);
+      if (state.currentTrack && String(state.currentTrack.id) === String(track.id)) row.classList.add('is-active');
+      row.innerHTML = `
+        <span class="radio-detail-track-number" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>
+        <span class="radio-detail-cover-wrap">${thumbnail ? `<img class="radio-detail-cover" src="${escapeHtml(thumbnail)}" alt="" loading="lazy" decoding="async"><span class="radio-detail-cover-fallback" aria-hidden="true">♫</span>` : '<span class="radio-detail-cover-fallback is-visible" aria-hidden="true">♫</span>'}</span>
+        <span class="radio-detail-track-copy"><strong title="${escapeHtml(title)}">${escapeHtml(title)}</strong><span title="${escapeHtml(artist)}">${escapeHtml(artist)}</span></span>
+        <span class="radio-detail-track-play" aria-hidden="true">▶</span>`;
+      const cover = row.querySelector('.radio-detail-cover');
+      cover?.addEventListener('error', () => {
+        cover.hidden = true;
+        row.querySelector('.radio-detail-cover-fallback')?.classList.add('is-visible');
+      }, { once: true });
+      row.addEventListener('click', () => {
+        const radio = activeDiscoverRadioDetail;
+        if (!radio || !radio.tracks[index]) return;
+        state.queue = [...radio.tracks];
+        state.queueIndex = index;
+        renderQueueDrawer();
+        playTrack(radio.tracks[index], false);
+        dom.radioDetailTracks.querySelectorAll('.radio-detail-track-row').forEach(item => {
+          item.classList.toggle('is-active', item === row);
+        });
+      });
+      dom.radioDetailTracks.appendChild(row);
+    });
+  }
+
+  async function openDiscoverRadioDetail(primaryCandidate, relatedCandidates = [], returnFocus = null) {
+    if (!dom.discoverRadioDetail || !primaryCandidate) return;
+    const primary = typeof primaryCandidate === 'string' ? { name: primaryCandidate } : primaryCandidate;
+    const countryAtStart = state.selectedCountry;
+    const requestId = ++discoverRadioOpenRequestId;
+    const wasOpen = !dom.discoverRadioDetail.classList.contains('hidden');
+    if (!wasOpen) {
+      discoverRadioReturnFocus = returnFocus || document.activeElement;
+    }
+    const previousScrollTop = wasOpen
+      ? activeDiscoverRadioDetail?.previousScrollTop || 0
+      : (dom.mainContent?.scrollTop || 0);
+    activeDiscoverRadioDetail = { primary, relatedCandidates, tracks: [], countryAtStart, previousScrollTop };
+    const artistName = String(primary.name || 'Nghệ sĩ');
+
+    document.getElementById('viewHome')?.classList.add('hidden');
+    dom.discoverRadioDetail.classList.remove('hidden');
+    if (dom.mainContent) dom.mainContent.scrollTop = 0;
+    if (dom.radioDetailTitle) dom.radioDetailTitle.textContent = `${artistName} Radio`;
+    if (dom.radioDetailSupport) {
+      const names = relatedCandidates.map(candidate => candidate.name).filter(Boolean);
+      dom.radioDetailSupport.textContent = names.length
+        ? `Cùng xu hướng với ${names.slice(0, 4).join(', ')} và những nghệ sĩ liên quan.`
+        : 'Những bài hát cùng xu hướng với nghệ sĩ này.';
+    }
+    if (dom.radioDetailRegion) dom.radioDetailRegion.textContent = `Khu vực ${state.selectedCountryName || state.selectedCountry || 'đang chọn'} · danh sách được cập nhật theo xu hướng`;
+    const tone = [...normalizeDiscoverArtist(artistName)].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 5;
+    const radioHero = document.getElementById('radioDetailHero');
+    if (radioHero) radioHero.className = `radio-detail-hero radio-detail-tone-${tone}`;
+    if (dom.radioDetailPlayBtn) dom.radioDetailPlayBtn.disabled = true;
+    if (dom.radioDetailCount) dom.radioDetailCount.textContent = 'Đang tải…';
+    if (dom.radioDetailTracks) {
+      dom.radioDetailTracks.setAttribute('aria-busy', 'true');
+      dom.radioDetailTracks.innerHTML = '<p class="radio-detail-loading" role="status">Đang chọn những giai điệu phù hợp...</p>';
+    }
+    buildDiscoverRadioArtwork(primary, relatedCandidates);
+    dom.radioDetailBackBtn?.focus({ preventScroll: true });
+
+    const tracks = await getDiscoverRadioTracks(primary, relatedCandidates, { silent: true });
+    if (requestId !== discoverRadioOpenRequestId || !activeDiscoverRadioDetail) return;
+    if (state.selectedCountry !== countryAtStart || !tracks) {
+      if (dom.radioDetailCount) dom.radioDetailCount.textContent = '';
+      if (dom.radioDetailTracks) {
+        dom.radioDetailTracks.setAttribute('aria-busy', 'false');
+        dom.radioDetailTracks.innerHTML = '<p class="radio-detail-loading" role="status">Khu vực vừa thay đổi. Quay lại và mở radio để tải danh sách theo vùng mới.</p>';
+      }
+      return;
+    }
+    if (!tracks.length) {
+      if (dom.radioDetailCount) dom.radioDetailCount.textContent = '0 bài';
+      if (dom.radioDetailTracks) {
+        dom.radioDetailTracks.setAttribute('aria-busy', 'false');
+        dom.radioDetailTracks.innerHTML = '<div class="radio-detail-empty"><p>Chưa tìm được bài phù hợp cho radio này.</p><button class="radio-detail-retry" id="radioDetailRetryBtn" type="button">Thử tải lại</button></div>';
+        dom.radioDetailTracks.querySelector('#radioDetailRetryBtn')?.addEventListener('click', () => {
+          openDiscoverRadioDetail(primary, relatedCandidates);
+        });
+      }
+      return;
+    }
+
+    activeDiscoverRadioDetail.tracks = tracks;
+    if (dom.radioDetailPlayBtn) dom.radioDetailPlayBtn.disabled = false;
+    dom.radioDetailTracks?.setAttribute('aria-busy', 'false');
+    renderDiscoverRadioDetailTracks(tracks);
+    try {
+      recordDiscoverArtistIntent(artistName);
+    } catch (historyError) {
+      console.warn('[Discover radio history warning]:', historyError);
+    }
+  }
+
+  function playDiscoverRadioDetail() {
+    const radio = activeDiscoverRadioDetail;
+    if (!radio?.tracks?.length) return;
+    const firstTrack = radio.tracks[0];
+    state.queue = [...radio.tracks];
+    state.queueIndex = 0;
+    renderQueueDrawer();
+    dom.radioDetailTracks?.querySelectorAll('.radio-detail-track-row').forEach((row, index) => {
+      row.classList.toggle('is-active', index === 0);
+    });
+    if (state.currentTrack && String(state.currentTrack.id) === String(firstTrack.id)) {
+      const wasPlaying = state.isPlaying;
+      togglePlayPause();
+      showToast(wasPlaying ? `Đã tạm dừng radio ${radio.primary.name}.` : `Đang phát radio ${radio.primary.name}.`);
+    } else {
+      playTrack(firstTrack, false);
+      showToast(`Đang phát radio ${radio.primary.name}.`);
     }
   }
 
   function playDiscoverChart(tracks, chartTitle) {
-    if (!tracks?.length) return;
-    state.queue = [...tracks];
+    const eligibleTracks = (tracks || []).filter(track => !isExcludedRecommendationTrack(track));
+    if (!eligibleTracks.length) {
+      showToast('Bảng này chưa có bài phù hợp để phát.');
+      return;
+    }
+    state.queue = eligibleTracks;
     state.queueIndex = 0;
     renderQueueDrawer();
     playTrack(state.queue[0], false);
     showToast(`Đang phát ${chartTitle} theo thứ hạng bảng nhạc.`);
-  }
-
-  async function loadDiscoverGlobalChart() {
-    if (state.selectedCountry === 'GLOBAL' && state.currentTimeframe === 'daily' && state.trendingTracks.length) {
-      state.globalTrendingTracks = state.trendingTracks;
-      renderDiscoverChartCards();
-      renderDiscoverRecentList();
-      renderDiscoverForYouRow();
-      return;
-    }
-    try {
-      const response = await fetch('/api/trending?country=GLOBAL&timeframe=daily');
-      const data = await response.json();
-      if (data?.success) {
-        state.globalTrendingTracks = data.results || data.tracks || [];
-        renderDiscoverChartCards();
-        renderDiscoverRecentList();
-        renderDiscoverForYouRow();
-      }
-    } catch (error) {
-      console.warn('[Global discovery chart error]:', error);
-    }
   }
 
   // ==========================================================================
@@ -6387,6 +6731,14 @@
   // 11. SỰ KIỆN TOÀN CỤC & SETUP
   // ==========================================================================
   function setupEvents() {
+    dom.radioDetailBackBtn?.addEventListener('click', () => closeDiscoverRadioDetail());
+    dom.radioDetailPlayBtn?.addEventListener('click', playDiscoverRadioDetail);
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && dom.discoverRadioDetail && !dom.discoverRadioDetail.classList.contains('hidden')) {
+        closeDiscoverRadioDetail();
+      }
+    });
+
     // 1. Click Sidebar Tabs
     dom.sidebarNavItems.forEach(item => {
       item.addEventListener('click', (e) => {
@@ -8080,7 +8432,6 @@
 
     // Tự động tải danh sách thịnh hành theo Geo-IP (Việt Nam 🇻🇳)
     loadTrendingMusic();
-    loadDiscoverGlobalChart();
     loadAlbumsByRegion(state.selectedCountry);
     refreshDiscoverSections();
   }

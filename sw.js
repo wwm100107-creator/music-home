@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const CACHE_NAME = 'antigravity-ghibli-v5.21-youtube-artwork-only';
+const CACHE_NAME = 'antigravity-ghibli-v5.36-clean-radio-artist-credits';
 
 // Danh sách các tài nguyên tĩnh cốt lõi cần lưu trữ offline
 const STATIC_ASSETS = [
@@ -13,6 +13,8 @@ const STATIC_ASSETS = [
   './index.html',
   './style.css',
   './app.js',
+  './signature-particles.js?v=1',
+  './signature.png?v=1',
   './manifest.json',
   './favicon.png?v=5.3',
   './favicon-32x32.png?v=5.3',
@@ -37,7 +39,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('🍃 [Service Worker] Pre-caching Ghibli UI Shell v5.12...');
+      console.log('🍃 [Service Worker] Pre-caching Ghibli UI Shell v5.36...');
       return cache.addAll(STATIC_ASSETS);
     }).then(() => self.skipWaiting())
   );
