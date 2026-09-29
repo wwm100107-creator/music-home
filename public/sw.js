@@ -39,7 +39,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('🍃 [Service Worker] Pre-caching Ghibli UI Shell v5.31...');
+      console.log('🍃 [Service Worker] Pre-caching Ghibli UI Shell v5.32...');
       return cache.addAll(STATIC_ASSETS);
     }).then(() => self.skipWaiting())
   );
