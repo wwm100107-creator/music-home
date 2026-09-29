@@ -420,7 +420,7 @@
     playerAmbientAura: document.getElementById('playerAmbientAura'),
     playerMiniVinyl: document.getElementById('playerMiniVinyl'),
     natureWaveformEq: document.getElementById('natureWaveformEq'),
-    kodamaBeatBuddy: document.getElementById('kodamaBeatBuddy'),
+    playerSignatureParticles: document.getElementById('playerSignatureParticles'),
 
     // Mobile Bottom Navigation Bar (< 768px)
     mobileBottomNav: document.getElementById('mobileBottomNav'),
@@ -1280,16 +1280,13 @@
       dom.sheetProgressWrap.addEventListener('touchmove', handleSheetScrub, { passive: true });
     }
 
-    // Kodama buddy greeting easter egg
-    if (dom.kodamaBeatBuddy) {
-      dom.kodamaBeatBuddy.addEventListener('click', (e) => {
+    // Reassemble the particle signature when it is tapped.
+    if (dom.playerSignatureParticles) {
+      dom.playerSignatureParticles.addEventListener('click', (e) => {
         e.stopPropagation();
         triggerHaptic(12);
-        dom.kodamaBeatBuddy.style.transform = 'scale(1.35) rotate(18deg)';
-        showToast('🌱 Chú Kodama khẽ lắc đầu lách cách chào bạn!');
-        setTimeout(() => {
-          dom.kodamaBeatBuddy.style.transform = '';
-        }, 400);
+        window.HomeMusicSignature?.replay();
+        showToast('Chữ ký đang được ráp lại từ những hạt.');
       });
     }
   }
@@ -1439,7 +1436,7 @@
     state.isPlaying = !!isPlaying;
     updateMediaSessionPlaybackState(isPlaying);
 
-    // Dynamic 33 RPM mini vinyl spin, ambient aura, botanical EQ, and Kodama wobble
+    // Dynamic 33 RPM mini vinyl spin, ambient aura, and botanical EQ
     if (dom.bottomPlayer) {
       dom.bottomPlayer.classList.toggle('is-playing', isPlaying);
     }
