@@ -952,6 +952,13 @@ function isSpamTrack(title, artist, durationSec) {
   const t = (title || '').toLowerCase();
   const a = (artist || '').toLowerCase();
 
+  // Keep alternate performances out of music-source results and regional charts.
+  // Check title only so an artist name containing one of these words stays valid.
+  const normalizedTitle = normalizeForComparison(t);
+  if (/(?:^|\s)(?:remix(?:ed|es)?|remake(?:s)?|covers?)(?=$|\s)/.test(normalizedTitle)) {
+    return true;
+  }
+
   // Lọc bài hát đơn lẻ chuẩn: loại bỏ các bản mix quá dài (> 9 phút) hoặc quá ngắn (< 75s)
   if (durationSec > 0 && (durationSec < 75 || durationSec > 540)) {
     return true;

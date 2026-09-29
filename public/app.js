@@ -3906,6 +3906,11 @@
       .trim();
   }
 
+  function isExcludedRecommendationTrack(track) {
+    const title = normalizeDiscoverArtist(track?.title);
+    return /(?:^|\s)(?:remix(?:ed|es)?|remake(?:s)?|covers?)(?=$|\s)/.test(title);
+  }
+
   function getDiscoverArtistNames(track) {
     const names = Array.isArray(track?.artists) && track.artists.length
       ? track.artists
@@ -4167,7 +4172,7 @@
     const profile = getRecommendationTasteProfile();
     const candidateScores = new Map();
     const add = (track, score, source) => {
-      if (!track?.id) return;
+      if (!track?.id || isExcludedRecommendationTrack(track)) return;
       const id = String(track.id);
       const existing = candidateScores.get(id);
       if (!existing || score > existing.score) candidateScores.set(id, { track, score, source });
@@ -4287,7 +4292,7 @@
         const response = await fetch(`/api/search?q=${encodeURIComponent(`${seed} similar songs`)}`);
         if (!response.ok) return [];
         const data = await response.json();
-        return (Array.isArray(data.results) ? data.results : []).map(track => ({
+        return (Array.isArray(data.results) ? data.results : []).filter(track => !isExcludedRecommendationTrack(track)).map(track => ({
           ...track,
           _recommendationSource: source,
           _recommendationSeed: seed
@@ -4425,7 +4430,7 @@
     };
 
     const addTrack = (track, source, index, sourceMeta = {}) => {
-      if (!track) return;
+      if (!track || isExcludedRecommendationTrack(track)) return;
       const names = getRadioArtistNames(track);
       if (!names.length) return;
       const rank = Math.max(1, Number(track.rank) || index + 1);
@@ -5181,7 +5186,7 @@
     const candidateMap = new Map();
     const startListeningIds = new Set(getStartListeningCandidates().slice(0, 5).map(track => String(track.id)));
     const addCandidate = (track, source) => {
-      if (!track?.id) return;
+      if (!track?.id || isExcludedRecommendationTrack(track)) return;
       const id = String(track.id);
       if (profile.likedSongIds.has(id) || startListeningIds.has(id)) return;
       const existing = candidateMap.get(id);
@@ -5403,7 +5408,7 @@
       typeof candidate === 'string' ? candidate : candidate.name
     )).filter(Boolean));
     const seenTrackIds = new Set();
-    const regionalTracks = state.trendingTracks || [];
+    const regionalTracks = (state.trendingTracks || []).filter(track => !isExcludedRecommendationTrack(track));
     const matchingTracks = regionalTracks.filter(track => {
       const id = String(track?.id || '');
       if (!id || seenTrackIds.has(id)) return false;
@@ -5435,7 +5440,7 @@
           if (!response.ok) return [];
           const data = await response.json();
           return (Array.isArray(data.results) ? data.results : Array.isArray(data.tracks) ? data.tracks : [])
-            .filter(track => track?.source !== 'itunes-preview' && getRadioArtistNames(track).some(name =>
+            .filter(track => track?.source !== 'itunes-preview' && !isExcludedRecommendationTrack(track) && getRadioArtistNames(track).some(name =>
               normalizeDiscoverArtist(name) === artistKey));
         } catch (error) {
           console.warn(`[Discover radio search warning] ${searchName}:`, error);
@@ -5452,6 +5457,7 @@
     const seenRadioTrackIds = new Set();
     const seenRadioTitles = new Set();
     [...matchingTracks, ...searchedTrackGroups.flat()].forEach(track => {
+      if (isExcludedRecommendationTrack(track)) return;
       if (radioTracks.length >= 50) return;
       const id = String(track?.id || track?.videoId || '').trim();
       const originalId = String(track?.originalVideoId || '').trim();
@@ -5496,8 +5502,12 @@
   }
 
   function playDiscoverChart(tracks, chartTitle) {
-    if (!tracks?.length) return;
-    state.queue = [...tracks];
+    const eligibleTracks = (tracks || []).filter(track => !isExcludedRecommendationTrack(track));
+    if (!eligibleTracks.length) {
+      showToast('Bảng này chưa có bài phù hợp để phát.');
+      return;
+    }
+    state.queue = eligibleTracks;
     state.queueIndex = 0;
     renderQueueDrawer();
     playTrack(state.queue[0], false);
