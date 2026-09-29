@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&family=Comfortaa:wght@600;700;800;900&family=Fredoka:wght@500;600;700;800&family=Sniglet:wght@800&family=Quicksand:wght@600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=5.31">
+  <link rel="stylesheet" href="style.css?v=5.32">
 </head>
 <body class="ghibli-app-body">
 
@@ -387,6 +387,39 @@
           <div class="discover-horizontal-row discover-track-row" id="discoverForYouRow" aria-label="Bài hát được gợi ý cho bạn"></div>
         </section>
 
+      </section>
+
+      <section class="discover-radio-detail hidden" id="discoverRadioDetail" aria-labelledby="radioDetailTitle">
+        <header class="radio-detail-topbar">
+          <button class="radio-detail-back" id="radioDetailBackBtn" type="button" aria-label="Quay lại trang khám phá">
+            <span aria-hidden="true">←</span><span>Quay lại</span>
+          </button>
+          <span class="radio-detail-topbar-label">Radio nghệ sĩ</span>
+          <span class="radio-detail-topbar-spacer" aria-hidden="true"></span>
+        </header>
+
+        <div class="radio-detail-hero" id="radioDetailHero">
+          <div class="radio-detail-art" id="radioDetailArtwork" aria-hidden="true"></div>
+          <div class="radio-detail-intro">
+            <span class="radio-detail-eyebrow"><span class="radio-detail-signal" aria-hidden="true"></span> HOME MUSIC RADIO</span>
+            <h1 id="radioDetailTitle">Radio nghệ sĩ</h1>
+            <p class="radio-detail-support" id="radioDetailSupport"></p>
+            <p class="radio-detail-region" id="radioDetailRegion"></p>
+            <button class="radio-detail-play" id="radioDetailPlayBtn" type="button" aria-label="Phát radio">
+              <span aria-hidden="true">▶</span><span>Phát radio</span>
+            </button>
+          </div>
+        </div>
+
+        <section class="radio-detail-songs" aria-labelledby="radioDetailSongsTitle">
+          <div class="radio-detail-songs-heading">
+            <div><span class="radio-detail-eyebrow">TUYỂN CHỌN THEO XU HƯỚNG</span><h2 id="radioDetailSongsTitle">Danh sách bài hát</h2></div>
+            <span class="radio-detail-count" id="radioDetailCount" aria-live="polite"></span>
+          </div>
+          <div class="radio-detail-track-list" id="radioDetailTracks" role="list" aria-busy="true">
+            <p class="radio-detail-loading" role="status">Đang chọn những giai điệu phù hợp...</p>
+          </div>
+        </section>
       </section>
 
       <!-- ================================================================== -->
@@ -1531,13 +1564,13 @@
   <!-- Scripts: YouTube Engine & Ghibli App -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <script src="signature-particles.js?v=1"></script>
-  <script src="app.js?v=5.33"></script>
+  <script src="app.js?v=5.34"></script>
 
   <!-- PWA Offline Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=5.13')
+        navigator.serviceWorker.register('./sw.js?v=5.14')
           .then((reg) => {
             console.log('🍃 [PWA] Service Worker registered:', reg.scope);
             reg.update().catch(() => {});

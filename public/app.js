@@ -278,6 +278,7 @@
     woodSliderSwitch: document.getElementById('woodSliderSwitch'),
     sidebarNavItems: document.querySelectorAll('.sidebar-nav-item'),
     tabViews: document.querySelectorAll('.tab-view-section'),
+    mainContent: document.getElementById('mainContent'),
 
     // Home view
     homeQuickSearchInput: document.getElementById('homeQuickSearchInput'),
@@ -295,6 +296,15 @@
     trendingTracksGrid: document.getElementById('trendingTracksGrid'),
     discoverRadioRow: document.getElementById('discoverRadioRow'),
     discoverRadioCaption: document.getElementById('discoverRadioCaption'),
+    discoverRadioDetail: document.getElementById('discoverRadioDetail'),
+    radioDetailBackBtn: document.getElementById('radioDetailBackBtn'),
+    radioDetailArtwork: document.getElementById('radioDetailArtwork'),
+    radioDetailTitle: document.getElementById('radioDetailTitle'),
+    radioDetailSupport: document.getElementById('radioDetailSupport'),
+    radioDetailRegion: document.getElementById('radioDetailRegion'),
+    radioDetailPlayBtn: document.getElementById('radioDetailPlayBtn'),
+    radioDetailCount: document.getElementById('radioDetailCount'),
+    radioDetailTracks: document.getElementById('radioDetailTracks'),
     discoverRecentCaption: document.getElementById('discoverRecentCaption'),
     discoverRecentList: document.getElementById('discoverRecentList'),
     discoverChartRow: document.getElementById('discoverChartRow'),
@@ -1318,6 +1328,7 @@
   }
 
   function switchTab(tabKey) {
+    closeDiscoverRadioDetail(false, false);
     dom.tabViews.forEach(view => {
       if (view.dataset.tab === tabKey) {
         view.classList.remove('hidden');
@@ -4711,6 +4722,9 @@
   const radioArtistArtworkFailed = new Set();
   const radioArtistArtworkRequests = new Set();
   let radioArtworkRenderGeneration = 0;
+  let discoverRadioOpenRequestId = 0;
+  let activeDiscoverRadioDetail = null;
+  let discoverRadioReturnFocus = null;
 
   async function requestRadioArtistArtwork(candidates) {
     const now = Date.now();
@@ -4896,7 +4910,7 @@
       const card = document.createElement('button');
       card.type = 'button';
       card.className = `discover-radio-card discover-radio-tone-${index % 5}`;
-      card.setAttribute('aria-label', `Phát radio phổ biến của ${primary.name}`);
+      card.setAttribute('aria-label', `Mở radio của ${primary.name}`);
       card.innerHTML = `
         <span class="discover-radio-art" aria-hidden="true">
           <span class="discover-radio-mark">RADIO</span>
@@ -4919,15 +4933,17 @@
           if (!key) return;
           radioArtistArtworkFailed.add(key);
           radioArtistArtworkCache.set(key, '');
+          const artist = faces.find(candidate => (candidate.key || normalizeDiscoverArtist(candidate.name)) === key);
           const monogram = document.createElement('span');
           monogram.className = `${image.className} discover-radio-monogram`;
-          monogram.textContent = getRadioArtistInitials(faces[imageIndex]);
+          monogram.textContent = getRadioArtistInitials(artist);
           image.replaceWith(monogram);
         }, { once: true });
       });
-      card.addEventListener('click', () => startDiscoverRadio(
+      card.addEventListener('click', () => openDiscoverRadioDetail(
         primary,
-        supports.map(item => item.candidate)
+        supports.map(item => item.candidate),
+        card
       ));
       const cardShell = document.createElement('div');
       cardShell.className = 'discover-radio-card-shell';
@@ -5392,7 +5408,7 @@
     renderDiscoverForYouRow();
   }
 
-  async function startDiscoverRadio(primaryCandidate, relatedCandidates = []) {
+  async function getDiscoverRadioTracks(primaryCandidate, relatedCandidates = [], options = {}) {
     const candidates = [primaryCandidate, ...relatedCandidates].filter(Boolean);
     const artistName = typeof primaryCandidate === 'string'
       ? primaryCandidate
@@ -5418,7 +5434,7 @@
     });
 
     const shouldSearchArtistTracks = artistKeys.size > 0 && matchingTracks.length < 50;
-    if (shouldSearchArtistTracks) {
+    if (shouldSearchArtistTracks && !options.silent) {
       showToast(`Đang tìm thêm bài của ${artistName} và các nghệ sĩ cùng xu hướng...`);
     }
     const searchedTrackGroups = !shouldSearchArtistTracks
@@ -5446,8 +5462,8 @@
       }));
 
     if (state.selectedCountry !== countryAtStart) {
-      showToast('Khu vực đã thay đổi. Hãy chọn radio lại để lấy đúng nhạc theo vùng mới.');
-      return;
+      if (!options.silent) showToast('Khu vực đã thay đổi. Hãy chọn radio lại để lấy đúng nhạc theo vùng mới.');
+      return null;
     }
 
     const radioTracks = [];
@@ -5469,9 +5485,19 @@
     });
 
     if (!radioTracks.length) {
-      showToast(`Tab ${state.selectedCountryName || 'khu vực này'} hiện chưa có bài phù hợp để tạo danh sách.`);
-      return;
+      if (!options.silent) showToast(`Tab ${state.selectedCountryName || 'khu vực này'} hiện chưa có bài phù hợp để tạo danh sách.`);
+      return [];
     }
+
+    return radioTracks;
+  }
+
+  async function startDiscoverRadio(primaryCandidate, relatedCandidates = []) {
+    const artistName = typeof primaryCandidate === 'string'
+      ? primaryCandidate
+      : String(primaryCandidate?.name || 'nghệ sĩ');
+    const radioTracks = await getDiscoverRadioTracks(primaryCandidate, relatedCandidates);
+    if (!radioTracks?.length) return;
 
     state.queue = radioTracks;
     state.queueIndex = 0;
@@ -5496,6 +5522,181 @@
     showToast(playbackError
       ? `Đã tạo danh sách ${radioTracks.length} bài; chưa phát được bài đầu tiên.`
       : `Đã tạo danh sách ${radioTracks.length} bài cho ${artistName}.`);
+  }
+
+  function closeDiscoverRadioDetail(restoreHome = true, restoreFocus = true) {
+    if (!dom.discoverRadioDetail || dom.discoverRadioDetail.classList.contains('hidden')) return;
+    discoverRadioOpenRequestId += 1;
+    dom.discoverRadioDetail.classList.add('hidden');
+    if (restoreHome) {
+      const homeView = document.getElementById('viewHome');
+      homeView?.classList.remove('hidden');
+      homeView?.classList.add('active');
+      if (dom.mainContent && Number.isFinite(activeDiscoverRadioDetail?.previousScrollTop)) {
+        dom.mainContent.scrollTop = activeDiscoverRadioDetail.previousScrollTop;
+      }
+    }
+    const focusTarget = discoverRadioReturnFocus;
+    activeDiscoverRadioDetail = null;
+    discoverRadioReturnFocus = null;
+    if (restoreFocus && focusTarget?.isConnected) focusTarget.focus({ preventScroll: true });
+  }
+
+  function buildDiscoverRadioArtwork(primary, relatedCandidates) {
+    if (!dom.radioDetailArtwork) return;
+    const faces = relatedCandidates.length
+      ? [relatedCandidates[0], primary, relatedCandidates[1]].filter(Boolean)
+      : [primary];
+    dom.radioDetailArtwork.innerHTML = faces.map((artist, index) => {
+      const thumbnail = getRadioCandidateThumbnail(artist);
+      const faceIndex = relatedCandidates.length ? index + 1 : 2;
+      const faceClass = `radio-detail-face radio-detail-face-${faceIndex}`;
+      const artistKey = artist.key || normalizeDiscoverArtist(artist.name);
+      return thumbnail
+        ? `<img class="${faceClass}" data-radio-artist-key="${escapeHtml(artistKey)}" src="${escapeHtml(thumbnail)}" alt="" loading="eager" decoding="async">`
+        : `<span class="${faceClass} radio-detail-monogram" data-radio-artist-key="${escapeHtml(artistKey)}">${escapeHtml(getRadioArtistInitials(artist))}</span>`;
+    }).join('');
+    dom.radioDetailArtwork.querySelectorAll('img').forEach(image => {
+      image.addEventListener('error', () => {
+        const artist = faces.find(candidate => (candidate.key || normalizeDiscoverArtist(candidate.name)) === image.dataset.radioArtistKey);
+        const monogram = document.createElement('span');
+        monogram.className = `${image.className} radio-detail-monogram`;
+        monogram.dataset.radioArtistKey = image.dataset.radioArtistKey;
+        monogram.textContent = getRadioArtistInitials(artist);
+        image.replaceWith(monogram);
+      }, { once: true });
+    });
+  }
+
+  function renderDiscoverRadioDetailTracks(tracks) {
+    if (!dom.radioDetailTracks) return;
+    dom.radioDetailTracks.innerHTML = '';
+    if (dom.radioDetailCount) dom.radioDetailCount.textContent = `${tracks.length} ${tracks.length === 1 ? 'bài' : 'bài hát'}`;
+
+    tracks.forEach((track, index) => {
+      const row = document.createElement('button');
+      const title = String(track?.title || 'Bài hát chưa có tên');
+      const artist = String(track?.artist || getRadioArtistNames(track).join(', ') || 'Nghệ sĩ chưa rõ');
+      const thumbnail = track?.thumbnail ? upgradeThumbnailUrl(track.thumbnail) : '';
+      row.type = 'button';
+      row.className = 'radio-detail-track-row';
+      row.dataset.trackIndex = String(index);
+      row.setAttribute('aria-label', `Phát ${title}, ${artist}`);
+      if (state.currentTrack && String(state.currentTrack.id) === String(track.id)) row.classList.add('is-active');
+      row.innerHTML = `
+        <span class="radio-detail-track-number" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>
+        <span class="radio-detail-cover-wrap">${thumbnail ? `<img class="radio-detail-cover" src="${escapeHtml(thumbnail)}" alt="" loading="lazy" decoding="async"><span class="radio-detail-cover-fallback" aria-hidden="true">♫</span>` : '<span class="radio-detail-cover-fallback is-visible" aria-hidden="true">♫</span>'}</span>
+        <span class="radio-detail-track-copy"><strong title="${escapeHtml(title)}">${escapeHtml(title)}</strong><span title="${escapeHtml(artist)}">${escapeHtml(artist)}</span></span>
+        <span class="radio-detail-track-play" aria-hidden="true">▶</span>`;
+      const cover = row.querySelector('.radio-detail-cover');
+      cover?.addEventListener('error', () => {
+        cover.hidden = true;
+        row.querySelector('.radio-detail-cover-fallback')?.classList.add('is-visible');
+      }, { once: true });
+      row.addEventListener('click', () => {
+        const radio = activeDiscoverRadioDetail;
+        if (!radio || !radio.tracks[index]) return;
+        state.queue = [...radio.tracks];
+        state.queueIndex = index;
+        renderQueueDrawer();
+        playTrack(radio.tracks[index], false);
+        dom.radioDetailTracks.querySelectorAll('.radio-detail-track-row').forEach(item => {
+          item.classList.toggle('is-active', item === row);
+        });
+      });
+      dom.radioDetailTracks.appendChild(row);
+    });
+  }
+
+  async function openDiscoverRadioDetail(primaryCandidate, relatedCandidates = [], returnFocus = null) {
+    if (!dom.discoverRadioDetail || !primaryCandidate) return;
+    const primary = typeof primaryCandidate === 'string' ? { name: primaryCandidate } : primaryCandidate;
+    const countryAtStart = state.selectedCountry;
+    const requestId = ++discoverRadioOpenRequestId;
+    const wasOpen = !dom.discoverRadioDetail.classList.contains('hidden');
+    if (!wasOpen) {
+      discoverRadioReturnFocus = returnFocus || document.activeElement;
+    }
+    const previousScrollTop = wasOpen
+      ? activeDiscoverRadioDetail?.previousScrollTop || 0
+      : (dom.mainContent?.scrollTop || 0);
+    activeDiscoverRadioDetail = { primary, relatedCandidates, tracks: [], countryAtStart, previousScrollTop };
+    const artistName = String(primary.name || 'Nghệ sĩ');
+
+    document.getElementById('viewHome')?.classList.add('hidden');
+    dom.discoverRadioDetail.classList.remove('hidden');
+    if (dom.mainContent) dom.mainContent.scrollTop = 0;
+    if (dom.radioDetailTitle) dom.radioDetailTitle.textContent = `${artistName} Radio`;
+    if (dom.radioDetailSupport) {
+      const names = relatedCandidates.map(candidate => candidate.name).filter(Boolean);
+      dom.radioDetailSupport.textContent = names.length
+        ? `Cùng xu hướng với ${names.slice(0, 4).join(', ')} và những nghệ sĩ liên quan.`
+        : 'Những bài hát cùng xu hướng với nghệ sĩ này.';
+    }
+    if (dom.radioDetailRegion) dom.radioDetailRegion.textContent = `Khu vực ${state.selectedCountryName || state.selectedCountry || 'đang chọn'} · danh sách được cập nhật theo xu hướng`;
+    const tone = [...normalizeDiscoverArtist(artistName)].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 5;
+    const radioHero = document.getElementById('radioDetailHero');
+    if (radioHero) radioHero.className = `radio-detail-hero radio-detail-tone-${tone}`;
+    if (dom.radioDetailPlayBtn) dom.radioDetailPlayBtn.disabled = true;
+    if (dom.radioDetailCount) dom.radioDetailCount.textContent = 'Đang tải…';
+    if (dom.radioDetailTracks) {
+      dom.radioDetailTracks.setAttribute('aria-busy', 'true');
+      dom.radioDetailTracks.innerHTML = '<p class="radio-detail-loading" role="status">Đang chọn những giai điệu phù hợp...</p>';
+    }
+    buildDiscoverRadioArtwork(primary, relatedCandidates);
+    dom.radioDetailBackBtn?.focus({ preventScroll: true });
+
+    const tracks = await getDiscoverRadioTracks(primary, relatedCandidates, { silent: true });
+    if (requestId !== discoverRadioOpenRequestId || !activeDiscoverRadioDetail) return;
+    if (state.selectedCountry !== countryAtStart || !tracks) {
+      if (dom.radioDetailCount) dom.radioDetailCount.textContent = '';
+      if (dom.radioDetailTracks) {
+        dom.radioDetailTracks.setAttribute('aria-busy', 'false');
+        dom.radioDetailTracks.innerHTML = '<p class="radio-detail-loading" role="status">Khu vực vừa thay đổi. Quay lại và mở radio để tải danh sách theo vùng mới.</p>';
+      }
+      return;
+    }
+    if (!tracks.length) {
+      if (dom.radioDetailCount) dom.radioDetailCount.textContent = '0 bài';
+      if (dom.radioDetailTracks) {
+        dom.radioDetailTracks.setAttribute('aria-busy', 'false');
+        dom.radioDetailTracks.innerHTML = '<div class="radio-detail-empty"><p>Chưa tìm được bài phù hợp cho radio này.</p><button class="radio-detail-retry" id="radioDetailRetryBtn" type="button">Thử tải lại</button></div>';
+        dom.radioDetailTracks.querySelector('#radioDetailRetryBtn')?.addEventListener('click', () => {
+          openDiscoverRadioDetail(primary, relatedCandidates);
+        });
+      }
+      return;
+    }
+
+    activeDiscoverRadioDetail.tracks = tracks;
+    if (dom.radioDetailPlayBtn) dom.radioDetailPlayBtn.disabled = false;
+    dom.radioDetailTracks?.setAttribute('aria-busy', 'false');
+    renderDiscoverRadioDetailTracks(tracks);
+    try {
+      recordDiscoverArtistIntent(artistName);
+    } catch (historyError) {
+      console.warn('[Discover radio history warning]:', historyError);
+    }
+  }
+
+  function playDiscoverRadioDetail() {
+    const radio = activeDiscoverRadioDetail;
+    if (!radio?.tracks?.length) return;
+    const firstTrack = radio.tracks[0];
+    state.queue = [...radio.tracks];
+    state.queueIndex = 0;
+    renderQueueDrawer();
+    dom.radioDetailTracks?.querySelectorAll('.radio-detail-track-row').forEach((row, index) => {
+      row.classList.toggle('is-active', index === 0);
+    });
+    if (state.currentTrack && String(state.currentTrack.id) === String(firstTrack.id)) {
+      const wasPlaying = state.isPlaying;
+      togglePlayPause();
+      showToast(wasPlaying ? `Đã tạm dừng radio ${radio.primary.name}.` : `Đang phát radio ${radio.primary.name}.`);
+    } else {
+      playTrack(firstTrack, false);
+      showToast(`Đang phát radio ${radio.primary.name}.`);
+    }
   }
 
   function playDiscoverChart(tracks, chartTitle) {
@@ -6496,6 +6697,14 @@
   // 11. SỰ KIỆN TOÀN CỤC & SETUP
   // ==========================================================================
   function setupEvents() {
+    dom.radioDetailBackBtn?.addEventListener('click', () => closeDiscoverRadioDetail());
+    dom.radioDetailPlayBtn?.addEventListener('click', playDiscoverRadioDetail);
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && dom.discoverRadioDetail && !dom.discoverRadioDetail.classList.contains('hidden')) {
+        closeDiscoverRadioDetail();
+      }
+    });
+
     // 1. Click Sidebar Tabs
     dom.sidebarNavItems.forEach(item => {
       item.addEventListener('click', (e) => {
