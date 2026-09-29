@@ -159,7 +159,9 @@ async function main() {
     const login = await runWrangler([
       "login",
       "--scopes",
-      "account:read user:read workers_scripts:write",
+      "account:read",
+      "user:read",
+      "workers_scripts:write",
     ]);
     if (login !== 0) throw new Error("Cloudflare login was not completed.");
     const verifiedIdentity = await runWrangler(["whoami"], { capture: true, quiet: true });
