@@ -153,11 +153,13 @@ async function main() {
   const identity = await runWrangler(["whoami"], { capture: true, quiet: true });
   if (identity.code !== 0 || /not authenticated|please run [`']?wrangler login/i.test(identity.output)) {
     console.log("Wrangler needs Cloudflare authorization. A browser window will open; sign in and authorize it there.\n");
-    // Limit OAuth to account identity and Worker deployment/state management.
+    // Request identity reads plus the Worker script permission used for deploys,
+    // Durable Objects, workers.dev, and Worker secrets. Avoid the broader
+    // workers:write scope, which also covers zones, KV, and routes.
     const login = await runWrangler([
       "login",
       "--scopes",
-      "account:read user:read workers:write workers_scripts:write",
+      "account:read user:read workers_scripts:write",
     ]);
     if (login !== 0) throw new Error("Cloudflare login was not completed.");
     const verifiedIdentity = await runWrangler(["whoami"], { capture: true, quiet: true });
