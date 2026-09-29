@@ -1545,7 +1545,11 @@ apiRouter.post('/artist-artwork/resolve', rateLimit({ maxRequests: 12, windowMs:
     const pending = [];
     for (const [key, name] of requestedArtists) {
       const cached = artistArtworkCache.get(key);
-      if (cached !== null) resolved.set(key, cached);
+      if (cached !== null) {
+        resolved.set(key, typeof cached === 'string'
+          ? { artistThumbnail: cached, verifiedArtist: Boolean(cached) }
+          : cached);
+      }
       else pending.push({ key, name });
     }
 
@@ -1557,33 +1561,39 @@ apiRouter.post('/artist-artwork/resolve', rateLimit({ maxRequests: 12, windowMs:
         while (cursor < pending.length) {
           const current = pending[cursor++];
           let thumbnail = '';
+          let verifiedArtist = false;
           try {
             const searchResult = await ytSearch.music.search(current.name, { type: 'artist' });
             const rows = searchResult?.artists?.contents || [];
             const exactArtist = rows.find(row =>
               normalizeForComparison(getYouTubeMusicArtistResultName(row)) === current.key
             );
+            verifiedArtist = Boolean(exactArtist);
             thumbnail = exactArtist ? getYouTubeMusicArtistResultThumbnail(exactArtist) : '';
           } catch (error) {
             console.warn(`[Radio Artist Artwork YouTube Music Warning] ${current.name}:`, error.message);
           }
 
-          if (!thumbnail) {
+          if (!verifiedArtist) {
             for (const query of [current.name, `${current.name} Official`, `${current.name} Topic`]) {
               try {
                 const channelSearch = await ytSearch.search(query, { type: 'channel' });
                 const channels = channelSearch?.channels?.contents || channelSearch?.results || [];
                 const matchingChannel = channels.find(channel => isMatchingOfficialArtistChannel(channel, current.key));
-                thumbnail = matchingChannel ? getYouTubeChannelArtistThumbnail(matchingChannel) : '';
-                if (thumbnail) break;
+                if (matchingChannel) {
+                  verifiedArtist = true;
+                  thumbnail = getYouTubeChannelArtistThumbnail(matchingChannel);
+                  break;
+                }
               } catch (error) {
                 console.warn(`[Radio Artist Artwork YouTube Channel Warning] ${current.name}:`, error.message);
               }
             }
           }
 
-          resolved.set(current.key, thumbnail);
-          artistArtworkCache.set(current.key, thumbnail, thumbnail ? undefined : 10 * 60 * 1000);
+          const artistResult = { artistThumbnail: thumbnail, verifiedArtist };
+          resolved.set(current.key, artistResult);
+          artistArtworkCache.set(current.key, artistResult, verifiedArtist ? undefined : 10 * 60 * 1000);
         }
       }));
     }
@@ -1592,7 +1602,8 @@ apiRouter.post('/artist-artwork/resolve', rateLimit({ maxRequests: 12, windowMs:
       success: true,
       artists: [...requestedArtists].map(([key, name]) => ({
         name,
-        artistThumbnail: resolved.get(key) || ''
+        artistThumbnail: resolved.get(key)?.artistThumbnail || '',
+        verifiedArtist: Boolean(resolved.get(key)?.verifiedArtist)
       }))
     });
   } catch (error) {

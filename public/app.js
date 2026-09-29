@@ -4368,11 +4368,30 @@
     };
   }
 
-  function splitRadioArtistCredits(value) {
-    return String(value?.name || value?.text || value || '')
+  function splitRadioArtistCredits(value, track = null) {
+    const rawCredit = String(value?.name || value?.text || value || '').trim();
+    if (!rawCredit) return [];
+
+    let credit = rawCredit.replace(/\s*[([]\s*(?:khách mời|guest(?:s)?|featuring)\b[^)\]]*[)\]]/gi, '');
+    const title = String(track?.title || '').trim();
+    if (title) {
+      const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const titlePrefix = credit.match(new RegExp(`^${escapedTitle}\\s*[-–—|:]\\s*(.+)$`, 'i'));
+      if (titlePrefix) credit = titlePrefix[1].trim();
+    }
+
+    const standardCredits = credit
       .split(/\s*(?:,|&|\+|\bx\b|\bfeat\.?\b|\bft\.?\b|\bwith\b)\s*/i)
       .map(name => name.trim().replace(/^[\s\d.,:;|()[\]{}]+|[\s.,:;|()[\]{}]+$/g, ''))
       .filter(name => name && !/^(feat\.?|ft\.?)$/i.test(name));
+
+    // Chart metadata occasionally puts a song title and its performer in one credit,
+    // such as “Trễ Giờ Cơm - Quang Hùng MasterD”. Keep the full credit for exact
+    // artist verification, while also checking both sides independently.
+    return standardCredits.flatMap(name => {
+      const hyphenParts = name.split(/\s+[-–—]\s+/).map(part => part.trim()).filter(Boolean);
+      return hyphenParts.length > 1 ? [name, ...hyphenParts] : [name];
+    });
   }
 
   function isUsableRadioArtist(name, track) {
@@ -4387,7 +4406,7 @@
   function getRadioArtistNames(track) {
     const credits = Array.isArray(track?.artists) && track.artists.length ? track.artists : [track?.artist];
     const seen = new Set();
-    return credits.flatMap(splitRadioArtistCredits).filter(name => {
+    return credits.flatMap(credit => splitRadioArtistCredits(credit, track)).filter(name => {
       const key = normalizeDiscoverArtist(name);
       if (!isUsableRadioArtist(name, track) || seen.has(key)) return false;
       seen.add(key);
@@ -4717,6 +4736,7 @@
   }
 
   const radioArtistArtworkCache = new Map();
+  const radioArtistVerificationCache = new Map();
   const radioArtistArtworkPending = new Set();
   const radioArtistArtworkAttemptAt = new Map();
   const radioArtistArtworkFailed = new Set();
@@ -4731,17 +4751,17 @@
     const requested = new Map();
     (candidates || []).forEach(candidate => {
       const key = candidate?.key || normalizeDiscoverArtist(candidate?.name);
-      if (!key || radioArtistArtworkFailed.has(key) || getRadioCandidateThumbnail(candidate) || radioArtistArtworkPending.has(key)) return;
-      if (radioArtistArtworkCache.has(key) && now - (radioArtistArtworkAttemptAt.get(key) || 0) < 10 * 60 * 1000) return;
+      const verification = radioArtistVerificationCache.get(key);
+      const verificationTtl = verification?.verifiedArtist ? 24 * 60 * 60 * 1000 : 10 * 60 * 1000;
+      if (!key || (verification && now - verification.checkedAt < verificationTtl) || radioArtistArtworkPending.has(key)) return;
       if (now - (radioArtistArtworkAttemptAt.get(key) || 0) < 5 * 60 * 1000) return;
-      radioArtistArtworkCache.delete(key);
       requested.set(key, String(candidate?.name || '').trim());
     });
 
     const batch = [...requested].filter(([, name]) => name).slice(0, 48);
     if (!batch.length) {
       await Promise.all([...radioArtistArtworkRequests]);
-      return;
+      return (candidates || []).every(candidate => radioArtistVerificationCache.has(candidate?.key || normalizeDiscoverArtist(candidate?.name)));
     }
     batch.forEach(([key]) => {
       radioArtistArtworkPending.add(key);
@@ -4758,22 +4778,28 @@
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const payload = await response.json();
         if (!payload?.success || !Array.isArray(payload.artists)) return;
-        const results = new Map(payload.artists.map(item => [
-          normalizeDiscoverArtist(item?.name),
-          isYoutubeArtworkUrl(item?.artistThumbnail) ? String(item.artistThumbnail) : ''
-        ]));
+        const results = new Map(payload.artists.map(item => [normalizeDiscoverArtist(item?.name), item]));
         batch.forEach(([key]) => {
-          if (results.has(key)) radioArtistArtworkCache.set(key, results.get(key));
+          const result = results.get(key);
+          if (!result) return;
+          const verifiedArtist = result.verifiedArtist === true;
+          const artistThumbnail = isYoutubeArtworkUrl(result.artistThumbnail) ? String(result.artistThumbnail) : '';
+          radioArtistVerificationCache.set(key, { verifiedArtist, checkedAt: Date.now() });
+          radioArtistArtworkCache.set(key, artistThumbnail);
+          if (artistThumbnail) radioArtistArtworkFailed.delete(key);
+          else radioArtistArtworkFailed.add(key);
         });
       } catch (_) {
-        // Keep the existing image-backed candidates visible when lookup is unavailable.
+        batch.forEach(([key]) => radioArtistArtworkAttemptAt.delete(key));
+        return false;
       } finally {
         batch.forEach(([key]) => radioArtistArtworkPending.delete(key));
       }
+      return batch.every(([key]) => radioArtistVerificationCache.has(key));
     })();
     radioArtistArtworkRequests.add(request);
     try {
-      await request;
+      return await request;
     } finally {
       radioArtistArtworkRequests.delete(request);
     }
@@ -4781,28 +4807,21 @@
 
   function getRadioCandidateArtworkData(candidate) {
     const artistKey = candidate?.key || normalizeDiscoverArtist(candidate?.name);
-    const metadataTrack = (candidate?.tracks || []).find(item => {
-      if (!item.track?.artistThumbnail) return false;
-      const primaryArtist = normalizeDiscoverArtist(item.track.primaryArtist || item.track.artist || item.track.artists?.[0]);
-      return primaryArtist === artistKey;
-    });
     return {
       kind: 'artist',
       artist: candidate?.name || '',
       primaryArtist: candidate?.name || '',
       artistId: candidate?.artistId || '',
-      artistThumbnail: metadataTrack?.track?.artistThumbnail || '',
-      source: metadataTrack?.track?.source || 'youtube-music',
+      artistThumbnail: radioArtistArtworkCache.get(artistKey) || '',
+      source: 'youtube-music',
       sourceThumbnail: ''
     };
   }
 
   function getRadioCandidateThumbnail(candidate) {
-    const artworkData = getRadioCandidateArtworkData(candidate);
-    const resolved = getResolvedDiscoverArtwork('artist', artworkData);
     const artistKey = candidate?.key || normalizeDiscoverArtist(candidate?.name);
-    if (radioArtistArtworkFailed.has(artistKey)) return '';
-    const thumbnail = resolved?.artistThumbnail || resolved?.thumbnail || radioArtistArtworkCache.get(artistKey) || '';
+    if (!radioArtistVerificationCache.get(artistKey)?.verifiedArtist || radioArtistArtworkFailed.has(artistKey)) return '';
+    const thumbnail = radioArtistArtworkCache.get(artistKey) || '';
     return thumbnail ? upgradeThumbnailUrl(thumbnail) : '';
   }
 
@@ -4964,23 +4983,37 @@
       return;
     }
 
-    const targetArtworkCount = Math.min(36, pipeline.ranked.length);
+    dom.discoverRadioRow.setAttribute('aria-busy', 'true');
+    dom.discoverRadioRow.innerHTML = '<span class="discover-radio-status" role="status">Đang xác minh hồ sơ nghệ sĩ…</span>';
     const scanLimit = Math.min(192, pipeline.ranked.length);
-    let artistsWithArtwork = pipeline.ranked.filter(candidate => getRadioCandidateThumbnail(candidate));
+    let verifiedCandidates = pipeline.ranked.filter(candidate => radioArtistVerificationCache.get(candidate.key)?.verifiedArtist);
 
-    // Show the chart artists immediately. Portrait lookup must never hide the radios.
-    renderDiscoverRadioCards(pipeline);
-
-    for (let offset = 0; offset < scanLimit && artistsWithArtwork.length < targetArtworkCount; offset += 48) {
+    for (let offset = 0; offset < scanLimit && verifiedCandidates.length < 12; offset += 48) {
       if (generation !== radioArtworkRenderGeneration) return;
-      await requestRadioArtistArtwork(pipeline.ranked.slice(offset, offset + 48));
+      const candidates = pipeline.ranked.slice(offset, offset + 48);
+      const resolved = await requestRadioArtistArtwork(candidates);
       if (generation !== radioArtworkRenderGeneration) return;
-      artistsWithArtwork = pipeline.ranked.filter(candidate => getRadioCandidateThumbnail(candidate));
-      renderDiscoverRadioCards(pipeline);
+      if (!resolved) {
+        dom.discoverRadioRow.removeAttribute('aria-busy');
+        dom.discoverRadioRow.innerHTML = '<button class="discover-radio-status discover-radio-retry" type="button">Chưa xác minh được nghệ sĩ. Chạm để thử lại.</button>';
+        dom.discoverRadioRow.querySelector('.discover-radio-retry')?.addEventListener('click', () => {
+          candidates.forEach(candidate => radioArtistArtworkAttemptAt.delete(candidate.key));
+          renderDiscoverRadioRow();
+        });
+        return;
+      }
+      verifiedCandidates = pipeline.ranked.filter(candidate => radioArtistVerificationCache.get(candidate.key)?.verifiedArtist);
     }
 
     if (generation !== radioArtworkRenderGeneration) return;
-    renderDiscoverRadioCards(pipeline);
+    const verifiedPipeline = { ...pipeline, ranked: verifiedCandidates };
+    if (!verifiedCandidates.length) {
+      dom.discoverRadioRow.removeAttribute('aria-busy');
+      dom.discoverRadioRow.innerHTML = '<span class="discover-radio-status" role="status">Chưa tìm thấy hồ sơ nghệ sĩ khớp trong bảng khu vực này.</span>';
+      return;
+    }
+
+    renderDiscoverRadioCards(verifiedPipeline);
   }
 
   function renderDiscoverRecentList() {

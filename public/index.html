@@ -1564,13 +1564,13 @@
   <!-- Scripts: YouTube Engine & Ghibli App -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <script src="signature-particles.js?v=1"></script>
-  <script src="app.js?v=5.34"></script>
+  <script src="app.js?v=5.35"></script>
 
   <!-- PWA Offline Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=5.14')
+        navigator.serviceWorker.register('./sw.js?v=5.15')
           .then((reg) => {
             console.log('🍃 [PWA] Service Worker registered:', reg.scope);
             reg.update().catch(() => {});
