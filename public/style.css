@@ -86,6 +86,9 @@ html, body {
   --home-title-outline: #173a2c;
   --home-copy-outline: #1b3d30;
   --home-title-shadow: 0 2px 5px rgba(10, 30, 19, 0.76);
+  --home-content-text-color: #fffdf7;
+  --home-content-outline: #173a2c;
+  --home-content-shadow: 0 1px 3px rgba(9, 28, 18, 0.82);
 
   /* Theme variables (Day Mode) */
   --theme-text-main: #2b1810;
@@ -189,6 +192,9 @@ body.twilight-mode {
   --home-title-outline: #07150d;
   --home-copy-outline: #0b1b11;
   --home-title-shadow: 0 2px 5px rgba(0, 0, 0, 0.86);
+  --home-content-text-color: #fffdf7;
+  --home-content-outline: #07150d;
+  --home-content-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   
   background-color: #0b170e !important;
   color: var(--theme-text-main) !important;
@@ -3089,9 +3095,11 @@ body.twilight-mode .ghibli-hero-banner {
   font-family: var(--font-ghibli-brand);
   font-size: clamp(1.5rem, 3.2vw, 2.1rem);
   font-weight: normal;
-  color: var(--theme-text-main);
-  -webkit-text-stroke: 0 !important;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
+  color: var(--home-content-text-color);
+  -webkit-text-fill-color: var(--home-content-text-color);
+  -webkit-text-stroke: 0.9px var(--home-content-outline);
+  paint-order: stroke fill;
+  text-shadow: var(--home-content-shadow);
   margin-bottom: 4px;
   letter-spacing: 0.02em;
 }
@@ -3103,8 +3111,12 @@ body.twilight-mode .hero-main-title {
 .hero-sub-description {
   font-family: var(--font-ghibli-body);
   font-size: 0.88rem;
-  font-weight: 500;
-  color: var(--theme-text-muted);
+  font-weight: 600;
+  color: var(--home-content-text-color);
+  -webkit-text-fill-color: var(--home-content-text-color);
+  -webkit-text-stroke: 0.45px var(--home-content-outline);
+  paint-order: stroke fill;
+  text-shadow: var(--home-content-shadow);
   max-width: 640px;
   margin-bottom: 12px;
   line-height: 1.45;
@@ -7796,11 +7808,13 @@ body.twilight-mode .bg-playback-chip.disabled {
 
 .discover-radio-status {
   padding: 10px 2px;
-  color: rgba(50, 60, 49, 0.72);
+  color: var(--home-content-text-color);
+  -webkit-text-fill-color: var(--home-content-text-color);
+  -webkit-text-stroke: 0.45px var(--home-content-outline);
+  paint-order: stroke fill;
+  text-shadow: var(--home-content-shadow);
   font-size: 0.84rem;
 }
-
-body.twilight-mode .discover-radio-status { color: rgba(235, 244, 232, 0.72); }
 
 .discover-radio-card {
   width: 100%;
@@ -7810,15 +7824,18 @@ body.twilight-mode .discover-radio-status { color: rgba(235, 244, 232, 0.72); }
 .discover-radio-attribution {
   align-self: flex-start;
   padding: 2px 4px;
-  color: rgba(50, 60, 49, 0.62);
+  color: var(--home-content-text-color);
+  -webkit-text-fill-color: var(--home-content-text-color);
+  -webkit-text-stroke: 0.4px var(--home-content-outline);
+  paint-order: stroke fill;
+  text-shadow: var(--home-content-shadow);
   font-size: 0.58rem;
   line-height: 1.2;
   text-decoration: none;
 }
 
 .discover-radio-attribution:hover,
-.discover-radio-attribution:focus-visible { color: #3f8f58; text-decoration: underline; }
-body.twilight-mode .discover-radio-attribution { color: rgba(235, 244, 232, 0.55); }
+.discover-radio-attribution:focus-visible { text-decoration: underline; }
 
 .discover-radio-art {
   position: relative;
@@ -7842,7 +7859,11 @@ body.twilight-mode .discover-radio-attribution { color: rgba(235, 244, 232, 0.55
   z-index: 2;
   top: 11px;
   right: 12px;
-  color: rgba(20, 45, 31, 0.8);
+  color: var(--home-content-text-color);
+  -webkit-text-fill-color: var(--home-content-text-color);
+  -webkit-text-stroke: 0.5px var(--home-content-outline);
+  paint-order: stroke fill;
+  text-shadow: var(--home-content-shadow);
   font-size: 0.68rem;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -7869,11 +7890,14 @@ body.twilight-mode .discover-radio-attribution { color: rgba(235, 244, 232, 0.55
   display: grid;
   place-items: center;
   background: radial-gradient(circle at 34% 26%, #f5e8b4, #8db997 76%);
-  color: #183522;
+  color: var(--home-content-text-color);
+  -webkit-text-fill-color: var(--home-content-text-color);
+  -webkit-text-stroke: 0.8px var(--home-content-outline);
+  paint-order: stroke fill;
   font-size: clamp(1rem, 2.5vw, 1.55rem);
   font-weight: 900;
   letter-spacing: 0.04em;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  text-shadow: var(--home-content-shadow);
 }
 
 .discover-radio-face-1 { left: -5%; z-index: 1; }
@@ -7892,7 +7916,11 @@ body.twilight-mode .discover-radio-attribution { color: rgba(235, 244, 232, 0.55
   bottom: 9px;
   left: 12px;
   overflow: hidden;
-  color: #18251b;
+  color: var(--home-content-text-color);
+  -webkit-text-fill-color: var(--home-content-text-color);
+  -webkit-text-stroke: 0.8px var(--home-content-outline);
+  paint-order: stroke fill;
+  text-shadow: var(--home-content-shadow);
   font-size: clamp(1.1rem, 2vw, 1.48rem);
   font-weight: 800;
   letter-spacing: -0.04em;
@@ -7904,12 +7932,15 @@ body.twilight-mode .discover-radio-attribution { color: rgba(235, 244, 232, 0.55
   display: flex;
   flex-direction: column;
   gap: 4px;
-  color: rgba(50, 60, 49, 0.76);
+  color: var(--home-content-text-color);
+  -webkit-text-fill-color: var(--home-content-text-color);
+  -webkit-text-stroke: 0.42px var(--home-content-outline);
+  paint-order: stroke fill;
+  text-shadow: var(--home-content-shadow);
   font-size: 0.84rem;
   line-height: 1.4;
 }
 
-body.twilight-mode .discover-card-copy { color: rgba(235, 244, 232, 0.68); }
 .discover-card-copy strong { color: inherit; font-weight: 800; }
 .discover-radio-card .discover-card-copy { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 
@@ -7937,10 +7968,23 @@ body.twilight-mode .discover-card-copy { color: rgba(235, 244, 232, 0.68); }
 .discover-recent-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 3px; }
 .discover-recent-copy strong,
 .discover-recent-copy span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.discover-recent-copy strong,
+.discover-recent-copy span {
+  color: var(--home-content-text-color);
+  -webkit-text-fill-color: var(--home-content-text-color);
+  -webkit-text-stroke: 0.42px var(--home-content-outline);
+  paint-order: stroke fill;
+  text-shadow: var(--home-content-shadow);
+}
 .discover-recent-copy strong { font-size: 0.9rem; font-weight: 750; }
-.discover-recent-copy span { color: rgba(50, 60, 49, 0.67); font-size: 0.78rem; }
-body.twilight-mode .discover-recent-copy span { color: rgba(235, 244, 232, 0.62); }
-.discover-recent-play { padding: 7px 9px; color: #2d6a4f; font-size: 0.8rem; }
+.discover-recent-copy span { font-size: 0.78rem; }
+.discover-recent-play {
+  padding: 7px 9px;
+  color: var(--home-content-text-color);
+  -webkit-text-stroke: 0.45px var(--home-content-outline);
+  text-shadow: var(--home-content-shadow);
+  font-size: 0.8rem;
+}
 
 .discover-chart-row { margin: 7px 0 12px; }
 .discover-chart-card { width: clamp(174px, 20vw, 224px); gap: 8px; }
@@ -7972,8 +8016,18 @@ body.twilight-mode .discover-recent-copy span { color: rgba(235, 244, 232, 0.62)
 .discover-chart-play { position: absolute; right: 11px; bottom: 11px; display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; color: #143322; background: #d7edbd; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
 
 .discover-chart-details { margin: 0 0 28px; }
-.discover-chart-details > summary { width: fit-content; margin: 0 0 12px; color: #2d6a4f; font-size: 0.83rem; font-weight: 750; cursor: pointer; }
-body.twilight-mode .discover-chart-details > summary { color: #a8d994; }
+.discover-chart-details > summary {
+  width: fit-content;
+  margin: 0 0 12px;
+  color: var(--home-content-text-color);
+  -webkit-text-fill-color: var(--home-content-text-color);
+  -webkit-text-stroke: 0.45px var(--home-content-outline);
+  paint-order: stroke fill;
+  text-shadow: var(--home-content-shadow);
+  font-size: 0.83rem;
+  font-weight: 750;
+  cursor: pointer;
+}
 .discover-chart-details .nature-songs-grid { margin-bottom: 4px; }
 
 .discover-album-card,
@@ -7985,15 +8039,35 @@ body.twilight-mode .discover-chart-details > summary { color: #a8d994; }
 .discover-track-card > span { display: -webkit-box; width: 100%; overflow: hidden; color: inherit; font-size: 0.88rem; line-height: 1.35; text-overflow: ellipsis; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
 .discover-album-card > strong,
 .discover-track-card > strong { margin-top: 3px; font-weight: 800; }
+.discover-album-card > strong,
 .discover-album-card > span,
-.discover-track-card > span { color: rgba(50, 60, 49, 0.68); font-size: 0.78rem; }
-body.twilight-mode .discover-album-card > span,
-body.twilight-mode .discover-track-card > span { color: rgba(235, 244, 232, 0.62); }
+.discover-track-card > strong,
+.discover-track-card > span {
+  color: var(--home-content-text-color);
+  -webkit-text-fill-color: var(--home-content-text-color);
+  -webkit-text-stroke: 0.42px var(--home-content-outline);
+  paint-order: stroke fill;
+  text-shadow: var(--home-content-shadow);
+}
+.discover-album-card > span,
+.discover-track-card > span { font-size: 0.78rem; }
 
 .discover-artist-row { gap: 18px; }
 .discover-artist-card { width: clamp(118px, 14vw, 156px); align-items: center; gap: 9px; text-align: center; }
 .discover-artist-card > img { display: block; width: 100%; aspect-ratio: 1 / 1; border: 1px solid rgba(37, 58, 39, 0.14); border-radius: 50%; object-fit: cover; background: rgba(82, 125, 91, 0.14); }
-.discover-artist-card > strong { max-width: 100%; overflow: hidden; color: inherit; font-size: 0.83rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.discover-artist-card > strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--home-content-text-color);
+  -webkit-text-fill-color: var(--home-content-text-color);
+  -webkit-text-stroke: 0.45px var(--home-content-outline);
+  paint-order: stroke fill;
+  text-shadow: var(--home-content-shadow);
+  font-size: 0.83rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .discover-track-art-wrap { position: relative; display: block; width: 100%; }
 .discover-track-play { position: absolute; right: 9px; bottom: 9px; display: grid; width: 35px; height: 35px; place-items: center; border-radius: 50%; color: #173a26; background: #c7e6aa; opacity: 0; transform: translateY(4px); transition: opacity 130ms ease, transform 130ms ease; }
@@ -10721,7 +10795,11 @@ body.twilight-mode .discover-artist-garden-section {
 }
 
 .discover-artist-monogram {
-  color: #203a2d;
+  color: var(--home-content-text-color);
+  -webkit-text-fill-color: var(--home-content-text-color);
+  -webkit-text-stroke: 0.85px var(--home-content-outline);
+  paint-order: stroke fill;
+  text-shadow: var(--home-content-shadow);
   background: linear-gradient(145deg, rgba(255, 248, 214, 0.94), color-mix(in srgb, var(--artist-accent) 37%, #d9e4c8));
   font-family: var(--font-heading, "Plus Jakarta Sans", sans-serif);
   font-size: clamp(1.8rem, 4vw, 2.7rem);
@@ -10780,7 +10858,11 @@ body.twilight-mode .discover-artist-garden-section {
 .discover-artist-copy > strong {
   max-width: 100%;
   overflow: hidden;
-  color: inherit;
+  color: var(--home-content-text-color);
+  -webkit-text-fill-color: var(--home-content-text-color);
+  -webkit-text-stroke: 0.45px var(--home-content-outline);
+  paint-order: stroke fill;
+  text-shadow: var(--home-content-shadow);
   font-size: 0.9rem;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -10793,7 +10875,11 @@ body.twilight-mode .discover-artist-garden-section {
   border: 1px solid rgba(83, 123, 77, 0.22);
   border-radius: 999px;
   padding: 4px 9px;
-  color: #486647;
+  color: var(--home-content-text-color);
+  -webkit-text-fill-color: var(--home-content-text-color);
+  -webkit-text-stroke: 0.55px var(--home-content-outline);
+  paint-order: stroke fill;
+  text-shadow: var(--home-content-shadow);
   background: rgba(250, 248, 225, 0.56);
   font-size: 0.66rem;
   font-weight: 750;
@@ -10804,7 +10890,8 @@ body.twilight-mode .discover-artist-garden-section {
 
 body.twilight-mode .discover-artist-copy > span {
   border-color: rgba(149, 194, 126, 0.24);
-  color: #c5e0a8;
+  color: var(--home-content-text-color);
+  -webkit-text-fill-color: var(--home-content-text-color);
   background: rgba(36, 68, 42, 0.55);
 }
 
