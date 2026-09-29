@@ -1,14 +1,26 @@
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createInterface } from "node:readline/promises";
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const workerConfig = "stable-link/wrangler.jsonc";
-const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
+const bundledNpxCli = resolve(dirname(process.execPath), "node_modules/npm/bin/npx-cli.js");
+const useBundledNpxCli = process.platform === "win32" && existsSync(bundledNpxCli);
+const npxCommand = useBundledNpxCli
+  ? process.execPath
+  : process.platform === "win32"
+    ? "npx.cmd"
+    : "npx";
 const sshCommand = process.platform === "win32" ? "ssh.exe" : "ssh";
 const remoteHome = "/data/data/com.termux/files/home";
+
+function npxArgs(args) {
+  return [...(useBundledNpxCli ? [bundledNpxCli] : []), "--yes", "wrangler@latest", ...args];
+}
 
 function spawnProcess(command, args, options = {}) {
   return new Promise((resolvePromise, rejectPromise) => {
@@ -23,8 +35,8 @@ function spawnProcess(command, args, options = {}) {
   });
 }
 
-async function runWrangler(args, { input, capture = false } = {}) {
-  const commandArgs = ["--yes", "wrangler@latest", ...args];
+async function runWrangler(args, { input, capture = false, quiet = false } = {}) {
+  const commandArgs = npxArgs(args);
 
   if (!capture && input === undefined) {
     return spawnProcess(npxCommand, commandArgs, { stdio: "inherit" });
@@ -34,7 +46,7 @@ async function runWrangler(args, { input, capture = false } = {}) {
     const child = spawn(npxCommand, commandArgs, {
       cwd: rootDir,
       env: process.env,
-      shell: process.platform === "win32",
+      shell: process.platform === "win32" && npxCommand.endsWith(".cmd"),
       stdio: [input === undefined ? "inherit" : "pipe", capture ? "pipe" : "inherit", capture ? "pipe" : "inherit"],
     });
     let output = "";
@@ -44,13 +56,18 @@ async function runWrangler(args, { input, capture = false } = {}) {
         stream.on("data", (chunk) => {
           const text = chunk.toString();
           output += text;
-          (stream === child.stdout ? process.stdout : process.stderr).write(text);
+          if (!quiet) {
+            (stream === child.stdout ? process.stdout : process.stderr).write(text);
+          }
         });
       }
     }
 
     child.once("error", rejectPromise);
-    child.once("close", (code) => resolvePromise({ code: code ?? 1, output }));
+    child.once("close", (code) => {
+      const exitCode = code ?? 1;
+      resolvePromise(capture ? { code: exitCode, output } : exitCode);
+    });
     if (input !== undefined) child.stdin.end(input);
   });
 }
@@ -70,6 +87,36 @@ async function pipeRemoteFile(remotePath, contents, mode) {
     child.once("close", (code) => resolvePromise(code ?? 1));
     child.stdin.end(`${encoded}\n`);
   });
+}
+
+async function askForWorkerUrl() {
+  const terminal = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    while (true) {
+      const answer = (await terminal.question(
+        "\nCopy the music-home-link workers.dev URL shown above and paste it here: ",
+      )).trim();
+
+      try {
+        const parsed = new URL(answer);
+        if (
+          parsed.protocol === "https:" &&
+          /^music-home-link\.[a-z0-9-]+\.workers\.dev$/i.test(parsed.hostname) &&
+          parsed.pathname === "/" &&
+          !parsed.search &&
+          !parsed.hash
+        ) {
+          return parsed.origin;
+        }
+      } catch {
+        // Keep the prompt open if the pasted value is not a valid Worker URL.
+      }
+
+      console.error("That does not look like the music-home-link workers.dev URL. Paste the URL Wrangler printed after deployment.");
+    }
+  } finally {
+    terminal.close();
+  }
 }
 
 async function installOnAndroid(workerUrl, token) {
@@ -103,24 +150,23 @@ async function main() {
   console.log("Music Home stable-link setup");
   console.log("This uses Cloudflare Workers on the free plan and your existing SSH alias: music-home.\n");
 
-  let identity = await runWrangler(["whoami"]);
-  if (identity !== 0) {
+  const identity = await runWrangler(["whoami"], { capture: true, quiet: true });
+  if (identity.code !== 0 || /not authenticated|please run [`']?wrangler login/i.test(identity.output)) {
     console.log("Wrangler needs Cloudflare authorization. A browser window will open; sign in and authorize it there.\n");
     const login = await runWrangler(["login"]);
     if (login !== 0) throw new Error("Cloudflare login was not completed.");
-    identity = await runWrangler(["whoami"]);
-    if (identity !== 0) throw new Error("Wrangler could not confirm the Cloudflare login.");
+    const verifiedIdentity = await runWrangler(["whoami"], { capture: true, quiet: true });
+    if (
+      verifiedIdentity.code !== 0 ||
+      /not authenticated|please run [`']?wrangler login/i.test(verifiedIdentity.output)
+    ) {
+      throw new Error("Wrangler could not confirm the Cloudflare login.");
+    }
   }
 
-  const deployment = await runWrangler(["deploy", "--config", workerConfig], { capture: true });
-  if (deployment.code !== 0) throw new Error("Cloudflare Worker deployment failed.");
-
-  const workerUrl = deployment.output.match(/https:\/\/music-home-link\.[a-z0-9-]+\.workers\.dev/i)?.[0];
-  if (!workerUrl) {
-    throw new Error(
-      "Worker deployed, but Wrangler did not print its workers.dev URL. Find it in Cloudflare > Workers & Pages, then run setup again after checking that workers.dev is enabled for the account.",
-    );
-  }
+  const deployment = await runWrangler(["deploy", "--config", workerConfig]);
+  if (deployment !== 0) throw new Error("Cloudflare Worker deployment failed.");
+  const workerUrl = await askForWorkerUrl();
 
   const token = randomBytes(32).toString("base64url");
   console.log("\nSaving the private Android-to-Worker update secret in Cloudflare...");

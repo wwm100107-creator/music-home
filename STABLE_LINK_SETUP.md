@@ -12,8 +12,9 @@ This adds a fixed Cloudflare Workers URL that redirects visitors to the current 
    node scripts/setup-stable-link.mjs
    ```
 
-4. Wrangler deploys `music-home-link`, creates a private random update secret, stores the secret with Cloudflare, installs it in Termux with owner-only permissions, and starts the tunnel supervisor. The script prints the fixed public link when setup finishes.
-5. Share the printed `https://music-home-link.<account>.workers.dev` link. The visitor's browser follows a no-cache redirect to the currently active Quick Tunnel. If the Android phone is restarting, the fixed link briefly shows a “server is starting” page until the new tunnel is registered.
+4. Wrangler opens the Cloudflare login/authorization flow if needed, then deploys `music-home-link`. Copy the `https://music-home-link.<account>.workers.dev` URL printed by Wrangler and paste it into the PowerShell prompt once.
+5. The script creates a private random update secret, stores it with Cloudflare, installs it in Termux with owner-only permissions, and starts the tunnel supervisor. It prints the fixed public link when setup finishes.
+6. Share that fixed link. The visitor's browser follows a no-cache redirect to the currently active Quick Tunnel. If the Android phone is restarting, the fixed link briefly shows a “server is starting” page until the new tunnel is registered.
 
 ## Limits
 
