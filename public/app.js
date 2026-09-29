@@ -5868,7 +5868,7 @@
           if (q) {
             dom.albumRegionSubtitle.textContent = `Kết quả tìm kiếm cho "${q}"`;
           } else {
-            dom.albumRegionSubtitle.textContent = `Quét 10 đĩa EP & Album chính thức phát hành tại ${data.countryName || country}`;
+            dom.albumRegionSubtitle.textContent = `Album, EP và đĩa đơn của nghệ sĩ đang thịnh hành ở ${data.countryName || country}`;
           }
         }
 
@@ -5886,7 +5886,7 @@
           dom.albumsEmptyState.classList.remove('hidden');
           dom.albumsEmptyState.innerHTML = `
             <span class="empty-icon">${GhibliIcons.vinylGroove}</span>
-            <h3>Không tìm thấy EP hay Album nào cho "${escapeHtml(q || country)}"</h3>
+            <h3>Không tìm thấy album, EP hay đĩa đơn nào cho "${escapeHtml(q || country)}"</h3>
             <p>Hãy thử tìm bằng tên nghệ sĩ khác xem sao nhé!</p>
           `;
         }

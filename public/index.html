@@ -373,7 +373,7 @@
         </details>
 
         <section class="discover-section" aria-labelledby="discoverAlbumsTitle">
-          <div class="discover-section-heading"><div><h2 id="discoverAlbumsTitle">Album và đĩa đơn phổ biến</h2><p>Tuyển chọn theo khu vực bạn đang khám phá</p></div></div>
+          <div class="discover-section-heading"><div><h2 id="discoverAlbumsTitle">Album và đĩa đơn phổ biến</h2><p>Album, EP và đĩa đơn chính thức của nghệ sĩ đang thịnh hành</p></div></div>
           <div class="discover-horizontal-row discover-album-row" id="discoverAlbumRow" aria-label="Album và đĩa đơn được gợi ý"></div>
         </section>
 
@@ -1564,13 +1564,13 @@
   <!-- Scripts: YouTube Engine & Ghibli App -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <script src="signature-particles.js?v=1"></script>
-  <script src="app.js?v=5.36"></script>
+  <script src="app.js?v=5.37"></script>
 
   <!-- PWA Offline Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=5.16')
+        navigator.serviceWorker.register('./sw.js?v=5.17')
           .then((reg) => {
             console.log('🍃 [PWA] Service Worker registered:', reg.scope);
             reg.update().catch(() => {});

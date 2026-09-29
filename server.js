@@ -252,6 +252,7 @@ const streamCache = new BoundedCache(300, 45 * 60 * 1000);
 const trendingCache = new BoundedCache(50, 60 * 60 * 1000);
 const artistArtworkCache = new BoundedCache(500, 24 * 60 * 60 * 1000);
 const albumCache = new BoundedCache(80, 60 * 60 * 1000);
+const artistReleaseCache = new BoundedCache(240, 24 * 60 * 60 * 1000);
 const lyricsCache = new BoundedCache(300, 60 * 60 * 1000);
 const LRCLIB_HEADERS = {
   'User-Agent': 'MusicHome/1.0 (https://github.com/wwm100107-creator/music-home)'
@@ -1256,6 +1257,141 @@ function normalizeMusicMetadata(item = {}, source = 'unknown') {
   };
 }
 
+function getRegionalReleaseArtistNames(track) {
+  const title = String(track?.title || '').trim();
+  const rawCredits = Array.isArray(track?.artists) && track.artists.length
+    ? track.artists.map(artist => String(artist?.name || artist || '').trim()).filter(Boolean)
+    : [String(track?.primaryArtist || track?.artist || track?.authors?.[0]?.name || track?.author?.name || '').trim()].filter(Boolean);
+
+  return [...new Set(rawCredits.flatMap(rawCredit => {
+    let credit = rawCredit;
+    if (title) {
+      const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const titlePrefix = credit.match(new RegExp(`^${escapedTitle}\\s*[-–—|:]\\s*(.+)$`, 'i'));
+      if (titlePrefix) credit = titlePrefix[1].trim();
+    }
+
+    const hasFeaturingCredit = /\b(?:feat\.?|ft\.?)\b|\bwith\b/i.test(credit);
+    const names = credit
+      .split(/\s*(?:,|&|\+|\bx\b|\bfeat\.?\b|\bft\.?\b|\bwith\b)\s*/i)
+      .map(name => name.trim().replace(/^[\s\d.,:;|()[\]{}]+|[\s.,:;|()[\]{}]+$/g, ''))
+      .filter(Boolean)
+      .map((name, index) => hasFeaturingCredit && index > 0
+        ? name.split(/\s+[-–—]\s+/)[0].trim()
+        : name)
+      .filter(name => {
+        const key = normalizeForComparison(name);
+        return key.length >= 2 && key.length <= 64 && key !== normalizeForComparison(title) &&
+          !/\b(?:official|vevo|topic|channel|visualizer|performance|lyrics|karaoke)\b/.test(key) &&
+          !['unknown artist', 'various artists', 'artist'].includes(key);
+      });
+    return names;
+  }))];
+}
+
+function getRegionalReleaseArtistCandidates(tracks) {
+  const artists = new Map();
+  (tracks || []).forEach((track, index) => {
+    const rank = Math.max(1, Number(track?.rank) || index + 1);
+    getRegionalReleaseArtistNames(track).forEach((name, artistIndex) => {
+      const key = normalizeForComparison(name);
+      if (!key) return;
+      const candidate = artists.get(key) || { key, name, score: 0, firstRank: rank };
+      candidate.score += 1 / Math.sqrt(rank) / (artistIndex + 1);
+      candidate.firstRank = Math.min(candidate.firstRank, rank);
+      artists.set(key, candidate);
+    });
+  });
+  return [...artists.values()].sort((left, right) =>
+    right.score - left.score || left.firstRank - right.firstRank || left.name.localeCompare(right.name)
+  );
+}
+
+function getMusicArtistBrowseId(item) {
+  const payload = item?.endpoint?.payload || item?.navigation_endpoint?.payload || {};
+  return String(item?.id || payload.browseId || payload.browseEndpoint?.browseId || '').trim();
+}
+
+function getMusicNodeText(value) {
+  if (typeof value === 'string') return value.trim();
+  if (!value || typeof value.toString !== 'function') return '';
+  const text = value.toString().trim();
+  return text === '[object Object]' ? '' : text;
+}
+
+async function getOfficialArtistReleases(ytSearch, artist) {
+  const cacheKey = `artist-releases:${artist.key}`;
+  const cached = artistReleaseCache.get(cacheKey);
+  if (cached !== null) return cached;
+
+  try {
+    const searchResult = await ytSearch.music.search(artist.name, { type: 'artist' });
+    const artistResult = (searchResult?.artists?.contents || []).find(item =>
+      normalizeForComparison(getYouTubeMusicArtistResultName(item)) === artist.key
+    );
+    const artistBrowseId = getMusicArtistBrowseId(artistResult);
+    if (!artistResult || (!artistBrowseId.startsWith('UC') && !artistBrowseId.startsWith('FEmusic_library_privately_owned_artist'))) {
+      artistReleaseCache.set(cacheKey, [], 30 * 60 * 1000);
+      return [];
+    }
+
+    const artistPage = await ytSearch.music.getArtist(artistBrowseId);
+    const releases = [];
+    const seenIds = new Set();
+    for (const shelf of artistPage?.sections || []) {
+      const shelfTitle = getMusicNodeText(shelf?.header?.title || shelf?.title);
+      const shelfKey = normalizeForComparison(shelfTitle);
+      const isSinglesShelf = /\bsingles?\b|\beps?\b/.test(shelfKey);
+      const isAlbumsShelf = /\balbums?\b/.test(shelfKey);
+      if (!isSinglesShelf && !isAlbumsShelf) continue;
+
+      for (const item of shelf?.contents || []) {
+        if (item?.item_type && item.item_type !== 'album') continue;
+        const albumId = getMusicArtistBrowseId(item);
+        if ((!albumId.startsWith('MPR') && !albumId.startsWith('FEmusic_library_privately_owned_release')) || seenIds.has(albumId)) continue;
+
+        const title = getMusicNodeText(item?.title || item?.name);
+        const itemArtists = Array.isArray(item?.artists)
+          ? item.artists.map(value => String(value?.name || value || '').trim()).filter(Boolean)
+          : [];
+        const artistNames = itemArtists.length ? [...new Set(itemArtists)] : [artist.name];
+        const displayArtist = artistNames.join(', ');
+        if (!title || isSpamAlbum(title, displayArtist) || /\b(?:remix(?:ed|es)?|remake|covers?)\b/i.test(title)) continue;
+
+        const thumbnail = extractThumbnail(item?.thumbnail || item?.thumbnails);
+        const normalizedTitle = normalizeForComparison(title);
+        const type = /\b(?:ep|mini album)\b/.test(normalizedTitle)
+          ? 'EP'
+          : (isSinglesShelf ? 'Đĩa đơn / EP' : 'Album');
+        seenIds.add(albumId);
+        releases.push(normalizeMusicMetadata({
+          id: albumId,
+          albumId,
+          releaseId: String(item?.releaseId || item?.releaseGroupId || ''),
+          title,
+          artist: displayArtist,
+          artists: artistNames,
+          artistId: String(item?.artists?.[0]?.channel_id || artistBrowseId),
+          year: String(item?.year || ''),
+          thumbnail,
+          albumThumbnail: thumbnail,
+          sourceThumbnail: thumbnail,
+          type,
+          popularity: 0,
+          source: 'youtube-music-artist-release'
+        }, 'youtube-music-artist-release'));
+      }
+    }
+
+    artistReleaseCache.set(cacheKey, releases, releases.length ? 24 * 60 * 60 * 1000 : 30 * 60 * 1000);
+    return releases;
+  } catch (error) {
+    console.warn(`[Artist releases unavailable for ${artist.name}]:`, error.message);
+    artistReleaseCache.set(cacheKey, [], 10 * 60 * 1000);
+    return [];
+  }
+}
+
 // 10.3. YouTube Music chart playlists by region. These playlist positions are
 // not Music Home stream counts and must not be presented as Top/Viral scores.
 apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpointName: 'trending' }), async (req, res) => {
@@ -1742,7 +1878,7 @@ apiRouter.get('/albums', rateLimit({ maxRequests: 60, windowMs: 60000, endpointN
 
   const cacheKey = searchQuery
     ? `albums:search:${searchQuery.toLowerCase()}`
-    : `albums:region:${hub.code}`;
+    : `albums:artist-releases:${hub.code}`;
 
   const cachedData = albumCache.get(cacheKey);
   if (cachedData) {
@@ -1791,84 +1927,37 @@ apiRouter.get('/albums', rateLimit({ maxRequests: 60, windowMs: 60000, endpointN
         if (albums.length >= 10) break;
       }
     } else {
-      // Derive releases only from the current regional trend dataset.
+      // Resolve official artist pages from this region's chart, then read their
+      // Albums and Singles & EPs shelves. Track album metadata often points to
+      // compilations or TV-show playlists, so it is not reliable release data.
       let trendTracks = trendingCache.get(`trending:${hub.code}:daily`)?.tracks || [];
       if (!trendTracks.length && hub.dailyPlaylistId && ytSearch.music?.getPlaylist) {
         const playlist = await ytSearch.music.getPlaylist(hub.dailyPlaylistId);
         trendTracks = playlist.items || [];
       }
 
-      const groupedReleases = new Map();
-      const addReleaseFromTrack = (track, index) => {
-        const rawAlbum = track.album && typeof track.album === 'object'
-          ? track.album
-          : { name: track.album, id: track.albumId, year: track.year };
-        const title = String(rawAlbum.name || rawAlbum.title || '').trim();
-        const artist = String(track.primaryArtist || track.artist || track.artists?.[0]?.name || track.authors?.[0]?.name || track.author?.name || '').trim();
-        const albumId = String(track.albumId || rawAlbum.id || rawAlbum.browseId || '');
-        if (!title || !artist || !albumId || isSpamAlbum(title, artist)) return;
-
-        const key = albumId || `${title.toLocaleLowerCase()}|${artist.toLocaleLowerCase()}`;
-        const current = groupedReleases.get(key) || {
-          id: albumId,
-          albumId,
-          releaseId: track.releaseId || rawAlbum.releaseId || rawAlbum.releaseGroupId || '',
-          title,
-          artist,
-          artists: [artist],
-          year: String(rawAlbum.year || track.year || ''),
-          thumbnail: track.albumThumbnail || (rawAlbum.thumbnails || rawAlbum.thumbnail
-            ? extractThumbnail(rawAlbum.thumbnails || rawAlbum.thumbnail)
-            : ''),
-          sourceThumbnail: track.thumbnail || (track.thumbnails ? extractThumbnail(track.thumbnails) : ''),
-          albumThumbnail: track.albumThumbnail || (rawAlbum.thumbnails || rawAlbum.thumbnail
-            ? extractThumbnail(rawAlbum.thumbnails || rawAlbum.thumbnail)
-            : ''),
-          type: /\b(ep|single|mini)\b/i.test(title) ? 'EP' : 'Album',
-          popularity: 0,
-          rank: index + 1,
-          source: 'youtube-music'
-        };
-        current.popularity += 1 / Math.sqrt(index + 1);
-        if (!current.thumbnail || current.thumbnail === 'wood_2.jpg') {
-          current.thumbnail = track.albumThumbnail || (rawAlbum.thumbnails || rawAlbum.thumbnail
-            ? extractThumbnail(rawAlbum.thumbnails || rawAlbum.thumbnail)
-            : '');
+      const artistCandidates = getRegionalReleaseArtistCandidates(trendTracks).slice(0, 14);
+      const releasesByArtist = new Array(artistCandidates.length);
+      let cursor = 0;
+      const workerCount = Math.min(4, artistCandidates.length);
+      await Promise.all(Array.from({ length: workerCount }, async () => {
+        while (cursor < artistCandidates.length) {
+          const index = cursor++;
+          releasesByArtist[index] = await getOfficialArtistReleases(ytSearch, artistCandidates[index]);
         }
-        groupedReleases.set(key, current);
-      };
-      trendTracks.forEach(addReleaseFromTrack);
+      }));
 
-      // If chart rows omit release IDs, query the same live regional trend terms
-      // and keep only the release metadata returned with those songs.
-      if (groupedReleases.size < 10) {
-        for (const configuredQuery of hub.queries) {
-          const query = configuredQuery.replace(/\b20\d{2}\b/g, String(new Date().getFullYear()));
-          try {
-            const result = await ytSearch.music.search(query, { type: 'song' });
-            const contents = result.songs?.contents || result.results || [];
-            contents.forEach((track, index) => addReleaseFromTrack(track, index));
-          } catch (error) {
-            console.warn(`[Album release metadata] Query "${query}" warning:`, error.message);
-          }
-          if (groupedReleases.size >= 10) break;
-        }
-      }
-
-      const rankedReleases = [...groupedReleases.values()].sort((a, b) =>
-        b.popularity - a.popularity || a.rank - b.rank
-      );
-      const primaryPass = [];
-      const seenArtists = new Set();
-      rankedReleases.forEach(release => {
-        const artistKey = release.artist.toLocaleLowerCase();
-        if (seenArtists.has(artistKey)) return;
-        seenArtists.add(artistKey);
-        primaryPass.push(release);
-      });
-      albums = primaryPass.slice(0, 10).map(release =>
-        normalizeMusicMetadata(release, 'youtube-music')
-      );
+      const seenReleaseIds = new Set();
+      albums = releasesByArtist
+        .filter(Array.isArray)
+        .map(releases => releases.find(release => {
+          const releaseId = String(release.albumId || release.id || '');
+          if (!releaseId || seenReleaseIds.has(releaseId)) return false;
+          seenReleaseIds.add(releaseId);
+          return true;
+        }))
+        .filter(Boolean)
+        .slice(0, 10);
     }
 
     const payload = {
@@ -1877,6 +1966,7 @@ apiRouter.get('/albums', rateLimit({ maxRequests: 60, windowMs: 60000, endpointN
       countryName: hub.name,
       flag: hub.flag,
       query: searchQuery || '',
+      rankingBasis: searchQuery ? 'youtube-music-album-search' : 'trending-artists-official-releases',
       results: albums,
       albums
     };
