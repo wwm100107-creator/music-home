@@ -4790,6 +4790,19 @@
     return thumbnail ? upgradeThumbnailUrl(thumbnail) : '';
   }
 
+  function getRadioArtistInitials(candidate) {
+    const words = String(candidate?.name || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\b(feat|ft|with)\b.*$/i, '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!words.length) return '♪';
+    if (words.length > 1) return `${Array.from(words[0])[0]}${Array.from(words[1])[0]}`.toLocaleUpperCase();
+    return Array.from(words[0]).slice(0, 2).join('').toLocaleUpperCase();
+  }
+
   function logRadioRecommendationDiagnostics(pipeline, selected, cardData) {
     const artworkSnapshot = cardData.map(card => {
       const faces = [card.supports[0]?.candidate, card.primary, card.supports[1]?.candidate].filter(Boolean);
