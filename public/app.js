@@ -5390,11 +5390,12 @@
     renderDiscoverForYouRow();
   }
 
-  function startDiscoverRadio(primaryCandidate, relatedCandidates = []) {
+  async function startDiscoverRadio(primaryCandidate, relatedCandidates = []) {
     const candidates = [primaryCandidate, ...relatedCandidates].filter(Boolean);
     const artistName = typeof primaryCandidate === 'string'
       ? primaryCandidate
       : String(primaryCandidate?.name || 'nghệ sĩ');
+    const countryAtStart = state.selectedCountry;
     const candidateTrackIds = new Set(candidates.flatMap(candidate =>
       (candidate.tracks || []).map(entry => String(entry?.track?.id || entry?.id || '')).filter(Boolean)
     ));
@@ -5413,7 +5414,56 @@
       seenTrackIds.add(id);
       return true;
     });
-    const radioTracks = matchingTracks.slice(0, 25);
+
+    const shouldSearchArtistTracks = artistKeys.size > 0 && matchingTracks.length < 50;
+    if (shouldSearchArtistTracks) {
+      showToast(`Đang tìm thêm bài của ${artistName} và các nghệ sĩ cùng xu hướng...`);
+    }
+    const searchedTrackGroups = !shouldSearchArtistTracks
+      ? []
+      : await Promise.all([...artistKeys].map(async artistKey => {
+        const matchingCandidate = candidates.find(candidate => normalizeDiscoverArtist(
+          typeof candidate === 'string' ? candidate : candidate.name
+        ) === artistKey);
+        const searchName = typeof matchingCandidate === 'string'
+          ? matchingCandidate
+          : String(matchingCandidate?.name || '');
+        if (!searchName) return [];
+
+        try {
+          const response = await fetch(`/api/search?q=${encodeURIComponent(searchName)}`);
+          if (!response.ok) return [];
+          const data = await response.json();
+          return (Array.isArray(data.results) ? data.results : Array.isArray(data.tracks) ? data.tracks : [])
+            .filter(track => track?.source !== 'itunes-preview' && getRadioArtistNames(track).some(name =>
+              normalizeDiscoverArtist(name) === artistKey));
+        } catch (error) {
+          console.warn(`[Discover radio search warning] ${searchName}:`, error);
+          return [];
+        }
+      }));
+
+    if (state.selectedCountry !== countryAtStart) {
+      showToast('Khu vực đã thay đổi. Hãy chọn radio lại để lấy đúng nhạc theo vùng mới.');
+      return;
+    }
+
+    const radioTracks = [];
+    const seenRadioTrackIds = new Set();
+    const seenRadioTitles = new Set();
+    [...matchingTracks, ...searchedTrackGroups.flat()].forEach(track => {
+      if (radioTracks.length >= 50) return;
+      const id = String(track?.id || track?.videoId || '').trim();
+      const originalId = String(track?.originalVideoId || '').trim();
+      const titleKey = `${normalizeDiscoverArtist(track?.title)}|${getRadioArtistNames(track)
+        .map(normalizeDiscoverArtist).sort().join('|')}`;
+      if (!id || seenRadioTrackIds.has(id) || (originalId && seenRadioTrackIds.has(originalId)) ||
+        (titleKey !== '|' && seenRadioTitles.has(titleKey))) return;
+      seenRadioTrackIds.add(id);
+      if (originalId) seenRadioTrackIds.add(originalId);
+      if (titleKey !== '|') seenRadioTitles.add(titleKey);
+      radioTracks.push(track);
+    });
 
     if (!radioTracks.length) {
       showToast(`Tab ${state.selectedCountryName || 'khu vực này'} hiện chưa có bài phù hợp để tạo danh sách.`);
