@@ -4723,16 +4723,14 @@
     });
 
     const batch = [...requested].filter(([, name]) => name).slice(0, 48);
-    if (!batch.length) return;
-    batch.forEach(([key]) => {
-      radioArtistArtworkPending.add(key);
-      radioArtistArtworkAttemptAt.set(key, now);
-    });
-
     if (!batch.length) {
       await Promise.all([...radioArtistArtworkRequests]);
       return;
     }
+    batch.forEach(([key]) => {
+      radioArtistArtworkPending.add(key);
+      radioArtistArtworkAttemptAt.set(key, now);
+    });
 
     const request = (async () => {
       try {
@@ -4853,13 +4851,13 @@
     }));
   }
 
-  function renderDiscoverRadioCards(pipeline, artistsWithArtwork) {
-    const selected = selectDiverseRadioArtists(artistsWithArtwork, pipeline.relationships, pipeline.snapshot);
+  function renderDiscoverRadioCards(pipeline) {
+    const selected = selectDiverseRadioArtists(pipeline.ranked, pipeline.relationships, pipeline.snapshot);
     const supportUseCounts = new Map();
     const recentSupportKeys = [];
     const cardData = selected.map(selection => {
       const primary = selection.candidate;
-      const supports = getRadioSupportingArtists(primary, artistsWithArtwork, pipeline.relationships,
+      const supports = getRadioSupportingArtists(primary, pipeline.ranked, pipeline.relationships,
         supportUseCounts, recentSupportKeys);
       supports.forEach(item => {
         recentSupportKeys.push(item.candidate.key);
@@ -4878,7 +4876,7 @@
     dom.discoverRadioRow.innerHTML = '';
     finalCardData.forEach(({ primary, supports }, index) => {
       const faces = [supports[0]?.candidate, primary, supports[1]?.candidate]
-        .filter(candidate => candidate && getRadioCandidateThumbnail(candidate));
+        .filter(Boolean);
       const companions = supports.map(item => item.candidate.name);
       const card = document.createElement('button');
       card.type = 'button';
@@ -4891,7 +4889,9 @@
             ${faces.map((artist, imageIndex) => {
               const imageUrl = getRadioCandidateThumbnail(artist);
               const faceClass = `discover-radio-face discover-radio-face-${imageIndex + 1}`;
-              return `<img class="${faceClass}" data-radio-artist-key="${escapeHtml(artist.key || normalizeDiscoverArtist(artist.name))}" src="${escapeHtml(imageUrl)}" alt="" loading="lazy">`;
+              return imageUrl
+                ? `<img class="${faceClass}" data-radio-artist-key="${escapeHtml(artist.key || normalizeDiscoverArtist(artist.name))}" src="${escapeHtml(imageUrl)}" alt="" loading="lazy">`
+                : `<span class="${faceClass} discover-radio-monogram">${escapeHtml(getRadioArtistInitials(artist))}</span>`;
             }).join('')}
           </span>
           <strong>${escapeHtml(primary.name)}</strong>
@@ -4904,7 +4904,10 @@
           if (!key) return;
           radioArtistArtworkFailed.add(key);
           radioArtistArtworkCache.set(key, '');
-          renderDiscoverRadioRow();
+          const monogram = document.createElement('span');
+          monogram.className = `${image.className} discover-radio-monogram`;
+          monogram.textContent = getRadioArtistInitials(faces[imageIndex]);
+          image.replaceWith(monogram);
         }, { once: true });
       });
       card.addEventListener('click', () => startDiscoverRadio(
@@ -4922,33 +4925,31 @@
     if (!dom.discoverRadioRow) return;
     const generation = ++radioArtworkRenderGeneration;
     const pipeline = buildRadioRecommendationCandidates();
+    if (!pipeline.ranked.length) {
+      dom.discoverRadioRow.removeAttribute('aria-busy');
+      dom.discoverRadioRow.innerHTML = `<span class="discover-radio-status" role="status">${state.trendingTracks?.length
+        ? 'Chưa có tên nghệ sĩ phù hợp trong bảng xếp hạng khu vực.'
+        : 'Đang tải nghệ sĩ trong bảng xếp hạng khu vực…'}</span>`;
+      return;
+    }
+
     const targetArtworkCount = Math.min(36, pipeline.ranked.length);
     const scanLimit = Math.min(192, pipeline.ranked.length);
     let artistsWithArtwork = pipeline.ranked.filter(candidate => getRadioCandidateThumbnail(candidate));
 
-    if (artistsWithArtwork.length) {
-      renderDiscoverRadioCards(pipeline, artistsWithArtwork);
-    } else {
-      dom.discoverRadioRow.setAttribute('aria-busy', 'true');
-      dom.discoverRadioRow.innerHTML = '<span class="discover-radio-status" role="status">Đang tìm nghệ sĩ có ảnh phù hợp…</span>';
-    }
+    // Show the chart artists immediately. Portrait lookup must never hide the radios.
+    renderDiscoverRadioCards(pipeline);
 
     for (let offset = 0; offset < scanLimit && artistsWithArtwork.length < targetArtworkCount; offset += 48) {
       if (generation !== radioArtworkRenderGeneration) return;
       await requestRadioArtistArtwork(pipeline.ranked.slice(offset, offset + 48));
       if (generation !== radioArtworkRenderGeneration) return;
       artistsWithArtwork = pipeline.ranked.filter(candidate => getRadioCandidateThumbnail(candidate));
-      if (artistsWithArtwork.length) renderDiscoverRadioCards(pipeline, artistsWithArtwork);
+      renderDiscoverRadioCards(pipeline);
     }
 
     if (generation !== radioArtworkRenderGeneration) return;
-    artistsWithArtwork = pipeline.ranked.filter(candidate => getRadioCandidateThumbnail(candidate));
-    if (artistsWithArtwork.length) {
-      renderDiscoverRadioCards(pipeline, artistsWithArtwork);
-    } else {
-      dom.discoverRadioRow.removeAttribute('aria-busy');
-      dom.discoverRadioRow.innerHTML = '<span class="discover-radio-status" role="status">Chưa tìm được ảnh nghệ sĩ phù hợp trên YouTube Music hoặc YouTube.</span>';
-    }
+    renderDiscoverRadioCards(pipeline);
   }
 
   function renderDiscoverRecentList() {
@@ -5183,14 +5184,14 @@
     })).sort((a, b) => b.score - a.score);
     const recommendations = diversifyRankedCandidates(candidates, 8, 2);
 
-    console.info('[Discovery items]', JSON.stringify(recommendations.map(({ track, score, source }) => ({
+    console.info('[Discovery items]', JSON.stringify(recommendations.map(track => ({
       section: 'Dành riêng cho bạn',
       title: track.title || '',
       artist: track.primaryArtist || track.artist || '',
       album: track.album || '',
-      source: track.source || source,
-      recommendationSource: source,
-      rankingScore: Number(score.toFixed(3)),
+      source: track.source || 'youtube-music',
+      recommendationSource: 'regional-chart',
+      rankingScore: Number(scorePersonalRecommendation(track, 'regional-chart', profile, exposure).toFixed(3)),
       artistId: track.artistId || '',
       albumId: track.albumId || track.releaseId || '',
       artworkSource: track.thumbnail && !String(track.thumbnail).endsWith('wood_2.jpg')
@@ -5199,8 +5200,7 @@
     }))));
 
     dom.discoverForYouRow.innerHTML = '';
-    recommendations.forEach(recommendation => {
-      const { track } = recommendation;
+    recommendations.forEach(track => {
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'discover-track-card';

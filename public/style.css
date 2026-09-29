@@ -7852,6 +7852,17 @@ body.twilight-mode .discover-radio-attribution { color: rgba(235, 244, 232, 0.55
   box-shadow: none;
 }
 
+.discover-radio-monogram {
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 34% 26%, #f5e8b4, #8db997 76%);
+  color: #183522;
+  font-size: clamp(1rem, 2.5vw, 1.55rem);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
 .discover-radio-face-1 { left: -5%; z-index: 1; }
 .discover-radio-face-2 {
   top: 15%;
