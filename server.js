@@ -1708,6 +1708,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
     let chartSourceUrl = '';
     let rankingFallbackReason = '';
     let chartCandidateCount = 0;
+    let chartMaxRank = 0;
     const targetPlaylistId = timeframe === 'weekly' ? hub.weeklyPlaylistId : hub.dailyPlaylistId;
 
     // Daily charts use Spotify's eligible stream counts from the latest published chart day.
@@ -1715,20 +1716,47 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
     if (timeframe === 'daily') {
       try {
         const dailyChart = await fetchSpotifyDailyChart(hub.code);
-        const chartCandidates = dailyChart.entries.slice(0, SPOTIFY_DAILY_CHART_LIMIT);
-        chartCandidateCount = chartCandidates.length;
-        const resolvedTracks = (await mapWithConcurrency(chartCandidates, 6, chartTrack =>
+        const chartCandidates = dailyChart.entries;
+        const firstCandidates = chartCandidates.slice(0, SPOTIFY_DAILY_CHART_LIMIT);
+        chartCandidateCount = firstCandidates.length;
+        const firstResolvedTracks = (await mapWithConcurrency(firstCandidates, 6, chartTrack =>
           resolveSpotifyChartTrack(ytSearch, chartTrack)
-        )).filter(Boolean)
-          .sort((left, right) => left.rank - right.rank)
-          .map(track => ({ ...track, chartDate: dailyChart.chartDate }));
+        )).filter(Boolean);
+        const resolvedTracks = [];
+        const resolvedTrackIds = new Set();
+        const addResolvedTracks = batch => {
+          for (const track of batch) {
+            if (!track || resolvedTrackIds.has(String(track.id))) continue;
+            resolvedTrackIds.add(String(track.id));
+            resolvedTracks.push(track);
+          }
+        };
+        addResolvedTracks(firstResolvedTracks);
 
-        if (resolvedTracks.length < chartCandidates.length) {
-          console.warn(`[Spotify Daily chart] ${resolvedTracks.length}/${chartCandidates.length} songs matched playable YouTube Music results for ${hub.code}.`);
+        // Keep the chart at 100 playable songs. If a top Spotify row has no
+        // exact YouTube match, scan the next stream-ranked rows and preserve
+        // their original Spotify ranks instead of inventing replacement ranks.
+        while (resolvedTracks.length < SPOTIFY_DAILY_CHART_LIMIT && chartCandidateCount < chartCandidates.length) {
+          const missingCount = SPOTIFY_DAILY_CHART_LIMIT - resolvedTracks.length;
+          const batchSize = Math.min(20, Math.max(5, missingCount + 5), chartCandidates.length - chartCandidateCount);
+          const nextCandidates = chartCandidates.slice(chartCandidateCount, chartCandidateCount + batchSize);
+          chartCandidateCount += nextCandidates.length;
+          const nextResolvedTracks = await mapWithConcurrency(nextCandidates, 6, chartTrack =>
+            resolveSpotifyChartTrack(ytSearch, chartTrack)
+          );
+          addResolvedTracks(nextResolvedTracks);
         }
 
-        if (resolvedTracks.length >= 10) {
-          tracks = resolvedTracks;
+        resolvedTracks.sort((left, right) => left.rank - right.rank);
+        tracks = resolvedTracks.slice(0, SPOTIFY_DAILY_CHART_LIMIT)
+          .map(track => ({ ...track, chartDate: dailyChart.chartDate }));
+        chartMaxRank = Number(tracks[tracks.length - 1]?.rank) || 0;
+
+        if (tracks.length < SPOTIFY_DAILY_CHART_LIMIT) {
+          console.warn(`[Spotify Daily chart] ${tracks.length}/${SPOTIFY_DAILY_CHART_LIMIT} playable songs found after scanning ${chartCandidateCount} Spotify Daily rows for ${hub.code}.`);
+        }
+
+        if (tracks.length >= 10) {
           chartDate = dailyChart.chartDate;
           chartSourceUrl = dailyChart.sourceUrl;
           rankingBasis = 'spotify-daily-streams';
@@ -1954,6 +1982,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
       rankingFallbackReason,
       chartLimit: rankingBasis === 'spotify-daily-streams' ? SPOTIFY_DAILY_CHART_LIMIT : 0,
       chartCandidateCount: rankingBasis === 'spotify-daily-streams' ? chartCandidateCount : 0,
+      chartMaxRank: rankingBasis === 'spotify-daily-streams' ? chartMaxRank : 0,
       chartDate,
       sourceUrl: chartSourceUrl,
       results: tracks,

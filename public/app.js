@@ -3802,6 +3802,7 @@
           sourceUrl: data.sourceUrl || '',
           chartLimit: Number(data.chartLimit) || 0,
           chartCandidateCount: Number(data.chartCandidateCount) || 0,
+          chartMaxRank: Number(data.chartMaxRank) || 0,
           timeframe: curTimeframe
         };
         // Đồng bộ Dropdown quốc gia
@@ -5083,6 +5084,9 @@
     const isSpotifyDaily = chartInfo.rankingBasis === 'spotify-daily-streams';
     const chartLimit = isSpotifyDaily ? Number(chartInfo.chartLimit) || 100 : currentRegionTracks.length;
     const playableTrackCount = currentRegionTracks.filter(track => !isExcludedRecommendationTrack(track)).length;
+    const extendedRankNote = isSpotifyDaily && Number(chartInfo.chartMaxRank) > chartLimit
+      ? ` · đến hạng #${chartInfo.chartMaxRank}`
+      : '';
     const sourceDetail = isSpotifyDaily
       ? `Spotify Daily · ${chartDateLabel || 'ngày gần nhất'} (UTC) · Kworb`
       : `Thứ tự playlist YouTube Music ${timeframeLabel}`;
@@ -5093,6 +5097,7 @@
         detail: sourceDetail,
         tracks: currentRegionTracks,
         limit: chartLimit,
+        maxRank: Number(chartInfo.chartMaxRank) || 0,
         playableTrackCount,
         tone: 'local'
       });
@@ -5111,7 +5116,7 @@
           <span class="discover-chart-region">${escapeHtml(chart.tone === 'global' ? 'GLOBAL' : regionLabel.toLocaleUpperCase())}</span>
           <span class="discover-chart-open" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 6h2m3 0h11M4 12h2m3 0h11M4 18h2m3 0h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
         </span>
-        <span class="discover-card-copy"><strong>${escapeHtml(chart.title)}</strong><span>${escapeHtml(chart.detail)} · ${isSpotifyDaily ? `${chart.playableTrackCount}/${chart.limit} bài ghép được` : `${chart.tracks.length} bài`}</span></span>
+        <span class="discover-card-copy"><strong>${escapeHtml(chart.title)}</strong><span>${escapeHtml(chart.detail)} · ${isSpotifyDaily ? `${chart.playableTrackCount}/${chart.limit} bài ghép được${extendedRankNote}` : `${chart.tracks.length} bài`}</span></span>
       `;
       card.addEventListener('click', () => openDiscoverChartDetail(chart, card));
       dom.discoverChartRow.appendChild(card);
@@ -5707,12 +5712,21 @@
       : (dom.mainContent?.scrollTop || 0);
     activeDiscoverRadioDetail = null;
     discoverRadioReturnFocus = null;
-    activeDiscoverChartDetail = { title: chart.title, tracks, chartLimit, previousScrollTop };
+    activeDiscoverChartDetail = {
+      title: chart.title,
+      tracks,
+      chartLimit,
+      chartMaxRank: Number(chart.maxRank) || 0,
+      previousScrollTop
+    };
 
     const chartInfo = state.trendingChartInfo || {};
     const regionLabel = state.selectedCountryName || state.selectedCountry || 'khu vực đang chọn';
     const chartDateLabel = chartInfo.chartDate ? chartInfo.chartDate.split('-').reverse().join('/') : '';
     const isSpotifyDaily = chartInfo.rankingBasis === 'spotify-daily-streams';
+    const extendedRankNote = isSpotifyDaily && Number(chart.maxRank) > chartLimit
+      ? ` Đã tìm đến hạng Spotify #${chart.maxRank} để đủ bài phát được.`
+      : '';
     document.getElementById('viewHome')?.classList.add('hidden');
     dom.discoverRadioDetail.classList.remove('hidden');
     if (dom.mainContent) dom.mainContent.scrollTop = 0;
@@ -5727,12 +5741,12 @@
     }
     if (dom.radioDetailSupport) {
       dom.radioDetailSupport.textContent = isSpotifyDaily
-        ? `${tracks.length}/${chartLimit} bài có bản YouTube Music tương ứng, xếp theo lượt nghe Spotify trong ngày ${chartDateLabel || 'gần nhất'}.`
+        ? `${tracks.length}/${chartLimit} bài có bản YouTube Music tương ứng, xếp theo lượt nghe Spotify trong ngày ${chartDateLabel || 'gần nhất'}.${extendedRankNote}`
         : `${tracks.length} bài trong playlist thịnh hành tại ${regionLabel}.`;
     }
     if (dom.radioDetailRegion) {
       dom.radioDetailRegion.textContent = isSpotifyDaily
-        ? `Spotify Daily · ${chartDateLabel || 'ngày gần nhất'} (UTC) · ${tracks.length}/${chartLimit} bài phát được`
+        ? `Spotify Daily · ${chartDateLabel || 'ngày gần nhất'} (UTC) · ${tracks.length}/${chartLimit} bài phát được${Number(chart.maxRank) > chartLimit ? ` · đến hạng #${chart.maxRank}` : ''}`
         : `YouTube Music · ${state.currentTimeframe === 'weekly' ? 'tuần này' : 'ngày gần nhất'} · ${tracks.length} bài hát`;
     }
     if (dom.radioDetailSongsEyebrow) {
