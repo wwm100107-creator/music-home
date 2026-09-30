@@ -48,6 +48,9 @@ Trình phát nhạc trên trình duyệt lấy cảm hứng từ khung cảnh th
 ### Nguồn cho mục “Radio phổ biến”
 - Nghệ sĩ được xếp hạng từ bảng nhạc YouTube Music theo khu vực, lượt nghe và bài yêu thích trên thiết bị. Không cần API key bên ngoài.
 
+### Nguồn cho mục “Gương mặt V-Pop thế hệ mới”
+- Tổng hợp cột stream **7Day** trên Spotify Daily chart Việt Nam theo nghệ sĩ chính, loại credit phụ và tên chương trình như **Tinh Hà Say Hi**. Chỉ tính nghệ sĩ có ít nhất một bài tựa tiếng Việt và bài có tối đa 365 ngày hiện diện trên chart; đây là tiêu chí nhận diện gương mặt mới nổi, không phải phân loại tuổi nghệ sĩ.
+
 ### Nguồn ảnh nghệ sĩ và album
 - Ảnh bìa bài hát/album và ảnh nghệ sĩ chỉ dùng thumbnail do YouTube hoặc YouTube Music cung cấp. Nếu không có ảnh nghệ sĩ phù hợp, thẻ dùng chữ viết tắt; ảnh không ảnh hưởng thứ hạng đề xuất.
 - Mục **Album và đĩa đơn phổ biến** gom các bản phát hành có ID từ bảng nhạc khu vực hiện tại, tính độ nổi bật, loại bản trùng và giới hạn một bản phát hành mỗi nghệ sĩ trước khi hiển thị.

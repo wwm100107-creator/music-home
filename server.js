@@ -250,6 +250,7 @@ class BoundedCache {
 const searchCache = new BoundedCache(300, 30 * 60 * 1000);
 const streamCache = new BoundedCache(300, 45 * 60 * 1000);
 const trendingCache = new BoundedCache(50, 60 * 60 * 1000);
+const vpopArtistCache = new BoundedCache(2, 60 * 60 * 1000);
 const artistArtworkCache = new BoundedCache(500, 24 * 60 * 60 * 1000);
 const albumCache = new BoundedCache(80, 60 * 60 * 1000);
 const artistReleaseCache = new BoundedCache(240, 24 * 60 * 60 * 1000);
@@ -1248,6 +1249,8 @@ function parseSpotifyDailyChartHtml(html, sourceUrl) {
     const rankIndex = headers.findIndex(name => /^(?:pos|position)$/.test(name));
     const songIndex = headers.findIndex(name => /artist\s+and\s+title|track/.test(name));
     const streamsIndex = headers.findIndex(name => name === 'streams');
+    const streams7dIndex = headers.findIndex(name => name === '7day');
+    const daysIndex = headers.findIndex(name => name === 'days');
     if (rankIndex < 0 || songIndex < 0 || streamsIndex < 0) continue;
 
     const entries = [];
@@ -1255,6 +1258,12 @@ function parseSpotifyDailyChartHtml(html, sourceUrl) {
       if (!cells[rankIndex] || !cells[songIndex] || !cells[streamsIndex]) continue;
       const rank = parseInt(chartHtmlToText(cells[rankIndex]).replace(/[^\d]/g, ''), 10);
       const streams = parseInt(chartHtmlToText(cells[streamsIndex]).replace(/[^\d]/g, ''), 10);
+      const streams7d = streams7dIndex >= 0
+        ? parseInt(chartHtmlToText(cells[streams7dIndex]).replace(/[^\d]/g, ''), 10)
+        : null;
+      const daysOnChart = daysIndex >= 0
+        ? parseInt(chartHtmlToText(cells[daysIndex]).replace(/[^\d]/g, ''), 10)
+        : null;
       if (!Number.isFinite(rank) || rank < 1 || !Number.isFinite(streams) || streams < 1) continue;
 
       const songCell = cells[songIndex];
@@ -1279,6 +1288,8 @@ function parseSpotifyDailyChartHtml(html, sourceUrl) {
         artist: cleaned.artist,
         artists: artists.length ? artists : [cleaned.artist],
         streams,
+        streams7d: Number.isFinite(streams7d) ? streams7d : null,
+        daysOnChart: Number.isFinite(daysOnChart) ? daysOnChart : null,
         chartTrackUrl: new URL(trackLink.href, sourceUrl).toString()
       });
     }
@@ -1679,6 +1690,80 @@ async function getOfficialArtistReleases(ytSearch, artist) {
     return [];
   }
 }
+
+const NON_ARTIST_CHART_ENTITIES = new Set([
+  'tinh ha say hi',
+  'anh trai say hi'
+]);
+const VIETNAMESE_TITLE_SIGNAL = /[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i;
+
+apiRouter.get('/vpop-artists', rateLimit({ maxRequests: 20, windowMs: 60000, endpointName: 'vpop-artists' }), async (_req, res) => {
+  const cacheKey = 'vpop-artists:VN:spotify-rolling-7d';
+  const cached = vpopArtistCache.get(cacheKey);
+  if (cached) return res.json({ ...cached, cached: true });
+
+  try {
+    const chart = await fetchSpotifyDailyChart('VN');
+    const recentTracks = chart.entries.filter(track => Number.isFinite(track.daysOnChart) &&
+      track.daysOnChart <= 365 && Number(track.streams7d) > 0);
+    const vpopArtistKeys = new Set(recentTracks.flatMap(track => {
+      if (!VIETNAMESE_TITLE_SIGNAL.test(String(track.title || ''))) return [];
+      const leadArtist = String(track.artists?.[0] || track.artist || '').trim();
+      const key = normalizeForComparison(leadArtist);
+      return key && !NON_ARTIST_CHART_ENTITIES.has(key) ? [key] : [];
+    }));
+    const artistTotals = new Map();
+
+    recentTracks.forEach(track => {
+      const name = String(track.artists?.[0] || track.artist || '').trim();
+      const key = normalizeForComparison(name);
+      const streams7d = Math.max(0, Number(track.streams7d) || 0);
+      if (!name || !key || !streams7d || !vpopArtistKeys.has(key) || NON_ARTIST_CHART_ENTITIES.has(key) ||
+        ['unknown artist', 'various artists', 'artist'].includes(key)) return;
+
+      const entry = artistTotals.get(key) || { name, streams7d: 0, trackCount: 0, topTrack: '' };
+      entry.streams7d += streams7d;
+      entry.trackCount += 1;
+      if (!entry.topTrack || streams7d > entry.topTrackStreams) {
+        entry.topTrack = track.title;
+        entry.topTrackStreams = streams7d;
+      }
+      artistTotals.set(key, entry);
+    });
+
+    const artists = [...artistTotals.values()]
+      .sort((left, right) => right.streams7d - left.streams7d || left.name.localeCompare(right.name))
+      .slice(0, 50)
+      .map((artist, index) => ({
+        rank: index + 1,
+        name: artist.name,
+        streams7d: artist.streams7d,
+        trackCount: artist.trackCount,
+        topTrack: artist.topTrack
+      }));
+
+    if (artists.length < 25) throw new Error(`Only ${artists.length} Vietnamese performer candidates were found in the Spotify Daily 7Day column.`);
+
+    const payload = {
+      success: true,
+      countryCode: 'VN',
+      chartDate: chart.chartDate,
+      windowDays: 7,
+      rankingBasis: 'spotify-rolling-7day-streams',
+      sourceUrl: chart.sourceUrl,
+      totalArtistCount: artists.length,
+      artists
+    };
+    vpopArtistCache.set(cacheKey, payload);
+    res.json(payload);
+  } catch (error) {
+    console.warn('[V-Pop 7Day artists unavailable]:', error.message);
+    res.status(503).json({
+      success: false,
+      error: 'Không thể tải lượt stream 7 ngày trên Spotify Việt Nam lúc này. Hãy thử lại sau.'
+    });
+  }
+});
 
 // 10.3. YouTube Music chart playlists by region. These playlist positions are
 // not Music Home stream counts and must not be presented as Top/Viral scores.

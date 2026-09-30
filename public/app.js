@@ -5209,14 +5209,97 @@
     });
   }
 
+  let vietnamVpopArtistCache = { artists: [], expiresAt: 0 };
+  let vietnamVpopArtistRequest = null;
+  let discoverArtistRowRenderId = 0;
+
+  function formatVpopWeeklyStreams(value) {
+    const streams = Math.max(0, Number(value) || 0);
+    if (streams >= 1_000_000) {
+      return `${(streams / 1_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} triệu`;
+    }
+    if (streams >= 1_000) return `${Math.round(streams / 1_000).toLocaleString('vi-VN')} nghìn`;
+    return new Intl.NumberFormat('vi-VN').format(streams);
+  }
+
+  async function loadVietnamVpopArtists() {
+    if (vietnamVpopArtistCache.artists.length && Date.now() < vietnamVpopArtistCache.expiresAt) {
+      return vietnamVpopArtistCache.artists;
+    }
+    if (vietnamVpopArtistRequest) return vietnamVpopArtistRequest;
+
+    vietnamVpopArtistRequest = (async () => {
+      const response = await fetch('/api/vpop-artists');
+      const data = await response.json();
+      if (!response.ok || data?.success !== true || !Array.isArray(data.artists)) {
+        throw new Error(data?.error || 'Không tải được stream Spotify 7 ngày.');
+      }
+      vietnamVpopArtistCache = {
+        artists: data.artists,
+        expiresAt: Date.now() + 60 * 60 * 1000
+      };
+      return data.artists;
+    })();
+
+    try {
+      return await vietnamVpopArtistRequest;
+    } finally {
+      vietnamVpopArtistRequest = null;
+    }
+  }
+
   function renderDiscoverArtistRow() {
     if (!dom.discoverArtistRow) return;
     const isVietnamWave = state.selectedCountry === 'VN';
+    const renderId = ++discoverArtistRowRenderId;
+
+    if (isVietnamWave) {
+      if (dom.discoverArtistsTitle) dom.discoverArtistsTitle.textContent = 'Gương mặt V-Pop thế hệ mới';
+      if (dom.discoverArtistsCaption) dom.discoverArtistsCaption.textContent = 'Đang tải lượt stream Spotify tại Việt Nam trong 7 ngày gần nhất…';
+      dom.discoverArtistRow.innerHTML = '<span class="discover-artist-status" role="status">Đang xếp hạng nghệ sĩ theo lượt stream 7 ngày…</span>';
+      loadVietnamVpopArtists().then(vpopArtists => {
+        if (renderId !== discoverArtistRowRenderId || state.selectedCountry !== 'VN') return;
+        const artists = vpopArtists.map(item => {
+          const key = normalizeDiscoverArtist(item.name);
+          const tracks = (state.trendingTracks || []).filter(track =>
+            normalizeDiscoverArtist(getRadioLeadArtistNames(track)[0]) === key
+          );
+          const artworkTrack = tracks.find(track => track.artistThumbnail) || tracks[0];
+          return {
+            ...item,
+            key,
+            score: Number(item.streams7d) || 0,
+            adjustedScore: Number(item.streams7d) || 0,
+            tracks,
+            source: 'spotify-rolling-7day-streams',
+            artistId: artworkTrack?.artistId || '',
+            artistThumbnail: artworkTrack?.artistThumbnail || '',
+            recentAlbumYear: 0
+          };
+        });
+        renderDiscoverArtistCards(artists, true, renderId);
+      }).catch(error => {
+        if (renderId !== discoverArtistRowRenderId || state.selectedCountry !== 'VN') return;
+        console.warn('[V-Pop 7Day artists unavailable]:', error.message);
+        dom.discoverArtistRow.innerHTML = '<button class="discover-artist-status discover-artist-retry" type="button">Chưa tải được lượt stream 7 ngày. Chạm để thử lại.</button>';
+        dom.discoverArtistRow.querySelector('.discover-artist-retry')?.addEventListener('click', () => {
+          vietnamVpopArtistCache = { artists: [], expiresAt: 0 };
+          renderDiscoverArtistRow();
+        });
+      });
+      return;
+    }
+
     const exposure = getHomeArtistExposure(false);
     const artists = getDiscoverArtistRankings().map(artist => ({
       ...artist,
       adjustedScore: artist.score - (exposure.get(normalizeDiscoverArtist(artist.name)) || 0) * 9
     })).sort((a, b) => b.adjustedScore - a.adjustedScore || a.name.localeCompare(b.name)).slice(0, 24);
+    renderDiscoverArtistCards(artists, false, renderId);
+  }
+
+  function renderDiscoverArtistCards(artists, isVietnamWave, renderId) {
+    if (!dom.discoverArtistRow || renderId !== discoverArtistRowRenderId) return;
     const artworkRequests = artists.map(artist => {
       return {
         kind: 'artist',
@@ -5236,7 +5319,7 @@
         title: artist.name,
         artist: artist.name,
         album: '',
-        source: [...new Set(artist.tracks.map(track => track.source || 'youtube-music'))].join('+'),
+        source: artist.source || [...new Set(artist.tracks.map(track => track.source || 'youtube-music'))].join('+'),
         rankingScore: Number(artist.adjustedScore.toFixed(3)),
         artistId: artwork?.artistId || artworkData.artistId || '',
         albumId: '',
@@ -5248,7 +5331,7 @@
     }
     if (dom.discoverArtistsCaption) {
       dom.discoverArtistsCaption.textContent = isVietnamWave
-        ? 'Gương mặt nổi bật qua bảng khu vực, đĩa gần đây và lượt nghe thực tế'
+        ? `Top ${artists.length} nghệ sĩ nhạc Việt · Spotify 7 ngày gần nhất · lọc bài có tối đa 1 năm trên chart`
         : 'Nghệ sĩ nổi bật theo bảng khu vực, đĩa gần đây và lượt nghe thực tế';
     }
     dom.discoverArtistRow.innerHTML = '';
@@ -5267,7 +5350,7 @@
           <span class="discover-artist-rank">${String(index + 1).padStart(2, '0')}</span>
           <svg class="discover-artist-sprout" viewBox="0 0 32 32" focusable="false"><path d="M15.8 25.8c.2-6.1 2.8-11.4 8.7-15.2-.4 6.5-3.7 11.6-8.7 15.2Z"/><path d="M15.8 25.8C14 20 10.5 16.7 5 15.3c.4 5.4 4.4 9.4 10.8 10.5ZM15.8 26V9.5"/></svg>
         </span>
-        <span class="discover-artist-copy"><strong>${escapeHtml(artist.name)}</strong><span>${escapeHtml(artist.recentAlbumYear ? `Đĩa phát hành ${artist.recentAlbumYear}` : 'Đang thịnh hành')}</span></span>
+        <span class="discover-artist-copy"><strong>${escapeHtml(artist.name)}</strong><span>${escapeHtml(isVietnamWave ? `${formatVpopWeeklyStreams(artist.streams7d)} · 7 ngày` : artist.recentAlbumYear ? `Đĩa phát hành ${artist.recentAlbumYear}` : 'Đang thịnh hành')}</span></span>
       `;
       if (portrait) {
         const portraitImage = card.querySelector('.discover-artist-avatar > img');
