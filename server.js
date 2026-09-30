@@ -1648,6 +1648,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
     let rankingBasis = timeframe === 'daily' ? 'spotify-daily-streams' : 'youtube-music-playlist-order';
     let chartDate = '';
     let chartSourceUrl = '';
+    let rankingFallbackReason = '';
     const targetPlaylistId = timeframe === 'weekly' ? hub.weeklyPlaylistId : hub.dailyPlaylistId;
 
     // Daily charts use Spotify's eligible stream counts from the latest published chart day.
@@ -1667,10 +1668,12 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
           rankingBasis = 'spotify-daily-streams';
         } else {
           rankingBasis = 'youtube-music-playlist-order';
+          rankingFallbackReason = `Only ${resolvedTracks.length} of ${chartCandidates.length} Spotify chart tracks could be resolved to playable YouTube Music tracks.`;
           console.warn(`[Spotify Daily chart] Only ${resolvedTracks.length} playable rows resolved for ${hub.code}; using YouTube Music fallback.`);
         }
       } catch (chartErr) {
         rankingBasis = 'youtube-music-playlist-order';
+        rankingFallbackReason = chartErr.message;
         console.warn(`[Spotify Daily chart unavailable for ${hub.code}]:`, chartErr.message);
       }
     }
@@ -1882,6 +1885,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
       greeting: hub.greeting,
       genres: hub.genres,
       rankingBasis,
+      rankingFallbackReason,
       chartDate,
       sourceUrl: chartSourceUrl,
       results: tracks,
