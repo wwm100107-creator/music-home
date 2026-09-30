@@ -5,14 +5,14 @@
  * ============================================================================
  */
 
-const CACHE_NAME = 'antigravity-ghibli-v5.42-vpop-rolling-7day';
+const CACHE_NAME = 'antigravity-ghibli-v5.43-vpop-artist-artwork';
 
 // Danh sách các tài nguyên tĩnh cốt lõi cần lưu trữ offline
 const STATIC_ASSETS = [
   './',
   './index.html',
   './style.css?v=5.34',
-  './app.js?v=5.42',
+  './app.js?v=5.43',
   './signature-particles.js?v=1',
   './signature.png?v=1',
   './manifest.json',

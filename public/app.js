@@ -5278,6 +5278,7 @@
           };
         });
         renderDiscoverArtistCards(artists, true, renderId);
+        hydrateVietnamVpopArtistPortraits(artists, renderId);
       }).catch(error => {
         if (renderId !== discoverArtistRowRenderId || state.selectedCountry !== 'VN') return;
         console.warn('[V-Pop 7Day artists unavailable]:', error.message);
@@ -5343,6 +5344,7 @@
       const card = document.createElement('button');
       card.type = 'button';
       card.className = `discover-artist-card discover-artist-tone-${index % 6}`;
+      card.dataset.discoverArtistKey = artist.key || normalizeDiscoverArtist(artist.name);
       card.setAttribute('aria-label', `Mở radio của ${artist.name}`);
       card.innerHTML = `
         <span class="discover-artist-avatar" aria-hidden="true">
@@ -5789,6 +5791,49 @@
       });
       dom.radioDetailTracks.appendChild(row);
     });
+  }
+
+  async function hydrateVietnamVpopArtistPortraits(artists, renderId) {
+    try {
+      // Resolve artists in small batches so a Top 50 row is fully covered by the
+      // resolver's per-request limit, while the initials remain visible meanwhile.
+      for (let offset = 0; offset < artists.length; offset += 48) {
+        if (renderId !== discoverArtistRowRenderId || state.selectedCountry !== 'VN') return;
+        await requestRadioArtistArtwork(artists.slice(offset, offset + 48));
+      }
+
+      if (renderId !== discoverArtistRowRenderId || state.selectedCountry !== 'VN') return;
+      const cards = [...dom.discoverArtistRow.querySelectorAll('.discover-artist-card')];
+      artists.forEach(artist => {
+        const key = artist.key || normalizeDiscoverArtist(artist.name);
+        const portrait = getRadioCandidateThumbnail(artist);
+        if (!portrait) return;
+
+        const card = cards.find(item => item.dataset.discoverArtistKey === key);
+        const avatar = card?.querySelector('.discover-artist-avatar');
+        const monogram = avatar?.querySelector('.discover-artist-monogram');
+        if (!avatar || !monogram) return;
+
+        const image = document.createElement('img');
+        image.src = portrait;
+        image.alt = '';
+        image.loading = 'lazy';
+        image.decoding = 'async';
+        image.addEventListener('error', () => {
+          radioArtistArtworkFailed.add(key);
+          radioArtistArtworkCache.set(key, '');
+          const fallback = document.createElement('span');
+          fallback.className = 'discover-artist-monogram';
+          fallback.textContent = getRadioArtistInitials(artist);
+          image.replaceWith(fallback);
+        }, { once: true });
+        monogram.replaceWith(image);
+      });
+    } catch (error) {
+      // Portraits are supplementary; keep the ranked artists and their initials
+      // available if the artwork service is temporarily unavailable.
+      console.warn('[V-Pop artist portraits unavailable]:', error.message);
+    }
   }
 
   function openDiscoverChartDetail(chart, returnFocus = null) {
