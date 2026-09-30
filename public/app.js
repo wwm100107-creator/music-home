@@ -3829,7 +3829,7 @@
             ? `Top ${Number(data.chartLimit) || 100} · 24h Spotify`
             : `Top ${state.trendingTracks.length} · ${curTimeframe === 'weekly' ? 'YouTube Music tuần' : 'YouTube Music'}`;
           dom.trendingCounter.title = data.sourceUrl
-            ? `Spotify Daily chart ngày ${data.chartDate || ''} (UTC). ${state.trendingTracks.length}/${Number(data.chartLimit) || 100} bài đã ghép được bản YouTube Music. Nguồn: Kworb`
+            ? `Spotify Daily chart ngày ${data.chartDate || ''} (UTC). ${state.trendingTracks.length}/${Number(data.chartLimit) || 100} bài đã ghép được bản YouTube có thể phát. Nguồn: Kworb`
             : 'Danh sách xếp theo thứ tự playlist YouTube Music.';
         }
 
@@ -5741,7 +5741,7 @@
     }
     if (dom.radioDetailSupport) {
       dom.radioDetailSupport.textContent = isSpotifyDaily
-        ? `${tracks.length}/${chartLimit} bài có bản YouTube Music tương ứng, xếp theo lượt nghe Spotify trong ngày ${chartDateLabel || 'gần nhất'}.${extendedRankNote}`
+        ? `${tracks.length}/${chartLimit} bài có bản YouTube phát được tương ứng, xếp theo lượt nghe Spotify trong ngày ${chartDateLabel || 'gần nhất'}.${extendedRankNote}`
         : `${tracks.length} bài trong playlist thịnh hành tại ${regionLabel}.`;
     }
     if (dom.radioDetailRegion) {
