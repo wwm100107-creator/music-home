@@ -5,14 +5,14 @@
  * ============================================================================
  */
 
-const CACHE_NAME = 'antigravity-ghibli-v5.40-spotify-daily-top100';
+const CACHE_NAME = 'antigravity-ghibli-v5.41-radio-lead-artists';
 
 // Danh sách các tài nguyên tĩnh cốt lõi cần lưu trữ offline
 const STATIC_ASSETS = [
   './',
   './index.html',
   './style.css?v=5.33',
-  './app.js?v=5.40',
+  './app.js?v=5.41',
   './signature-particles.js?v=1',
   './signature.png?v=1',
   './manifest.json',

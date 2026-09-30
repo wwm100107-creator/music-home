@@ -4444,6 +4444,16 @@
     });
   }
 
+  function getRadioLeadArtistNames(track) {
+    const credits = Array.isArray(track?.artists) && track.artists.length
+      ? track.artists
+      : [track?.primaryArtist || track?.artist];
+    const leadCredit = track?.primaryArtist || credits.find(credit => String(credit?.name || credit?.text || credit || '').trim());
+    const leadName = splitRadioArtistCredits(leadCredit, track)
+      .find(name => isUsableRadioArtist(name, track));
+    return leadName ? [leadName] : [];
+  }
+
   function getRadioTrackGenres(track) {
     return getRecommendationTrackGenres(track);
   }
@@ -4488,7 +4498,9 @@
 
     const addTrack = (track, source, index, sourceMeta = {}) => {
       if (!track || isExcludedRecommendationTrack(track)) return;
-      const names = getRadioArtistNames(track);
+      // Spotify Daily credits include non-performing collaborators. Build Radio
+      // cards from the first credited performer, not every name on the track.
+      const names = getRadioLeadArtistNames(track);
       if (!names.length) return;
       const rank = Math.max(1, Number(track.rank) || index + 1);
       const rankSignal = 1 / Math.pow(rank, 0.58);
@@ -4564,11 +4576,11 @@
     ].forEach(({ tracks, strength }) => {
       for (let index = 0; index < tracks.length; index++) {
         const current = tracks[index];
-        const currentArtists = getRadioArtistNames(current);
+        const currentArtists = getRadioLeadArtistNames(current);
         const currentGenres = getRadioTrackGenres(current);
         for (let nextIndex = index + 1; nextIndex < Math.min(tracks.length, index + 4); nextIndex++) {
           const next = tracks[nextIndex];
-          const nextArtists = getRadioArtistNames(next);
+          const nextArtists = getRadioLeadArtistNames(next);
           const genreOverlap = getRadioTrackGenres(next).some(genre => currentGenres.includes(genre));
           const rankDistance = nextIndex - index;
           // Chart adjacency alone is not a reliable artist relationship.
@@ -4587,7 +4599,7 @@
       const gapHours = Math.max(0, (current._lastListenedAt - previous._lastListenedAt) / 3600000);
       if (gapHours > 2) continue;
       const coListenWeight = 0.55 * Math.exp(-gapHours / 0.65);
-      getRadioArtistNames(previous).forEach(name => getRadioArtistNames(current).forEach(otherName => addRelationship(name, otherName, coListenWeight)));
+      getRadioLeadArtistNames(previous).forEach(name => getRadioLeadArtistNames(current).forEach(otherName => addRelationship(name, otherName, coListenWeight)));
     }
 
     const maximumRecentArtistScore = Math.max(0, ...profile.recentArtistScores.values());
@@ -4599,7 +4611,7 @@
       ...profile.recentArtistScores.keys(),
       ...profile.longTermArtistScores.keys()
     ]);
-    const trendingAnchorKeys = new Set(regionalTracks.slice(0, 12).flatMap(getRadioArtistNames).map(normalizeDiscoverArtist));
+    const trendingAnchorKeys = new Set(regionalTracks.slice(0, 12).flatMap(getRadioLeadArtistNames).map(normalizeDiscoverArtist));
     const similarityAnchors = userAnchorKeys.size ? userAnchorKeys : trendingAnchorKeys;
 
     const ranked = [...new Set(candidates.values())].map(candidate => {
