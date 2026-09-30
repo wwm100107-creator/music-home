@@ -4009,6 +4009,11 @@
       .trim();
   }
 
+  function normalizeDiscoverArtistIdentity(name) {
+    const key = normalizeDiscoverArtist(name);
+    return key === 'vct' ? 'vu cat tuong' : key;
+  }
+
   function isExcludedRecommendationTrack(track) {
     const title = normalizeDiscoverArtist(track?.title);
     return /(?:^|\s)(?:remix(?:ed|es)?|remake(?:s)?|covers?)(?=$|\s)/.test(title);
@@ -5326,9 +5331,9 @@
       loadVietnamVpopArtists().then(vpopArtists => {
         if (renderId !== discoverArtistRowRenderId || state.selectedCountry !== 'VN') return;
         const artists = vpopArtists.map(item => {
-          const key = normalizeDiscoverArtist(item.name);
+          const key = normalizeDiscoverArtistIdentity(item.name);
           const tracks = (state.trendingTracks || []).filter(track =>
-            normalizeDiscoverArtist(getRadioLeadArtistNames(track)[0]) === key
+            normalizeDiscoverArtistIdentity(getRadioLeadArtistNames(track)[0]) === key
           );
           const artworkTrack = tracks.find(track => track.artistThumbnail) || tracks[0];
           return {
@@ -5659,7 +5664,7 @@
     const candidateTrackIds = new Set(candidates.flatMap(candidate =>
       (candidate.tracks || []).map(entry => String(entry?.track?.id || entry?.id || '')).filter(Boolean)
     ));
-    const artistKeys = new Set(candidates.map(candidate => normalizeDiscoverArtist(
+    const artistKeys = new Set(candidates.map(candidate => normalizeDiscoverArtistIdentity(
       typeof candidate === 'string' ? candidate : candidate.name
     )).filter(Boolean));
     const seenTrackIds = new Set();
@@ -5669,7 +5674,7 @@
       if (!id || seenTrackIds.has(id)) return false;
       const selectedOnCard = candidateTrackIds.has(id);
       const matchesArtist = artistKeys.size && getRadioArtistNames(track)
-        .some(name => artistKeys.has(normalizeDiscoverArtist(name)));
+        .some(name => artistKeys.has(normalizeDiscoverArtistIdentity(name)));
       if (!selectedOnCard && !matchesArtist) return false;
       seenTrackIds.add(id);
       return true;
@@ -5682,7 +5687,7 @@
     const searchedTrackGroups = !shouldSearchArtistTracks
       ? []
       : await Promise.all([...artistKeys].map(async artistKey => {
-        const matchingCandidate = candidates.find(candidate => normalizeDiscoverArtist(
+        const matchingCandidate = candidates.find(candidate => normalizeDiscoverArtistIdentity(
           typeof candidate === 'string' ? candidate : candidate.name
         ) === artistKey);
         const searchName = typeof matchingCandidate === 'string'
@@ -5696,7 +5701,7 @@
           const data = await response.json();
           return (Array.isArray(data.results) ? data.results : Array.isArray(data.tracks) ? data.tracks : [])
             .filter(track => track?.source !== 'itunes-preview' && !isExcludedRecommendationTrack(track) && getRadioArtistNames(track).some(name =>
-              normalizeDiscoverArtist(name) === artistKey));
+              normalizeDiscoverArtistIdentity(name) === artistKey));
         } catch (error) {
           console.warn(`[Discover radio search warning] ${searchName}:`, error);
           return [];

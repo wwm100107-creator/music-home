@@ -5,14 +5,14 @@
  * ============================================================================
  */
 
-const CACHE_NAME = 'antigravity-ghibli-v5.44-audio-stream-warmup';
+const CACHE_NAME = 'antigravity-ghibli-v5.45-vct-canonical-name';
 
 // Danh sách các tài nguyên tĩnh cốt lõi cần lưu trữ offline
 const STATIC_ASSETS = [
   './',
   './index.html',
   './style.css?v=5.34',
-  './app.js?v=5.44',
+  './app.js?v=5.45',
   './signature-particles.js?v=1',
   './signature.png?v=1',
   './manifest.json',

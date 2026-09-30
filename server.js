@@ -1712,8 +1712,20 @@ const NON_ARTIST_CHART_ENTITIES = new Set([
 ]);
 const VIETNAMESE_TITLE_SIGNAL = /[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i;
 
+const VPOP_ARTIST_DISPLAY_ALIASES = new Map([
+  ['vct', 'Vũ Cát Tường'],
+  ['vu cat tuong', 'Vũ Cát Tường']
+]);
+
+function canonicalizeVpopArtistName(value) {
+  const sourceName = String(value || '').trim();
+  const sourceKey = normalizeForComparison(sourceName);
+  const name = VPOP_ARTIST_DISPLAY_ALIASES.get(sourceKey) || sourceName;
+  return { name, key: normalizeForComparison(name) };
+}
+
 apiRouter.get('/vpop-artists', rateLimit({ maxRequests: 20, windowMs: 60000, endpointName: 'vpop-artists' }), async (_req, res) => {
-  const cacheKey = 'vpop-artists:VN:spotify-rolling-7d';
+  const cacheKey = 'vpop-artists:VN:spotify-rolling-7d:canonical-artist-names-v2';
   const cached = vpopArtistCache.get(cacheKey);
   if (cached) return res.json({ ...cached, cached: true });
 
@@ -1724,14 +1736,13 @@ apiRouter.get('/vpop-artists', rateLimit({ maxRequests: 20, windowMs: 60000, end
     const vpopArtistKeys = new Set(recentTracks.flatMap(track => {
       if (!VIETNAMESE_TITLE_SIGNAL.test(String(track.title || ''))) return [];
       const leadArtist = String(track.artists?.[0] || track.artist || '').trim();
-      const key = normalizeForComparison(leadArtist);
+      const key = canonicalizeVpopArtistName(leadArtist).key;
       return key && !NON_ARTIST_CHART_ENTITIES.has(key) ? [key] : [];
     }));
     const artistTotals = new Map();
 
     recentTracks.forEach(track => {
-      const name = String(track.artists?.[0] || track.artist || '').trim();
-      const key = normalizeForComparison(name);
+      const { name, key } = canonicalizeVpopArtistName(track.artists?.[0] || track.artist);
       const streams7d = Math.max(0, Number(track.streams7d) || 0);
       if (!name || !key || !streams7d || !vpopArtistKeys.has(key) || NON_ARTIST_CHART_ENTITIES.has(key) ||
         ['unknown artist', 'various artists', 'artist'].includes(key)) return;
