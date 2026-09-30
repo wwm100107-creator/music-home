@@ -1230,11 +1230,13 @@ function parseSpotifyDailyChartHtml(html, sourceUrl) {
       const songCell = cells[songIndex];
       const links = [...songCell.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
         .map(match => ({ href: decodeChartHtml(match[1]), text: chartHtmlToText(match[2]) }));
-      const trackLink = links.find(link => /\/spotify\/track\//i.test(link.href));
+      // Kworb uses ../track/... and ../artist/... links inside country pages.
+      // Accept those relative paths as well as absolute /spotify/... paths.
+      const trackLink = links.find(link => /(?:^|\/)(?:spotify\/)?track\//i.test(link.href));
       if (!trackLink?.text) continue;
 
       const artists = [...new Set(links
-        .filter(link => /\/spotify\/artist\//i.test(link.href) && link.text)
+        .filter(link => /(?:^|\/)(?:spotify\/)?artist\//i.test(link.href) && link.text)
         .map(link => link.text))];
       const rowText = chartHtmlToText(songCell);
       const artist = artists.join(', ') || rowText.split(/\s+-\s+/)[0] || '';
@@ -1247,7 +1249,7 @@ function parseSpotifyDailyChartHtml(html, sourceUrl) {
         artist: cleaned.artist,
         artists: artists.length ? artists : [cleaned.artist],
         streams,
-        chartTrackUrl: trackLink.href.startsWith('http') ? trackLink.href : `https://kworb.net${trackLink.href}`
+        chartTrackUrl: new URL(trackLink.href, sourceUrl).toString()
       });
     }
 
