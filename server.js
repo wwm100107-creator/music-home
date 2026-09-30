@@ -1267,7 +1267,10 @@ async function fetchSpotifyDailyChart(countryCode) {
   const regionSlug = KWORB_SPOTIFY_REGION_SLUGS[countryCode];
   if (!regionSlug) throw new Error(`No Spotify daily chart region is configured for ${countryCode}.`);
 
-  const sourceUrl = `https://www.kworb.net/spotify/country/${regionSlug}_daily.html`;
+  // The www hostname currently presents a certificate whose SAN does not
+  // match www.kworb.net on Node/Android. The apex hostname serves the same chart
+  // with a valid certificate, so use it for the server-side fetch.
+  const sourceUrl = `https://kworb.net/spotify/country/${regionSlug}_daily.html`;
   const response = await fetch(sourceUrl, {
     headers: {
       'Accept': 'text/html,application/xhtml+xml',
@@ -1888,7 +1891,11 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
     trendingCache.set(
       cacheKey,
       responsePayload,
-      rankingBasis === 'spotify-daily-streams' ? 12 * 60 * 60 * 1000 : null
+      rankingBasis === 'spotify-daily-streams'
+        ? 12 * 60 * 60 * 1000
+        : timeframe === 'daily'
+          ? 5 * 60 * 1000
+          : null
     );
     circuitBreaker.recordSuccess();
 
