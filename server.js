@@ -1201,7 +1201,8 @@ function parseSpotifyDailyChartHtml(html, sourceUrl) {
   const headings = [...String(html || '').matchAll(/<(?:title|h1|h2)\b[^>]*>([\s\S]*?)<\/(?:title|h1|h2)>/gi)]
     .map(match => chartHtmlToText(match[1]));
   const heading = headings.find(text => /spotify daily chart/i.test(text)) || '';
-  const dateMatch = heading.match(/\b(20\d{2})[/-](\d{2})[/-](\d{2})\b/);
+  const dateMatch = heading.match(/\b(20\d{2})[/-](\d{2})[/-](\d{2})\b/) ||
+    String(html || '').match(/\b(20\d{2})[/-](\d{2})[/-](\d{2})\b/);
   const chartDate = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}` : '';
   const tables = [...String(html || '').matchAll(/<table\b[^>]*>([\s\S]*?)<\/table>/gi)].map(match => match[1]);
 
