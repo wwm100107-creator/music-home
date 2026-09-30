@@ -8105,7 +8105,9 @@ body.twilight-mode .bg-playback-chip.disabled {
 .discover-chart-brand { position: absolute; top: 12px; left: 12px; font-size: 0.54rem; font-weight: 800; letter-spacing: 0.09em; opacity: 0.78; }
 .discover-chart-art > strong { font-size: clamp(1.9rem, 4vw, 2.5rem); letter-spacing: -0.05em; }
 .discover-chart-region { margin-top: 5px; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.18em; }
-.discover-chart-play { position: absolute; right: 11px; bottom: 11px; display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; color: #143322; background: #d7edbd; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+.discover-chart-open { position: absolute; right: 11px; bottom: 11px; display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid rgba(255,255,255,.58); border-radius: 50%; color: #143322; background: #d7edbd; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+.discover-chart-open svg { width: 18px; height: 18px; }
+.discover-chart-card:hover .discover-chart-open { transform: translateY(-2px); }
 
 .discover-chart-details { margin: 0 0 28px; }
 .discover-chart-details > summary {

@@ -5,14 +5,14 @@
  * ============================================================================
  */
 
-const CACHE_NAME = 'antigravity-ghibli-v5.37-artist-releases';
+const CACHE_NAME = 'antigravity-ghibli-v5.38-chart-playlist';
 
 // Danh sách các tài nguyên tĩnh cốt lõi cần lưu trữ offline
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './style.css',
-  './app.js',
+  './style.css?v=5.33',
+  './app.js?v=5.38',
   './signature-particles.js?v=1',
   './signature.png?v=1',
   './manifest.json',
@@ -39,7 +39,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('🍃 [Service Worker] Pre-caching Ghibli UI Shell v5.37...');
+      console.log('🍃 [Service Worker] Pre-caching Ghibli UI Shell v5.38...');
       return cache.addAll(STATIC_ASSETS);
     }).then(() => self.skipWaiting())
   );

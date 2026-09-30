@@ -298,13 +298,17 @@
     discoverRadioCaption: document.getElementById('discoverRadioCaption'),
     discoverRadioDetail: document.getElementById('discoverRadioDetail'),
     radioDetailBackBtn: document.getElementById('radioDetailBackBtn'),
+    radioDetailTopbarLabel: document.getElementById('radioDetailTopbarLabel'),
+    radioDetailEyebrow: document.getElementById('radioDetailEyebrow'),
     radioDetailArtwork: document.getElementById('radioDetailArtwork'),
     radioDetailTitle: document.getElementById('radioDetailTitle'),
     radioDetailSupport: document.getElementById('radioDetailSupport'),
     radioDetailRegion: document.getElementById('radioDetailRegion'),
     radioDetailPlayBtn: document.getElementById('radioDetailPlayBtn'),
+    radioDetailPlayText: document.getElementById('radioDetailPlayText'),
     radioDetailCount: document.getElementById('radioDetailCount'),
     radioDetailTracks: document.getElementById('radioDetailTracks'),
+    radioDetailSongsEyebrow: document.getElementById('radioDetailSongsEyebrow'),
     discoverRecentCaption: document.getElementById('discoverRecentCaption'),
     discoverRecentList: document.getElementById('discoverRecentList'),
     discoverChartRow: document.getElementById('discoverChartRow'),
@@ -4768,6 +4772,8 @@
   let discoverRadioOpenRequestId = 0;
   let activeDiscoverRadioDetail = null;
   let discoverRadioReturnFocus = null;
+  let activeDiscoverChartDetail = null;
+  let discoverChartReturnFocus = null;
 
   async function requestRadioArtistArtwork(candidates) {
     const now = Date.now();
@@ -5090,17 +5096,17 @@
       const card = document.createElement('button');
       card.type = 'button';
       card.className = `discover-chart-card discover-chart-${chart.tone}`;
-      card.setAttribute('aria-label', `Phát bảng xếp hạng ${chart.title}`);
+      card.setAttribute('aria-label', `Mở danh sách ${chart.title}`);
       card.innerHTML = `
         <span class="discover-chart-art" style="--chart-cover:url('${escapeHtml(upgradeThumbnailUrl(topTrack?.thumbnail) || 'wood_2.jpg')}')">
-          <span class="discover-chart-brand">HOME MUSIC CHARTS</span>
+          <span class="discover-chart-brand">${chartInfo.rankingBasis === 'spotify-daily-streams' ? 'SPOTIFY DAILY' : 'YOUTUBE MUSIC'}</span>
           <strong>TOP ${Math.min(50, chart.tracks.length)}</strong>
           <span class="discover-chart-region">${escapeHtml(chart.tone === 'global' ? 'GLOBAL' : regionLabel.toLocaleUpperCase())}</span>
-          <span class="discover-chart-play" aria-hidden="true">▶</span>
+          <span class="discover-chart-open" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M4 6h2m3 0h11M4 12h2m3 0h11M4 18h2m3 0h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
         </span>
         <span class="discover-card-copy"><strong>${escapeHtml(chart.title)}</strong><span>${escapeHtml(chart.detail)} · ${chart.tracks.length} bài</span></span>
       `;
-      card.addEventListener('click', () => playDiscoverChart(chart.tracks, chart.title));
+      card.addEventListener('click', () => openDiscoverChartDetail(chart, card));
       dom.discoverChartRow.appendChild(card);
     });
   }
@@ -5587,19 +5593,28 @@
 
   function closeDiscoverRadioDetail(restoreHome = true, restoreFocus = true) {
     if (!dom.discoverRadioDetail || dom.discoverRadioDetail.classList.contains('hidden')) return;
-    discoverRadioOpenRequestId += 1;
+    const closingChart = Boolean(activeDiscoverChartDetail);
+    const activeDetail = activeDiscoverChartDetail || activeDiscoverRadioDetail;
+    if (!closingChart) discoverRadioOpenRequestId += 1;
     dom.discoverRadioDetail.classList.add('hidden');
     if (restoreHome) {
       const homeView = document.getElementById('viewHome');
       homeView?.classList.remove('hidden');
       homeView?.classList.add('active');
-      if (dom.mainContent && Number.isFinite(activeDiscoverRadioDetail?.previousScrollTop)) {
-        dom.mainContent.scrollTop = activeDiscoverRadioDetail.previousScrollTop;
+      if (dom.mainContent && Number.isFinite(activeDetail?.previousScrollTop)) {
+        dom.mainContent.scrollTop = activeDetail.previousScrollTop;
       }
     }
-    const focusTarget = discoverRadioReturnFocus;
+    const focusTarget = closingChart ? discoverChartReturnFocus : discoverRadioReturnFocus;
     activeDiscoverRadioDetail = null;
     discoverRadioReturnFocus = null;
+    activeDiscoverChartDetail = null;
+    discoverChartReturnFocus = null;
+    if (dom.radioDetailTopbarLabel) dom.radioDetailTopbarLabel.textContent = 'Radio nghệ sĩ';
+    if (dom.radioDetailEyebrow) dom.radioDetailEyebrow.innerHTML = '<span class="radio-detail-signal" aria-hidden="true"></span> HOME MUSIC RADIO';
+    if (dom.radioDetailSongsEyebrow) dom.radioDetailSongsEyebrow.textContent = 'TUYỂN CHỌN THEO XU HƯỚNG';
+    if (dom.radioDetailPlayText) dom.radioDetailPlayText.textContent = 'Phát radio';
+    if (dom.radioDetailPlayBtn) dom.radioDetailPlayBtn.setAttribute('aria-label', 'Phát radio');
     if (restoreFocus && focusTarget?.isConnected) focusTarget.focus({ preventScroll: true });
   }
 
@@ -5645,7 +5660,7 @@
       row.setAttribute('aria-label', `Phát ${title}, ${artist}`);
       if (state.currentTrack && String(state.currentTrack.id) === String(track.id)) row.classList.add('is-active');
       row.innerHTML = `
-        <span class="radio-detail-track-number" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>
+        <span class="radio-detail-track-number" aria-hidden="true">${String(Number(track.rank) || index + 1).padStart(2, '0')}</span>
         <span class="radio-detail-cover-wrap">${thumbnail ? `<img class="radio-detail-cover" src="${escapeHtml(thumbnail)}" alt="" loading="lazy" decoding="async"><span class="radio-detail-cover-fallback" aria-hidden="true">♫</span>` : '<span class="radio-detail-cover-fallback is-visible" aria-hidden="true">♫</span>'}</span>
         <span class="radio-detail-track-copy"><strong title="${escapeHtml(title)}">${escapeHtml(title)}</strong><span title="${escapeHtml(artist)}">${escapeHtml(artist)}</span></span>
         <span class="radio-detail-track-play" aria-hidden="true">▶</span>`;
@@ -5655,18 +5670,95 @@
         row.querySelector('.radio-detail-cover-fallback')?.classList.add('is-visible');
       }, { once: true });
       row.addEventListener('click', () => {
-        const radio = activeDiscoverRadioDetail;
-        if (!radio || !radio.tracks[index]) return;
-        state.queue = [...radio.tracks];
+        const detail = activeDiscoverChartDetail || activeDiscoverRadioDetail;
+        if (!detail || !detail.tracks[index]) return;
+        state.queue = [...detail.tracks];
         state.queueIndex = index;
         renderQueueDrawer();
-        playTrack(radio.tracks[index], false);
+        playTrack(detail.tracks[index], false);
         dom.radioDetailTracks.querySelectorAll('.radio-detail-track-row').forEach(item => {
           item.classList.toggle('is-active', item === row);
         });
       });
       dom.radioDetailTracks.appendChild(row);
     });
+  }
+
+  function openDiscoverChartDetail(chart, returnFocus = null) {
+    if (!dom.discoverRadioDetail || !chart) return;
+    const tracks = (chart.tracks || []).filter(track => !isExcludedRecommendationTrack(track));
+    if (!tracks.length) {
+      showToast('Bảng này chưa có bài phù hợp.');
+      return;
+    }
+
+    const wasOpen = !dom.discoverRadioDetail.classList.contains('hidden');
+    if (!wasOpen) discoverChartReturnFocus = returnFocus || document.activeElement;
+    const previousScrollTop = wasOpen
+      ? activeDiscoverChartDetail?.previousScrollTop || activeDiscoverRadioDetail?.previousScrollTop || 0
+      : (dom.mainContent?.scrollTop || 0);
+    activeDiscoverRadioDetail = null;
+    discoverRadioReturnFocus = null;
+    activeDiscoverChartDetail = { title: chart.title, tracks, previousScrollTop };
+
+    const chartInfo = state.trendingChartInfo || {};
+    const regionLabel = state.selectedCountryName || state.selectedCountry || 'khu vực đang chọn';
+    const chartDateLabel = chartInfo.chartDate ? chartInfo.chartDate.split('-').reverse().join('/') : '';
+    const isSpotifyDaily = chartInfo.rankingBasis === 'spotify-daily-streams';
+    document.getElementById('viewHome')?.classList.add('hidden');
+    dom.discoverRadioDetail.classList.remove('hidden');
+    if (dom.mainContent) dom.mainContent.scrollTop = 0;
+    if (dom.radioDetailTopbarLabel) dom.radioDetailTopbarLabel.textContent = 'Bảng xếp hạng';
+    if (dom.radioDetailEyebrow) {
+      dom.radioDetailEyebrow.innerHTML = `<span class="radio-detail-signal" aria-hidden="true"></span> ${isSpotifyDaily ? 'SPOTIFY DAILY · 24 GIỜ' : 'YOUTUBE MUSIC CHART'}`;
+    }
+    if (dom.radioDetailTitle) dom.radioDetailTitle.textContent = `Bảng xếp hạng ${regionLabel}`;
+    if (dom.radioDetailSupport) {
+      dom.radioDetailSupport.textContent = isSpotifyDaily
+        ? `${tracks.length} bài được xếp theo lượt nghe Spotify trong ngày ${chartDateLabel || 'gần nhất'}.`
+        : `${tracks.length} bài trong playlist thịnh hành tại ${regionLabel}.`;
+    }
+    if (dom.radioDetailRegion) {
+      dom.radioDetailRegion.textContent = isSpotifyDaily
+        ? `Spotify Daily · ${chartDateLabel || 'ngày gần nhất'} (UTC) · ${tracks.length} bài hát`
+        : `YouTube Music · ${state.currentTimeframe === 'weekly' ? 'tuần này' : 'ngày gần nhất'} · ${tracks.length} bài hát`;
+    }
+    if (dom.radioDetailSongsEyebrow) {
+      dom.radioDetailSongsEyebrow.textContent = isSpotifyDaily ? 'XẾP THEO LƯỢT NGHE SPOTIFY' : 'THỨ TỰ PLAYLIST YOUTUBE MUSIC';
+    }
+    if (dom.radioDetailPlayText) dom.radioDetailPlayText.textContent = 'Phát danh sách';
+    if (dom.radioDetailPlayBtn) {
+      dom.radioDetailPlayBtn.disabled = false;
+      dom.radioDetailPlayBtn.setAttribute('aria-label', 'Phát danh sách nhạc');
+    }
+
+    const tone = [...normalizeDiscoverArtist(regionLabel)].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 5;
+    const chartHero = document.getElementById('radioDetailHero');
+    if (chartHero) chartHero.className = `radio-detail-hero radio-detail-tone-${tone}`;
+    if (dom.radioDetailArtwork) {
+      const faces = [tracks[1] || tracks[0], tracks[0], tracks[2] || tracks[0]];
+      dom.radioDetailArtwork.innerHTML = faces.map((track, index) => {
+        const faceClass = `radio-detail-face radio-detail-face-${index + 1}`;
+        const thumbnail = upgradeThumbnailUrl(track.thumbnail || '');
+        if (thumbnail) {
+          return `<img class="${faceClass}" src="${escapeHtml(thumbnail)}" alt="" loading="eager" decoding="async">`;
+        }
+        const initials = String(track.artist || 'Home Music').split(/\s+/).filter(Boolean).slice(0, 2).map(name => name[0]).join('').toLocaleUpperCase();
+        return `<span class="${faceClass} radio-detail-monogram">${escapeHtml(initials || '♫')}</span>`;
+      }).join('');
+      dom.radioDetailArtwork.querySelectorAll('img').forEach(image => {
+        image.addEventListener('error', () => {
+          const fallback = document.createElement('span');
+          fallback.className = `${image.className} radio-detail-monogram`;
+          fallback.textContent = '♫';
+          image.replaceWith(fallback);
+        }, { once: true });
+      });
+    }
+
+    if (dom.radioDetailTracks) dom.radioDetailTracks.setAttribute('aria-busy', 'false');
+    renderDiscoverRadioDetailTracks(tracks);
+    dom.radioDetailBackBtn?.focus({ preventScroll: true });
   }
 
   async function openDiscoverRadioDetail(primaryCandidate, relatedCandidates = [], returnFocus = null) {
@@ -5682,11 +5774,18 @@
       ? activeDiscoverRadioDetail?.previousScrollTop || 0
       : (dom.mainContent?.scrollTop || 0);
     activeDiscoverRadioDetail = { primary, relatedCandidates, tracks: [], countryAtStart, previousScrollTop };
+    activeDiscoverChartDetail = null;
+    discoverChartReturnFocus = null;
     const artistName = String(primary.name || 'Nghệ sĩ');
 
     document.getElementById('viewHome')?.classList.add('hidden');
     dom.discoverRadioDetail.classList.remove('hidden');
     if (dom.mainContent) dom.mainContent.scrollTop = 0;
+    if (dom.radioDetailTopbarLabel) dom.radioDetailTopbarLabel.textContent = 'Radio nghệ sĩ';
+    if (dom.radioDetailEyebrow) dom.radioDetailEyebrow.innerHTML = '<span class="radio-detail-signal" aria-hidden="true"></span> HOME MUSIC RADIO';
+    if (dom.radioDetailSongsEyebrow) dom.radioDetailSongsEyebrow.textContent = 'TUYỂN CHỌN THEO XU HƯỚNG';
+    if (dom.radioDetailPlayText) dom.radioDetailPlayText.textContent = 'Phát radio';
+    if (dom.radioDetailPlayBtn) dom.radioDetailPlayBtn.setAttribute('aria-label', 'Phát radio');
     if (dom.radioDetailTitle) dom.radioDetailTitle.textContent = `${artistName} Radio`;
     if (dom.radioDetailSupport) {
       const names = relatedCandidates.map(candidate => candidate.name).filter(Boolean);
@@ -5741,6 +5840,14 @@
   }
 
   function playDiscoverRadioDetail() {
+    if (activeDiscoverChartDetail?.tracks?.length) {
+      const chart = activeDiscoverChartDetail;
+      playDiscoverChart(chart.tracks, chart.title);
+      dom.radioDetailTracks?.querySelectorAll('.radio-detail-track-row').forEach((row, index) => {
+        row.classList.toggle('is-active', index === 0);
+      });
+      return;
+    }
     const radio = activeDiscoverRadioDetail;
     if (!radio?.tracks?.length) return;
     const firstTrack = radio.tracks[0];
