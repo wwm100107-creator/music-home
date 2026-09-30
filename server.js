@@ -1167,6 +1167,233 @@ function formatYouTubeVideoViews(count) {
   return n + ' lượt xem video';
 }
 
+const KWORB_SPOTIFY_REGION_SLUGS = {
+  VN: 'vn',
+  US: 'us',
+  KR: 'kr',
+  JP: 'jp',
+  GB: 'uk',
+  GLOBAL: 'global'
+};
+
+function decodeChartHtml(value) {
+  return String(value || '')
+    .replace(/&nbsp;|&#160;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([\da-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)));
+}
+
+function chartHtmlToText(value) {
+  return decodeChartHtml(String(value || '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' '))
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parseSpotifyDailyChartHtml(html, sourceUrl) {
+  const headings = [...String(html || '').matchAll(/<(?:title|h1|h2)\b[^>]*>([\s\S]*?)<\/(?:title|h1|h2)>/gi)]
+    .map(match => chartHtmlToText(match[1]));
+  const heading = headings.find(text => /spotify daily chart/i.test(text)) || '';
+  const dateMatch = heading.match(/\b(20\d{2})[/-](\d{2})[/-](\d{2})\b/);
+  const chartDate = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}` : '';
+  const tables = [...String(html || '').matchAll(/<table\b[^>]*>([\s\S]*?)<\/table>/gi)].map(match => match[1]);
+
+  for (const table of tables) {
+    const rows = [...table.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)].map(match => match[1]);
+    const parsedRows = rows.map(row => [...row.matchAll(/<(?:td|th)\b[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)].map(match => match[1]));
+    const headerIndex = parsedRows.findIndex(cells => {
+      const names = cells.map(cell => chartHtmlToText(cell).toLowerCase());
+      return names.some(name => /^(?:pos|position)$/.test(name)) && names.some(name => name === 'streams');
+    });
+    if (headerIndex < 0) continue;
+
+    const headers = parsedRows[headerIndex].map(cell => chartHtmlToText(cell).toLowerCase());
+    const rankIndex = headers.findIndex(name => /^(?:pos|position)$/.test(name));
+    const songIndex = headers.findIndex(name => /artist\s+and\s+title|track/.test(name));
+    const streamsIndex = headers.findIndex(name => name === 'streams');
+    if (rankIndex < 0 || songIndex < 0 || streamsIndex < 0) continue;
+
+    const entries = [];
+    for (const cells of parsedRows.slice(headerIndex + 1)) {
+      if (!cells[rankIndex] || !cells[songIndex] || !cells[streamsIndex]) continue;
+      const rank = parseInt(chartHtmlToText(cells[rankIndex]).replace(/[^\d]/g, ''), 10);
+      const streams = parseInt(chartHtmlToText(cells[streamsIndex]).replace(/[^\d]/g, ''), 10);
+      if (!Number.isFinite(rank) || rank < 1 || !Number.isFinite(streams) || streams < 1) continue;
+
+      const songCell = cells[songIndex];
+      const links = [...songCell.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
+        .map(match => ({ href: decodeChartHtml(match[1]), text: chartHtmlToText(match[2]) }));
+      const trackLink = links.find(link => /\/spotify\/track\//i.test(link.href));
+      if (!trackLink?.text) continue;
+
+      const artists = [...new Set(links
+        .filter(link => /\/spotify\/artist\//i.test(link.href) && link.text)
+        .map(link => link.text))];
+      const rowText = chartHtmlToText(songCell);
+      const artist = artists.join(', ') || rowText.split(/\s+-\s+/)[0] || '';
+      const cleaned = cleanChartSong(trackLink.text, artist);
+      if (!cleaned.title || !cleaned.artist || isSpamTrack(cleaned.title, cleaned.artist, 0)) continue;
+
+      entries.push({
+        rank,
+        title: cleaned.title,
+        artist: cleaned.artist,
+        artists: artists.length ? artists : [cleaned.artist],
+        streams,
+        chartTrackUrl: trackLink.href.startsWith('http') ? trackLink.href : `https://kworb.net${trackLink.href}`
+      });
+    }
+
+    if (entries.length >= 25) {
+      return {
+        chartDate,
+        sourceUrl,
+        entries: entries.sort((left, right) => left.rank - right.rank)
+      };
+    }
+  }
+
+  throw new Error('Spotify Daily chart table was not found or did not contain enough track rows.');
+}
+
+async function fetchSpotifyDailyChart(countryCode) {
+  const regionSlug = KWORB_SPOTIFY_REGION_SLUGS[countryCode];
+  if (!regionSlug) throw new Error(`No Spotify daily chart region is configured for ${countryCode}.`);
+
+  const sourceUrl = `https://www.kworb.net/spotify/country/${regionSlug}_daily.html`;
+  const response = await fetch(sourceUrl, {
+    headers: {
+      'Accept': 'text/html,application/xhtml+xml',
+      'User-Agent': 'Mozilla/5.0 (compatible; MusicHome/1.0; +https://github.com/wwm100107-creator/music-home)'
+    },
+    signal: AbortSignal.timeout(12000)
+  });
+  if (!response.ok) throw new Error(`Spotify Daily chart source returned HTTP ${response.status}.`);
+  return parseSpotifyDailyChartHtml(await response.text(), sourceUrl);
+}
+
+function normalizeChartTitle(value) {
+  return normalizeForComparison(value).replace(/\b(?:feat|featuring|ft)\b/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function chartArtistMatches(sourceArtists, candidateArtists) {
+  if (!candidateArtists.length) return false;
+  return sourceArtists.some(sourceArtist => {
+    const sourceKey = normalizeForComparison(sourceArtist);
+    if (sourceKey.length < 2) return false;
+    return candidateArtists.some(candidateArtist => {
+      const candidateKey = normalizeForComparison(candidateArtist);
+      return candidateKey === sourceKey || candidateKey.includes(sourceKey) || sourceKey.includes(candidateKey);
+    });
+  });
+}
+
+async function resolveSpotifyChartTrack(ytSearch, chartTrack) {
+  const query = `${chartTrack.title} ${chartTrack.artist}`.trim();
+  let searchResult = null;
+  try {
+    searchResult = ytSearch.music && typeof ytSearch.music.search === 'function'
+      ? await ytSearch.music.search(query, { type: 'song' })
+      : await ytSearch.search(query);
+  } catch (error) {
+    console.warn(`[Spotify chart track search unavailable: ${chartTrack.title}]:`, error.message);
+    return null;
+  }
+
+  const contents = searchResult?.songs?.contents || searchResult?.results || [];
+  const sourceTitleKey = normalizeChartTitle(chartTrack.title);
+  const sourceArtists = chartTrack.artists?.length ? chartTrack.artists : [chartTrack.artist];
+  let match = null;
+  let bestScore = -1;
+
+  for (const item of contents) {
+    const id = item.id || item.videoId || item.video_id;
+    if (!id) continue;
+    const rawTitle = item.title?.text || item.title || '';
+    const rawArtists = item.artists?.map(artist => artist?.name || artist).filter(Boolean) || [];
+    if (!rawArtists.length && item.author?.name) rawArtists.push(item.author.name);
+    const durationSec = parseToDurationSec(item.duration?.seconds || item.duration?.text || item.duration) || 210;
+    const cleaned = cleanChartSong(rawTitle, rawArtists.join(', '));
+    if (isSpamTrack(cleaned.title, cleaned.artist, durationSec)) continue;
+
+    const candidateTitleKey = normalizeChartTitle(cleaned.title);
+    const titleMatches = candidateTitleKey === sourceTitleKey ||
+      (sourceTitleKey.length >= 8 && (candidateTitleKey.startsWith(sourceTitleKey) || sourceTitleKey.startsWith(candidateTitleKey)));
+    if (!titleMatches) continue;
+
+    const artistMatch = chartArtistMatches(sourceArtists, rawArtists.length ? rawArtists : [cleaned.artist]);
+    if (!artistMatch && rawArtists.length) continue;
+    const score = (candidateTitleKey === sourceTitleKey ? 2 : 0) + (artistMatch ? 1 : 0);
+    if (score > bestScore) {
+      bestScore = score;
+      match = { item, id, title: cleaned.title, artist: cleaned.artist, durationSec };
+    }
+  }
+
+  if (!match) return null;
+  let id = match.id;
+  let durationSec = match.durationSec;
+  let duration = match.item.duration?.text || formatTimeSec(durationSec);
+  const idKey = id.toLowerCase().trim();
+  if (KNOWN_CLEAN_TRACKS[idKey]) {
+    id = KNOWN_CLEAN_TRACKS[idKey].id;
+    duration = KNOWN_CLEAN_TRACKS[idKey].duration || duration;
+    durationSec = parseToDurationSec(duration) || durationSec;
+  } else if (isLikelyBloatedMV(match.title, durationSec)) {
+    try {
+      const clean = await getCleanAudioTrack(ytSearch, match.id, match.item);
+      if (clean?.id) {
+        id = clean.id;
+        if (clean.duration) duration = clean.duration;
+        if (clean.durationSec) durationSec = clean.durationSec;
+      }
+    } catch (_) {}
+  }
+
+  return {
+    id,
+    originalVideoId: match.id,
+    title: chartTrack.title,
+    artist: chartTrack.artist,
+    artists: chartTrack.artists,
+    album: match.item.album?.name || match.item.album?.title || '',
+    albumId: match.item.album?.id || match.item.album?.browseId || '',
+    duration,
+    durationSec,
+    thumbnail: extractThumbnail(match.item.thumbnails || match.item.thumbnail),
+    artistThumbnail: extractArtistThumbnail(match.item),
+    rank: chartTrack.rank,
+    spotifyStreams: chartTrack.streams,
+    spotifyStreamsText: `${new Intl.NumberFormat('vi-VN').format(chartTrack.streams)} lượt nghe`,
+    chartTrackUrl: chartTrack.chartTrackUrl,
+    source: 'spotify-daily-chart'
+  };
+}
+
+async function mapWithConcurrency(items, concurrency, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(Math.max(1, concurrency), items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex++;
+      try {
+        results[index] = await mapper(items[index], index);
+      } catch (_) {
+        results[index] = null;
+      }
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
 function cleanChartSong(rawTitle, rawArtist) {
   let title = (rawTitle || '').trim();
   let artist = (rawArtist || '').trim();
@@ -1415,11 +1642,38 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
 
     const ytSearch = await getSearchClient();
     let tracks = [];
-    let rankingBasis = 'youtube-music-playlist-order';
+    let rankingBasis = timeframe === 'daily' ? 'spotify-daily-streams' : 'youtube-music-playlist-order';
+    let chartDate = '';
+    let chartSourceUrl = '';
     const targetPlaylistId = timeframe === 'weekly' ? hub.weeklyPlaylistId : hub.dailyPlaylistId;
 
+    // Daily charts use Spotify's eligible stream counts from the latest published chart day.
+    // Kworb mirrors Spotify's public chart rows; YouTube Music is used only to resolve playable IDs.
+    if (timeframe === 'daily') {
+      try {
+        const dailyChart = await fetchSpotifyDailyChart(hub.code);
+        const chartCandidates = dailyChart.entries.slice(0, 50);
+        const resolvedTracks = (await mapWithConcurrency(chartCandidates, 6, chartTrack =>
+          resolveSpotifyChartTrack(ytSearch, chartTrack)
+        )).filter(Boolean).map(track => ({ ...track, chartDate: dailyChart.chartDate }));
+
+        if (resolvedTracks.length >= 10) {
+          tracks = resolvedTracks;
+          chartDate = dailyChart.chartDate;
+          chartSourceUrl = dailyChart.sourceUrl;
+          rankingBasis = 'spotify-daily-streams';
+        } else {
+          rankingBasis = 'youtube-music-playlist-order';
+          console.warn(`[Spotify Daily chart] Only ${resolvedTracks.length} playable rows resolved for ${hub.code}; using YouTube Music fallback.`);
+        }
+      } catch (chartErr) {
+        rankingBasis = 'youtube-music-playlist-order';
+        console.warn(`[Spotify Daily chart unavailable for ${hub.code}]:`, chartErr.message);
+      }
+    }
+
     // 1. Tải bảng xếp hạng chính thức từ YouTube Music Chart Playlist
-    if (targetPlaylistId && ytSearch.music && typeof ytSearch.music.getPlaylist === 'function') {
+    if (tracks.length === 0 && targetPlaylistId && ytSearch.music && typeof ytSearch.music.getPlaylist === 'function') {
       try {
         const pl = await ytSearch.music.getPlaylist(targetPlaylistId);
         const rawItems = pl.items || [];
@@ -1591,11 +1845,12 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
     // YouTube exposes lifetime video views here, not Music Home or daily streams.
     try {
       const topTracks = tracks.slice(0, 3);
-      const viewsPromise = Promise.allSettled(
-        topTracks.map(t => ytSearch.getBasicInfo ? ytSearch.getBasicInfo(t.id) : Promise.resolve(null))
-      );
-      const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 800));
-      const results = await Promise.race([viewsPromise, timeoutPromise]);
+      const results = rankingBasis === 'spotify-daily-streams'
+        ? null
+        : await Promise.race([
+          Promise.allSettled(topTracks.map(t => ytSearch.getBasicInfo ? ytSearch.getBasicInfo(t.id) : Promise.resolve(null))),
+          new Promise(resolve => setTimeout(() => resolve(null), 800))
+        ]);
 
       if (results && Array.isArray(results)) {
         results.forEach((resItem, idx) => {
@@ -1612,7 +1867,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
 
     tracks = tracks.map(track => normalizeMusicMetadata({
       ...track,
-      popularity: track.views || track.rank || 0
+      popularity: track.spotifyStreams || track.views || track.rank || 0
     }, track.previewUrl ? 'itunes-preview' : 'youtube-music'));
 
     const responsePayload = {
@@ -1624,11 +1879,17 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
       greeting: hub.greeting,
       genres: hub.genres,
       rankingBasis,
+      chartDate,
+      sourceUrl: chartSourceUrl,
       results: tracks,
       tracks: tracks
     };
 
-    trendingCache.set(cacheKey, responsePayload);
+    trendingCache.set(
+      cacheKey,
+      responsePayload,
+      rankingBasis === 'spotify-daily-streams' ? 12 * 60 * 60 * 1000 : null
+    );
     circuitBreaker.recordSuccess();
 
     res.json({
@@ -1646,6 +1907,8 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
       greeting: hub.greeting,
       genres: hub.genres,
       rankingBasis: 'temporarily-unavailable',
+      chartDate: '',
+      sourceUrl: '',
       results: [],
       tracks: [],
       cached: false

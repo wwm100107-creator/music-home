@@ -3719,6 +3719,9 @@
     const youtubeViewsHtml = youtubeViewsText
       ? `<span class="track-card-views" title="Tổng lượt xem video trên YouTube; không phải lượt nghe trong ứng dụng">${GhibliIcons.calciferFlame} ${escapeHtml(String(youtubeViewsText).replace(/^[🔥📈]\s*/, ''))}</span>`
       : '';
+    const spotifyStreamsHtml = track.spotifyStreamsText
+      ? `<span class="track-card-streams" title="Streams theo bảng xếp hạng Spotify trong ngày ${escapeHtml(track.chartDate || '')} (UTC)">${escapeHtml(track.spotifyStreamsText)} Spotify</span>`
+      : '';
 
     card.innerHTML = `
       <div class="card-glare" aria-hidden="true"></div>
@@ -3735,7 +3738,7 @@
         <span class="track-card-artist" title="${artist}">${artist}</span>
         <div class="track-card-meta-row">
           <span class="track-card-duration">${duration}</span>
-          ${youtubeViewsHtml}
+          ${spotifyStreamsHtml || youtubeViewsHtml}
         </div>
       </div>
     `;
@@ -3752,7 +3755,7 @@
   }
 
   // ==========================================================================
-  // 7. GEO-IP & YOUTUBE MUSIC TRENDING PLAYLISTS
+  // 7. GEO-IP & DAILY STREAMING CHARTS
   // ==========================================================================
   async function loadTrendingMusic(countryCode = null, timeframe = null) {
     try {
@@ -3771,7 +3774,7 @@
         dom.trendingTracksGrid.innerHTML = `
           <div class="ghibli-loading-placeholder">
             <div class="loading-leaf-spinner">${GhibliIcons.leafSprout}</div>
-            <p class="loading-text">Đang cập nhật bảng xếp hạng YouTube Music ${curTimeframe === 'weekly' ? 'tuần này' : 'hôm nay'}...</p>
+            <p class="loading-text">${curTimeframe === 'weekly' ? 'Đang cập nhật bảng YouTube Music tuần này...' : 'Đang cập nhật bảng streams Spotify của ngày gần nhất...'}</p>
           </div>
         `;
       }
@@ -3789,6 +3792,12 @@
         state.selectedCountry = data.countryCode || 'VN';
         state.selectedCountryName = data.countryName || state.selectedCountry;
         state.trendingTracks = data.results || data.tracks || [];
+        state.trendingChartInfo = {
+          rankingBasis: data.rankingBasis || '',
+          chartDate: data.chartDate || '',
+          sourceUrl: data.sourceUrl || '',
+          timeframe: curTimeframe
+        };
         // Đồng bộ Dropdown quốc gia
         if (dom.countrySelectDropdown) {
           dom.countrySelectDropdown.value = state.selectedCountry;
@@ -3797,11 +3806,24 @@
         // Cập nhật Banner
         if (dom.heroFlag) dom.heroFlag.textContent = data.flag || '🇻🇳';
         if (dom.heroGreetingText) {
-          const tfLabel = curTimeframe === 'weekly' ? 'YouTube Music • tuần này' : 'YouTube Music • hôm nay';
+          const isSpotifyDaily = data.rankingBasis === 'spotify-daily-streams';
+          const chartDateLabel = data.chartDate ? data.chartDate.split('-').reverse().join('/') : '';
+          const tfLabel = isSpotifyDaily
+            ? `Spotify • ngày ${chartDateLabel || 'gần nhất'} (UTC)`
+            : curTimeframe === 'weekly' ? 'YouTube Music • tuần này' : 'YouTube Music • playlist ngày';
           dom.heroGreetingText.textContent = `${data.countryName} • ${tfLabel}`;
+          dom.heroGreetingText.title = data.sourceUrl
+            ? `Số streams Spotify Daily ${chartDateLabel} (UTC), tham khảo từ Kworb`
+            : `Nguồn dữ liệu: ${tfLabel}`;
         }
         if (dom.trendingCounter) {
-          dom.trendingCounter.textContent = `Top ${state.trendingTracks.length} bài (${curTimeframe === 'weekly' ? 'Tuần' : 'Ngày'})`;
+          const isSpotifyDaily = data.rankingBasis === 'spotify-daily-streams';
+          dom.trendingCounter.textContent = isSpotifyDaily
+            ? `Top ${state.trendingTracks.length} · 24h Spotify`
+            : `Top ${state.trendingTracks.length} · ${curTimeframe === 'weekly' ? 'YouTube Music tuần' : 'YouTube Music'}`;
+          dom.trendingCounter.title = data.sourceUrl
+            ? `Spotify Daily chart ngày ${data.chartDate || ''} (UTC). Nguồn: Kworb`
+            : 'Danh sách xếp theo thứ tự playlist YouTube Music.';
         }
 
         // Cập nhật Genre Pills
@@ -5047,12 +5069,17 @@
     if (!dom.discoverChartRow) return;
     const currentRegionTracks = state.trendingTracks || [];
     const regionLabel = state.selectedCountryName || state.selectedCountry || 'Khu vực';
-    const timeframeLabel = state.currentTimeframe === 'weekly' ? 'tuần này' : 'hôm nay';
+    const chartInfo = state.trendingChartInfo || {};
+    const timeframeLabel = state.currentTimeframe === 'weekly' ? 'tuần này' : 'ngày gần nhất';
+    const chartDateLabel = chartInfo.chartDate ? chartInfo.chartDate.split('-').reverse().join('/') : '';
+    const sourceDetail = chartInfo.rankingBasis === 'spotify-daily-streams'
+      ? `Spotify Daily · ${chartDateLabel || 'ngày gần nhất'} (UTC) · Kworb`
+      : `Thứ tự playlist YouTube Music ${timeframeLabel}`;
     const charts = [];
     if (currentRegionTracks.length) {
       charts.push({
         title: `Top ${Math.min(50, currentRegionTracks.length)} • ${regionLabel}`,
-        detail: `Thứ hạng YouTube Music ${timeframeLabel}`,
+        detail: sourceDetail,
         tracks: currentRegionTracks,
         tone: 'local'
       });
