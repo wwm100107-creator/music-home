@@ -793,6 +793,33 @@ const COUNTRY_HUBS = {
   }
 };
 
+function isCountryCode(value) {
+  const code = String(value || '').toUpperCase();
+  return /^[A-Z]{2}$/.test(code) && code !== 'XX' && code !== 'T1';
+}
+
+function getCountryHub(countryCode) {
+  const code = String(countryCode || '').toUpperCase();
+  if (COUNTRY_HUBS[code]) return COUNTRY_HUBS[code];
+  if (!isCountryCode(code)) return COUNTRY_HUBS.VN;
+
+  let name = code;
+  try {
+    name = new Intl.DisplayNames(['vi'], { type: 'region' }).of(code) || code;
+  } catch (_) {}
+  const flag = String.fromCodePoint(...Array.from(code, character => 127397 + character.charCodeAt(0)));
+  const currentYear = new Date().getFullYear();
+
+  return {
+    code,
+    name,
+    flag,
+    greeting: `${flag} ${name} • Bảng Xếp Hạng & Xu Hướng Thịnh Hành Hôm Nay`,
+    genres: ['Tất cả', 'Nhạc thịnh hành', 'Pop', 'Hip-Hop', 'Indie', 'Ballad'],
+    queries: [`top songs ${name} ${currentYear}`, `${name} viral songs today`, 'global top hits']
+  };
+}
+
 const TIMEZONE_TO_COUNTRY = {
   'Asia/Ho_Chi_Minh': 'VN',
   'Asia/Bangkok': 'VN',
@@ -807,20 +834,17 @@ const TIMEZONE_TO_COUNTRY = {
 
 function detectCountry(req) {
   const queryCountry = req.query.country?.toUpperCase();
-  if (queryCountry && COUNTRY_HUBS[queryCountry]) return queryCountry;
+  if (queryCountry === 'GLOBAL' || isCountryCode(queryCountry)) return queryCountry;
 
   const cfCountry = req.headers['cf-ipcountry']?.toUpperCase();
-  if (cfCountry && COUNTRY_HUBS[cfCountry]) return cfCountry;
+  if (isCountryCode(cfCountry)) return cfCountry;
 
   const clientTz = req.query.tz;
   if (clientTz && TIMEZONE_TO_COUNTRY[clientTz]) return TIMEZONE_TO_COUNTRY[clientTz];
 
   const acceptLang = req.headers['accept-language'] || '';
-  if (/vi[-_]VN/i.test(acceptLang) || /vi/i.test(acceptLang)) return 'VN';
-  if (/ko[-_]KR/i.test(acceptLang) || /ko/i.test(acceptLang)) return 'KR';
-  if (/ja[-_]JP/i.test(acceptLang) || /ja/i.test(acceptLang)) return 'JP';
-  if (/en[-_]GB/i.test(acceptLang)) return 'GB';
-  if (/en[-_]US/i.test(acceptLang)) return 'US';
+  const languageRegion = acceptLang.match(/(?:^|,)\s*[a-z]{2,3}[-_]([a-z]{2})(?=[;,]|$)/i)?.[1]?.toUpperCase();
+  if (isCountryCode(languageRegion)) return languageRegion;
 
   return 'VN';
 }
@@ -1138,7 +1162,15 @@ apiRouter.get('/debug-stream/:videoId', async (req, res) => {
 // 10.2. Location & Supported Countries
 apiRouter.get('/location', (req, res) => {
   const detectedCode = detectCountry(req);
-  const hub = COUNTRY_HUBS[detectedCode] || COUNTRY_HUBS.VN;
+  const hub = getCountryHub(detectedCode);
+  const supportedCountries = Object.values(COUNTRY_HUBS).map(c => ({
+    code: c.code,
+    name: c.name,
+    flag: c.flag
+  }));
+  if (!supportedCountries.some(country => country.code === hub.code)) {
+    supportedCountries.push({ code: hub.code, name: hub.name, flag: hub.flag });
+  }
 
   res.json({
     success: true,
@@ -1147,11 +1179,7 @@ apiRouter.get('/location', (req, res) => {
     flag: hub.flag,
     greeting: hub.greeting,
     genres: hub.genres,
-    supportedCountries: Object.values(COUNTRY_HUBS).map(c => ({
-      code: c.code,
-      name: c.name,
-      flag: c.flag
-    }))
+    supportedCountries
   });
 });
 
@@ -1175,6 +1203,7 @@ const KWORB_SPOTIFY_REGION_SLUGS = {
   GB: 'uk',
   GLOBAL: 'global'
 };
+const SPOTIFY_DAILY_CHART_LIMIT = 100;
 
 function decodeChartHtml(value) {
   return String(value || '')
@@ -1267,7 +1296,8 @@ function parseSpotifyDailyChartHtml(html, sourceUrl) {
 }
 
 async function fetchSpotifyDailyChart(countryCode) {
-  const regionSlug = KWORB_SPOTIFY_REGION_SLUGS[countryCode];
+  const regionSlug = KWORB_SPOTIFY_REGION_SLUGS[countryCode] ||
+    (isCountryCode(countryCode) ? countryCode.toLowerCase() : '');
   if (!regionSlug) throw new Error(`No Spotify daily chart region is configured for ${countryCode}.`);
 
   // The www hostname currently presents a certificate whose SAN does not
@@ -1303,43 +1333,68 @@ function chartArtistMatches(sourceArtists, candidateArtists) {
 
 async function resolveSpotifyChartTrack(ytSearch, chartTrack) {
   const query = `${chartTrack.title} ${chartTrack.artist}`.trim();
-  let searchResult = null;
-  try {
-    searchResult = ytSearch.music && typeof ytSearch.music.search === 'function'
-      ? await ytSearch.music.search(query, { type: 'song' })
-      : await ytSearch.search(query);
-  } catch (error) {
-    console.warn(`[Spotify chart track search unavailable: ${chartTrack.title}]:`, error.message);
-    return null;
-  }
-
-  const contents = searchResult?.songs?.contents || searchResult?.results || [];
   const sourceTitleKey = normalizeChartTitle(chartTrack.title);
   const sourceArtists = chartTrack.artists?.length ? chartTrack.artists : [chartTrack.artist];
+  const findMatch = (contents, requirePlayableVideoId = false) => {
+    let bestMatch = null;
+    let bestScore = -1;
+
+    for (const item of contents) {
+      const id = item.id || item.videoId || item.video_id;
+      if (!id || (requirePlayableVideoId && !/^[\w-]{11}$/.test(String(id)))) continue;
+      const rawTitle = item.title?.text || item.title || '';
+      const rawArtists = item.artists?.map(artist => artist?.name || artist).filter(Boolean) || [];
+      if (!rawArtists.length && item.author?.name) rawArtists.push(item.author.name);
+      const durationSec = parseToDurationSec(item.duration?.seconds || item.duration?.text || item.duration) || 210;
+      const cleaned = cleanChartSong(rawTitle, rawArtists.join(', '));
+      if (isSpamTrack(cleaned.title, cleaned.artist, durationSec)) continue;
+
+      const candidateTitleKey = normalizeChartTitle(cleaned.title);
+      const titleMatches = candidateTitleKey === sourceTitleKey ||
+        (sourceTitleKey.length >= 8 && (candidateTitleKey.startsWith(sourceTitleKey) || sourceTitleKey.startsWith(candidateTitleKey)));
+      if (!titleMatches) continue;
+
+      const artistMatch = chartArtistMatches(sourceArtists, rawArtists.length ? rawArtists : [cleaned.artist]);
+      if (!artistMatch && rawArtists.length) continue;
+      const score = (candidateTitleKey === sourceTitleKey ? 2 : 0) + (artistMatch ? 1 : 0);
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = { item, id, title: cleaned.title, artist: cleaned.artist, durationSec };
+      }
+    }
+
+    return bestMatch;
+  };
+
   let match = null;
-  let bestScore = -1;
+  if (ytSearch.music && typeof ytSearch.music.search === 'function') {
+    try {
+      const musicResults = await ytSearch.music.search(query, { type: 'song' });
+      const songContents = musicResults?.songs?.contents;
+      match = findMatch(Array.isArray(songContents) && songContents.length ? songContents : musicResults?.results || []);
+    } catch (_) {
+      // Use regular YouTube video results below if Music search is unavailable.
+    }
+  }
 
-  for (const item of contents) {
-    const id = item.id || item.videoId || item.video_id;
-    if (!id) continue;
-    const rawTitle = item.title?.text || item.title || '';
-    const rawArtists = item.artists?.map(artist => artist?.name || artist).filter(Boolean) || [];
-    if (!rawArtists.length && item.author?.name) rawArtists.push(item.author.name);
-    const durationSec = parseToDurationSec(item.duration?.seconds || item.duration?.text || item.duration) || 210;
-    const cleaned = cleanChartSong(rawTitle, rawArtists.join(', '));
-    if (isSpamTrack(cleaned.title, cleaned.artist, durationSec)) continue;
+  // Some Spotify Daily songs are indexed as YT Music videos rather than songs.
+  if (!match && ytSearch.music && typeof ytSearch.music.search === 'function') {
+    try {
+      const musicVideoResults = await ytSearch.music.search(query, { type: 'video' });
+      const videoContents = musicVideoResults?.videos?.contents;
+      match = findMatch(Array.isArray(videoContents) && videoContents.length ? videoContents : musicVideoResults?.results || [], true);
+    } catch (_) {}
+  }
 
-    const candidateTitleKey = normalizeChartTitle(cleaned.title);
-    const titleMatches = candidateTitleKey === sourceTitleKey ||
-      (sourceTitleKey.length >= 8 && (candidateTitleKey.startsWith(sourceTitleKey) || sourceTitleKey.startsWith(candidateTitleKey)));
-    if (!titleMatches) continue;
-
-    const artistMatch = chartArtistMatches(sourceArtists, rawArtists.length ? rawArtists : [cleaned.artist]);
-    if (!artistMatch && rawArtists.length) continue;
-    const score = (candidateTitleKey === sourceTitleKey ? 2 : 0) + (artistMatch ? 1 : 0);
-    if (score > bestScore) {
-      bestScore = score;
-      match = { item, id, title: cleaned.title, artist: cleaned.artist, durationSec };
+  // A few releases are present only as regular YouTube official videos. Match
+  // exact title/artist results as a playable fallback for those chart rows.
+  if (!match && typeof ytSearch.search === 'function') {
+    try {
+      const videoResults = await ytSearch.search(query, { type: 'video' });
+      const videoContents = videoResults?.videos?.contents;
+      match = findMatch(Array.isArray(videoContents) && videoContents.length ? videoContents : videoResults?.results || [], true);
+    } catch (_) {
+      // A missing YouTube result must not abort resolution of the rest of the chart.
     }
   }
 
@@ -1629,7 +1684,7 @@ async function getOfficialArtistReleases(ytSearch, artist) {
 // not Music Home stream counts and must not be presented as Top/Viral scores.
 apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpointName: 'trending' }), async (req, res) => {
   const countryCode = detectCountry(req);
-  const hub = COUNTRY_HUBS[countryCode] || COUNTRY_HUBS.VN;
+  const hub = getCountryHub(countryCode);
   const timeframe = (req.query.timeframe || 'daily').toLowerCase() === 'weekly' ? 'weekly' : 'daily';
   const cacheKey = `trending:${hub.code}:${timeframe}`;
   const cachedData = trendingCache.get(cacheKey);
@@ -1652,6 +1707,7 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
     let chartDate = '';
     let chartSourceUrl = '';
     let rankingFallbackReason = '';
+    let chartCandidateCount = 0;
     const targetPlaylistId = timeframe === 'weekly' ? hub.weeklyPlaylistId : hub.dailyPlaylistId;
 
     // Daily charts use Spotify's eligible stream counts from the latest published chart day.
@@ -1659,10 +1715,17 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
     if (timeframe === 'daily') {
       try {
         const dailyChart = await fetchSpotifyDailyChart(hub.code);
-        const chartCandidates = dailyChart.entries.slice(0, 50);
+        const chartCandidates = dailyChart.entries.slice(0, SPOTIFY_DAILY_CHART_LIMIT);
+        chartCandidateCount = chartCandidates.length;
         const resolvedTracks = (await mapWithConcurrency(chartCandidates, 6, chartTrack =>
           resolveSpotifyChartTrack(ytSearch, chartTrack)
-        )).filter(Boolean).map(track => ({ ...track, chartDate: dailyChart.chartDate }));
+        )).filter(Boolean)
+          .sort((left, right) => left.rank - right.rank)
+          .map(track => ({ ...track, chartDate: dailyChart.chartDate }));
+
+        if (resolvedTracks.length < chartCandidates.length) {
+          console.warn(`[Spotify Daily chart] ${resolvedTracks.length}/${chartCandidates.length} songs matched playable YouTube Music results for ${hub.code}.`);
+        }
 
         if (resolvedTracks.length >= 10) {
           tracks = resolvedTracks;
@@ -1889,6 +1952,8 @@ apiRouter.get('/trending', rateLimit({ maxRequests: 60, windowMs: 60000, endpoin
       genres: hub.genres,
       rankingBasis,
       rankingFallbackReason,
+      chartLimit: rankingBasis === 'spotify-daily-streams' ? SPOTIFY_DAILY_CHART_LIMIT : 0,
+      chartCandidateCount: rankingBasis === 'spotify-daily-streams' ? chartCandidateCount : 0,
       chartDate,
       sourceUrl: chartSourceUrl,
       results: tracks,
@@ -2151,7 +2216,7 @@ apiRouter.get('/search', rateLimit({ maxRequests: 50, windowMs: 60000, endpointN
 apiRouter.get('/albums', rateLimit({ maxRequests: 60, windowMs: 60000, endpointName: 'albums' }), async (req, res) => {
   const searchQuery = req.query.q?.trim();
   const countryCode = detectCountry(req);
-  const hub = COUNTRY_HUBS[countryCode] || COUNTRY_HUBS.VN;
+  const hub = getCountryHub(countryCode);
 
   const cacheKey = searchQuery
     ? `albums:search:${searchQuery.toLowerCase()}`

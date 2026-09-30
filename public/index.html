@@ -357,7 +357,7 @@
               <span class="pill-chart-icon"><svg class="ghibli-svg-icon ghibli-icon-bamboo-chart" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="14" width="3.5" height="7" rx="1" stroke="currentColor" stroke-width="1.4" fill="currentColor" fill-opacity="0.2"/><line x1="4" y1="17.5" x2="7.5" y2="17.5" stroke="currentColor" stroke-width="1"/><rect x="10" y="9" width="3.5" height="12" rx="1" stroke="currentColor" stroke-width="1.4" fill="currentColor" fill-opacity="0.2"/><line x1="10" y1="13" x2="13.5" y2="13" stroke="currentColor" stroke-width="1"/><line x1="10" y1="17" x2="13.5" y2="17" stroke="currentColor" stroke-width="1"/><rect x="16" y="4" width="3.5" height="17" rx="1" stroke="currentColor" stroke-width="1.4" fill="currentColor" fill-opacity="0.2"/><line x1="16" y1="9.5" x2="19.5" y2="9.5" stroke="currentColor" stroke-width="1"/><line x1="16" y1="15" x2="19.5" y2="15" stroke="currentColor" stroke-width="1"/><path d="M4 12c3-2 6-5 15-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M16 4.5l3.5.5-.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Tuần Này
             </button>
           </div>
-          <span class="heading-badge-counter" id="trendingCounter">Top 50 bài</span>
+          <span class="heading-badge-counter" id="trendingCounter">Top 100 bài</span>
         </div>
 
         <div class="discover-horizontal-row discover-chart-row" id="discoverChartRow" aria-label="Bảng xếp hạng theo khu vực"></div>
@@ -1564,13 +1564,13 @@
   <!-- Scripts: YouTube Engine & Ghibli App -->
   <script src="https://www.youtube.com/iframe_api"></script>
   <script src="signature-particles.js?v=1"></script>
-  <script src="app.js?v=5.38"></script>
+  <script src="app.js?v=5.39"></script>
 
   <!-- PWA Offline Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=5.18')
+        navigator.serviceWorker.register('./sw.js?v=5.19')
           .then((reg) => {
             console.log('🍃 [PWA] Service Worker registered:', reg.scope);
             reg.update().catch(() => {});
