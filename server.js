@@ -249,6 +249,7 @@ class BoundedCache {
 
 const searchCache = new BoundedCache(300, 30 * 60 * 1000);
 const streamCache = new BoundedCache(300, 45 * 60 * 1000);
+const streamResolutionRequests = new Map();
 const trendingCache = new BoundedCache(50, 60 * 60 * 1000);
 const vpopArtistCache = new BoundedCache(2, 60 * 60 * 1000);
 const artistArtworkCache = new BoundedCache(500, 24 * 60 * 60 * 1000);
@@ -726,6 +727,20 @@ async function resolveAudioStream(videoId, forceRefresh = false, excludeClients 
     }
   }
   return streamData;
+}
+
+function resolveAudioStreamOnce(videoId, forceRefresh = false, excludeClients = []) {
+  const requestKey = `${String(videoId || '').trim()}:${forceRefresh ? 'refresh' : 'cached'}:${excludeClients.join(',')}`;
+  const inFlight = streamResolutionRequests.get(requestKey);
+  if (inFlight) return inFlight;
+
+  const request = resolveAudioStream(videoId, forceRefresh, excludeClients).finally(() => {
+    if (streamResolutionRequests.get(requestKey) === request) {
+      streamResolutionRequests.delete(requestKey);
+    }
+  });
+  streamResolutionRequests.set(requestKey, request);
+  return request;
 }
 
 // ============================================================================
@@ -2548,6 +2563,24 @@ apiRouter.get('/album/:albumId', rateLimit({ maxRequests: 80, windowMs: 60000, e
 // 10.5. Audio Stream Proxy (VisionOS Unthrottled Audio Stream)
 const VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{10,12}$/;
 
+// Resolve stream metadata before playback when the listener signals intent.
+// This only warms the short-lived URL cache; it does not download audio bytes.
+apiRouter.get('/stream/prepare/:videoId', rateLimit({ maxRequests: 24, windowMs: 60000, endpointName: 'stream-prepare' }), async (req, res) => {
+  const { videoId } = req.params;
+  if (!VIDEO_ID_REGEX.test(videoId)) {
+    return res.status(400).json({ success: false, error: 'Invalid YouTube Video ID format' });
+  }
+
+  try {
+    await resolveAudioStreamOnce(videoId);
+    res.setHeader('cache-control', 'no-store');
+    return res.json({ success: true });
+  } catch (_) {
+    // Warming is best-effort; normal playback still runs its usual resolution path.
+    return res.status(503).json({ success: false, error: 'Stream warm-up unavailable' });
+  }
+});
+
 
 apiRouter.get('/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000, endpointName: 'stream' }), async (req, res) => {
   const { videoId } = req.params;
@@ -2563,10 +2596,10 @@ apiRouter.get('/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000,
   try {
     let streamData;
     try {
-      streamData = await resolveAudioStream(videoId);
+      streamData = await resolveAudioStreamOnce(videoId);
     } catch (resolveErr) {
       console.warn(`[Stream] Cache refresh for ${videoId}:`, resolveErr.message);
-      streamData = await resolveAudioStream(videoId, true);
+      streamData = await resolveAudioStreamOnce(videoId, true);
     }
 
     // Chỉ chuyển hướng 302 nếu client yêu cầu rõ ràng qua query parameter ?redirect=1
@@ -2586,7 +2619,9 @@ apiRouter.get('/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000,
     };
 
     const abortController = new AbortController();
-    req.on('close', () => abortController.abort());
+    res.on('close', () => {
+      if (!res.writableEnded) abortController.abort();
+    });
 
     let upstreamResponse = await fetch(streamData.url, {
       headers: upstreamHeaders,
@@ -2597,7 +2632,7 @@ apiRouter.get('/stream/:videoId', rateLimit({ maxRequests: 150, windowMs: 60000,
       console.warn(`[Stream] Upstream 403 for ${videoId} with ${streamData.clientName || 'current client'}. Attempting fallback client...`);
       streamCache.delete(videoId);
       try {
-        streamData = await resolveAudioStream(videoId, true, streamData.clientName ? [streamData.clientName] : []);
+        streamData = await resolveAudioStreamOnce(videoId, true, streamData.clientName ? [streamData.clientName] : []);
         const retryHeaders = {
           ...upstreamHeaders,
           'User-Agent': streamData.userAgent || upstreamHeaders['User-Agent']

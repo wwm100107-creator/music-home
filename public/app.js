@@ -3363,6 +3363,7 @@
           setPlaybackVisualState(true);
           state.consecutiveErrors = 0;
           updateMediaSession(track);
+          scheduleNextAudioStreamWarmup(track);
         }).catch(audioErr => {
           if (audioErr.name === 'AbortError') return;
           console.warn('[Native Audio Engine Warning]:', audioErr.message);
@@ -3688,6 +3689,62 @@
   // ==========================================================================
   // 6. CARD RENDERING (GHIBLI STYLE)
   // ==========================================================================
+  const audioStreamWarmupAt = new Map();
+
+  function warmAudioStreamForTrack(track) {
+    if (!track?.id || track.audioUrl || track.streamUrl || track.previewUrl) return;
+    if (!/^[a-zA-Z0-9_-]{10,12}$/.test(String(track.id))) return;
+    if (!(state.isIOS || state.isMobile || state.isStandalone || state.backgroundPlayback)) return;
+
+    const videoId = String(track.id);
+    const now = Date.now();
+    if (now - (audioStreamWarmupAt.get(videoId) || 0) < 30 * 60 * 1000) return;
+    audioStreamWarmupAt.set(videoId, now);
+    if (audioStreamWarmupAt.size > 100) {
+      audioStreamWarmupAt.delete(audioStreamWarmupAt.keys().next().value);
+    }
+
+    fetch(`/api/stream/prepare/${encodeURIComponent(videoId)}`, { credentials: 'same-origin' })
+      .then(response => {
+        if (!response.ok) {
+          audioStreamWarmupAt.delete(videoId);
+          console.debug(`[Audio warm-up skipped] ${videoId}: HTTP ${response.status}`);
+        }
+      })
+      .catch(() => audioStreamWarmupAt.delete(videoId));
+  }
+
+  function getNextTrackForAudioWarmup() {
+    if (!state.queue.length || state.isShuffle) return null;
+
+    if (state.loopMode === 'acorn') {
+      const selectedIds = new Set(getAcornSelectedIds());
+      const selectedTracks = state.queue.filter(track => selectedIds.has(track.id));
+      if (selectedTracks.length) {
+        const currentIndex = selectedTracks.findIndex(track => track.id === state.currentTrack?.id);
+        return selectedTracks[(currentIndex + 1 + selectedTracks.length) % selectedTracks.length] || null;
+      }
+    }
+
+    if (state.queueIndex < state.queue.length - 1) return state.queue[state.queueIndex + 1];
+    if (state.queue.length <= 1 && state.trendingTracks.length > 1) {
+      const currentIndex = state.trendingTracks.findIndex(track => track.id === state.currentTrack?.id);
+      if (currentIndex >= 0 && currentIndex < state.trendingTracks.length - 1) {
+        return state.trendingTracks[currentIndex + 1];
+      }
+      if (state.loopMode === 'all') return state.trendingTracks[0];
+    }
+    if (state.loopMode === 'all') return state.queue[0];
+    return null;
+  }
+
+  function scheduleNextAudioStreamWarmup(track) {
+    window.setTimeout(() => {
+      if (!state.isPlaying || state.currentTrack?.id !== track?.id) return;
+      warmAudioStreamForTrack(getNextTrackForAudioWarmup());
+    }, 1400);
+  }
+
   function createSongCardElement(track, clickHandler) {
     const card = document.createElement('div');
     card.className = 'nature-track-card';
@@ -3747,6 +3804,15 @@
       </div>
     `;
 
+    let warmupTimer = null;
+    card.addEventListener('pointerenter', event => {
+      if (event.pointerType !== 'mouse') return;
+      warmupTimer = window.setTimeout(() => warmAudioStreamForTrack(track), 650);
+    });
+    card.addEventListener('pointerleave', () => {
+      if (warmupTimer !== null) window.clearTimeout(warmupTimer);
+      warmupTimer = null;
+    });
     card.addEventListener('click', () => clickHandler(track));
     attach3DTiltEffect(card);
     return card;
